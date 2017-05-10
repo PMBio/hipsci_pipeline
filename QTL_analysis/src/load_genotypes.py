@@ -14,7 +14,7 @@ def load_genotypes_plink(plink_prefix):
     1.0
 
     '''
-    (bim, fam, bed) = limix.io.read_plink(plink_prefix)
+    (bim, fam, bed) = limix.io.read_plink(plink_prefix,verbose=False)
 
     #make missing values 0 for now (i.e. homozygous for second allele)
     #needs to be replaced with a snp-specific value

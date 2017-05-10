@@ -1,2 +1,3 @@
 
 from load_genotypes import load_genotypes
+from generate_kinship import generate_kinship
