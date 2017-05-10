@@ -27,7 +27,7 @@ def load_genotypes_plink(plink_prefix):
     #(nN,nS)
     genotypes = np.array(np.vectorize(bed_to_genotype_value)(bed.compute()),dtype=float).transpose()
     
-    return genotypes
+    return bim,genotypes
 
 if __name__ == "__main__":
     import doctest

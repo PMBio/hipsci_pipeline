@@ -1,17 +1,13 @@
-#!/usr/bin/env python2
-import argparse
+#import pandas as pd
+from load_genotypes import load_genotypes_plink
+from generate_kinship import generate_kinship
 
-def get_args():
-    parser = argparse.ArgumentParser(description='QTL pipeline')
-    parser.add_argument('-geno_prefix','--geno_prefix', required=True)
-    parser.add_argument('-pheno_file','--pheno_file', required=False)
-    parser.add_argument('-out_file','--out_file', required=True)
-    parser.add_argument('-cis_window_kb','--cis_window_kb', required=True)
-    args = parser.parse_args()
+geno_prefix = '../data/geuvadis_test_data/Geuvadis_chr1'
+pheno_filename = '../data/geuvadis_test_data/Geuvadis_CEU_YRI_Expr.txt'
+anno_filename = '../data/geuvadis_test_data/Geuvadis_CEU_YRI_Annot.txt'
 
-    geno_prefix = args.geno_prefix
-    pheno_file = args.pheno_file
-    out_file = args.out_file
-    cis_window_kb = args.cis_window_kb
+#bim,genotype_mat = load_genotypes_plink(geno_prefix)
+#kinship = generate_kinship(genotype_mat)
 
-    return geno_prefix, pheno_file, out_file, cis_window_kb
+phenotypes = pd.read_csv(pheno_filename,sep='\t',index_col=0)
+annotation = pd.read_csv(anno_filename,sep='\t',index_col=1)
