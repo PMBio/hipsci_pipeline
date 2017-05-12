@@ -11,11 +11,14 @@ geno_prefix = data_path+'Geuvadis_chr1'
 pheno_filename = data_path+'Geuvadis_CEU_YRI_Expr.txt'
 anno_filename = data_path+'Geuvadis_CEU_YRI_formatted_annotation_data.txt'
 kinship_filename= data_path+'Geuvadis_chr1_kinship.txt'
-output_filename = data_path+'limix_QTL_results.txt'
+
+output_dir = data_path+'limix_QTL_results'
 
 
 phenotype_df = pd.read_csv(pheno_filename,sep='\t',index_col=0)
-annotation_df = pd.read_csv(anno_filename,sep='\t',index_col=1)
+annotation_df = pd.read_csv(anno_filename,sep='\t',index_col=0)
+
+
 
 
 
@@ -80,4 +83,11 @@ for feature_id in feature_list:
     temp_df['p_value'] = LMM.getPv()[0]
     qtl_results_df = qtl_results_df.append(temp_df, ignore_index=True)
 
-qtl_results_df.to_csv(output_filename,sep='\t',index=False)
+snp_df = pd.DataFrame()
+snp_df['snp_id'] = bim['snp']
+snp_df['chromosome'] = bim['chrom']
+snp_df['position'] = bim['pos']
+
+snp_df.to_csv(output_dir+'/snp_metadata.txt',sep='\t',index=False)
+annotation_df.to_csv(output_dir+'/feature_metadata.txt',sep='\t')
+qtl_results_df.to_csv(output_dir+'/qtl_results.txt',sep='\t',index=False)
