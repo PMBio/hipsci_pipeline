@@ -8,6 +8,7 @@ class hdf5_writer:
         self.table = self.h5file.create_table(self.group,'results',QTL_result_hdf5,"QTL analysis results")
 
     def close(self):
+        indexrows = self.table.cols.feature_id.create_index()
         self.h5file.close()
 
     def add_result_df(self,qtl_results_df):
