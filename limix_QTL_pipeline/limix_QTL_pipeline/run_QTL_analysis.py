@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import limix
-
+import qtl_output
 
 #def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
 
@@ -19,7 +19,7 @@ phenotype_df = pd.read_csv(pheno_filename,sep='\t',index_col=0)
 annotation_df = pd.read_csv(anno_filename,sep='\t',index_col=0)
 
 
-
+output_writer = qtl_output.hdf5_writer(output_dir+'/qtl_results.h5')
 
 
 bim,fam,bed = limix.io.read_plink(geno_prefix,verbose=False)
@@ -81,7 +81,10 @@ for feature_id in feature_list:
     temp_df['feature_id'] = feature_id
     temp_df['beta'] = LMM.getBetaSNP()[0]
     temp_df['p_value'] = LMM.getPv()[0]
+    output_writer.add_result_df(temp_df)
     qtl_results_df = qtl_results_df.append(temp_df, ignore_index=True)
+
+output_writer.close()
 
 snp_df = pd.DataFrame()
 snp_df['snp_id'] = bim['snp']
