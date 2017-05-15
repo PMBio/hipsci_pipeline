@@ -33,7 +33,7 @@ class text_writer:
         self.outfile.close()
 
     def add_result_df(self,qtl_results_df):
-        qtl_results_df.loc[:,self.column_names].to_csv(self.outfile,header=None,mode='a',index=False)
+        qtl_results_df.loc[:,self.column_names].to_csv(self.outfile,header=None,mode='a',index=False,sep='\t')
 
        
         
