@@ -53,8 +53,6 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir,
         snp_idxs = cis['i'].values
         snp_names = cis['snp'].values
     
-        #make sure to only look up the non NA valued samples for this feature.
-        
         #indices for relevant individuals in genotype matrix
         individual_ids = list(set(fam.index)&set(individual2sample_df.index))
         individual_idxs = fam.loc[individual_ids,'i'].values
