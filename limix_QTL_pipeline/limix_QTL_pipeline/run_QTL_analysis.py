@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import limix
 import qtl_output
-
+import glob
 
 def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir,
                      covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
@@ -102,6 +102,21 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir,
     snp_df.to_csv(output_dir+'/snp_metadata.txt',sep='\t',index=False)
     annotation_df.to_csv(output_dir+'/feature_metadata.txt',sep='\t')
 
+def merge_QTL_results(results_dir):
+    '''Merge QTL results for individual chromosomes into a combined, indexed
+    hdf5 file.'''
+    qtl_results_files = glob.glob(results_dir+'/qtl_results_*.txt')
+    
+    hdf5_outfile = qtl_output.hdf5_writer(results_dir+'/qtl_results.h5')
+    
+    for filename in qtl_results_files:
+        df = pd.read_csv(filename,sep='\t')
+        hdf5_outfile.add_result_df(df)
+    
+    hdf5_outfile.close()
+
+
+
 if __name__=='__main__':
     '''Run a test case'''
     data_path = '../data/geuvadis_CEU_YRI_test_data/'
@@ -134,3 +149,4 @@ if __name__=='__main__':
     
     for chromosome in ['1','2']:
         run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir)
+    merge_QTL_results(output_dir)
