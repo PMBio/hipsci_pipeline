@@ -24,16 +24,20 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir,
     
     if kinship_filename:
         kinship_df = pd.read_csv(kinship_filename,sep='\t',index_col=0)
+    else:
+        kinship_df = None
     
     if covariates_filename:
         covariate_df = pd.read_csv(covariates_filename,sep='\t',index_col=0)
+    else:
+        covariate_df = None
     
-    if individual2sample_filename:
-        individual2sample_df = pd.read_csv(individual2sample_filename,sep='\t',header=None,names=['iid','sample'],index_col=0)
+    if sample_mapping_filename:
+        individual2sample_df = pd.read_csv(sample_mapping_filename,sep='\t',header=None,names=['iid','sample'],index_col=0)
     else:
         #assume the mapping is the identity mapping
         identifiers = list(phenotype_df.columns)
-        individual2sample_df = pd.DataFrame(data=[identifiers],index=identifiers,columns=['sample'])
+        individual2sample_df = pd.DataFrame(data=identifiers,index=identifiers,columns=['sample'])
     
     
     feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
@@ -118,3 +122,15 @@ if __name__=='__main__':
                      covariates_filename=covariates_filename,
                      kinship_filename=kinship_filename,
                      sample_mapping_filename=individual2sample_filename)
+
+    data_path = '../data/geuvadis_CEU_test_data/'
+    geno_prefix = data_path+'Genotypes/Geuvadis'
+    pheno_filename = data_path+'Expression/Geuvadis_CEU_Expr.txt'
+    anno_filename = data_path+'Expression/Geuvadis_CEU_formatted_annotation_data.txt'
+    
+    output_dir = data_path+'TestOutput/limix_QTL_results'
+        
+    ws = 250000
+    
+    for chromosome in ['1','2']:
+        run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir)
