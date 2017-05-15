@@ -45,6 +45,7 @@ qtl_results_df = pd.DataFrame(columns=['feature_id','snp_id','p_value','beta'])
 ws = 250000
 feature_list = list(set(annotation_df.index)&set(phenotype_df.index))
 
+
 for feature_id in feature_list:
     
     chrom = str(annotation_df.loc[feature_id,'chromosome'])
@@ -67,7 +68,7 @@ for feature_id in feature_list:
         continue
     snps = snps[individual_idxs,:]
 
-    if kinship_df:
+    if kinship_df is not None:
         kinship_mat = kinship_df.loc[individual_ids,individual_ids].as_matrix()
     else:
         kinship_mat = None
@@ -77,7 +78,7 @@ for feature_id in feature_list:
     phenotype = phenotype_df.loc[feature_id,sample_ids].as_matrix()
     
     #generate covariate matrix
-    if covariate_df:
+    if covariate_df is not None:
         cov_matrix = np.concatenate([np.ones((len(sample_ids),1)),covariate_df.loc[sample_ids,:].as_matrix()],axis=1)
     else:
         cov_matrix = None
