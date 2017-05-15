@@ -77,7 +77,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir,
             cov_matrix = None
         
         #fit modelrun
-        LMM = limix.qtl.qtl_test_lmm(snps, phenotype,K=kinship_mat)
+        LMM = limix.qtl.qtl_test_lmm(snps, phenotype,K=kinship_mat,covs=cov_matrix)
         
         #add these results to qtl_results
     
@@ -108,7 +108,7 @@ if __name__=='__main__':
     kinship_filename= data_path+'Geuvadis_chr1_kinship.txt'
     individual2sample_filename = data_path + 'Geuvadis_CEU_gte.txt'
     
-    output_dir = data_path+'limix_QTL_results'
+    output_dir = data_path+'limix_QTL_results_kinship_covs'
     
     chromosome = '1'
     
