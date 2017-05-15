@@ -3,7 +3,6 @@ import numpy as np
 import limix
 import qtl_output
 
-#def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
 
 data_path = '../data/geuvadis_CEU_YRI_test_data/'
 covariates_filename = data_path+'Geuvadis_CEU_YRI_covariates.txt'
@@ -16,6 +15,9 @@ individual2sample_filename = data_path + 'Geuvadis_CEU_gte.txt'
 output_dir = data_path+'limix_QTL_results'
 
 chromosome = '1'
+
+
+#def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
 
 
 phenotype_df = pd.read_csv(pheno_filename,sep='\t',index_col=0)
@@ -47,8 +49,6 @@ else:
     #assume the mapping is the identity mapping
     identifiers = list(phenotype_df.columns)
     individual2sample_df = pd.DataFrame(data=[identifiers],index=identifiers,columns=['sample'])
-
-qtl_results_df = pd.DataFrame(columns=['feature_id','snp_id','p_value','beta'])
 
 
 ws = 250000
@@ -103,7 +103,6 @@ for feature_id in feature_list:
     temp_df['beta'] = LMM.getBetaSNP()[0]
     temp_df['p_value'] = LMM.getPv()[0]
     output_writer.add_result_df(temp_df)
-    qtl_results_df = qtl_results_df.append(temp_df, ignore_index=True)
 
 output_writer.close()
 
@@ -114,4 +113,3 @@ snp_df['position'] = bim['pos']
 
 snp_df.to_csv(output_dir+'/snp_metadata.txt',sep='\t',index=False)
 annotation_df.to_csv(output_dir+'/feature_metadata.txt',sep='\t')
-qtl_results_df.to_csv(output_dir+'/qtl_results.csv',sep='\t',index=False)
