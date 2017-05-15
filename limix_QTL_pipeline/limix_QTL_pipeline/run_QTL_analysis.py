@@ -19,8 +19,8 @@ phenotype_df = pd.read_csv(pheno_filename,sep='\t',index_col=0)
 annotation_df = pd.read_csv(anno_filename,sep='\t',index_col=0)
 
 
-output_writer = qtl_output.hdf5_writer(output_dir+'/qtl_results.h5')
-
+#output_writer = qtl_output.hdf5_writer(output_dir+'/qtl_results.h5')
+output_writer = qtl_output.text_writer(output_dir+'/qtl_results.txt')
 
 bim,fam,bed = limix.io.read_plink(geno_prefix,verbose=False)
 fam.set_index('iid',inplace=True)
@@ -93,4 +93,4 @@ snp_df['position'] = bim['pos']
 
 snp_df.to_csv(output_dir+'/snp_metadata.txt',sep='\t',index=False)
 annotation_df.to_csv(output_dir+'/feature_metadata.txt',sep='\t')
-qtl_results_df.to_csv(output_dir+'/qtl_results.txt',sep='\t',index=False)
+qtl_results_df.to_csv(output_dir+'/qtl_results.csv',sep='\t',index=False)

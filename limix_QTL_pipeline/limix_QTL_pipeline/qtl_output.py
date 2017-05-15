@@ -19,7 +19,23 @@ class hdf5_writer:
                 qtl_result[col_name] = df_row[col_name]
             qtl_result.append()
         self.table.flush()
-        
+ 
+class text_writer:
+
+    def __init__(self,output_filename):
+        self.column_names = ['feature_id','snp_id','p_value','beta']
+        with open(output_filename,'w') as f:
+            header = '\t'.join(self.column_names)
+            f.write(header+'\n')
+        self.outfile = open(output_filename,'a')
+
+    def close(self):
+        self.outfile.close()
+
+    def add_result_df(self,qtl_results_df):
+        qtl_results_df.loc[:,self.column_names].to_csv(self.outfile,header=None,mode='a',index=False)
+
+       
         
 class QTL_result_hdf5(tables.IsDescription):
     feature_id = tables.StringCol(16)   # 16-character String
