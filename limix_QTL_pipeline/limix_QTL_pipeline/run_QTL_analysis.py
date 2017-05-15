@@ -11,6 +11,7 @@ geno_prefix = data_path+'Geuvadis_chr1'
 pheno_filename = data_path+'Geuvadis_CEU_YRI_Expr.txt'
 anno_filename = data_path+'Geuvadis_CEU_YRI_formatted_annotation_data.txt'
 kinship_filename= data_path+'Geuvadis_chr1_kinship.txt'
+individual2sample_filename = data_path + 'Geuvadis_CEU_gte.txt'
 
 output_dir = data_path+'limix_QTL_results'
 
@@ -30,8 +31,13 @@ if kinship_filename:
 
 if covariates_filename:
     covariate_df = pd.read_csv(covariates_filename,sep='\t',index_col=0)
- 
-individual2sample_df = pd.read_csv('../data/geuvadis_CEU_YRI_test_data/Geuvadis_CEU_gte.txt',sep='\t',header=None,names=['iid','sample'],index_col=0)
+
+if individual2sample_filename:
+    individual2sample_df = pd.read_csv(individual2sample_filename,sep='\t',header=None,names=['iid','sample'],index_col=0)
+else:
+    #assume the mapping is the identity mapping
+    identifiers = list(phenotype_df.columns)
+    individual2sample_df = pd.DataFrame(data=[identifiers],index=identifiers,columns=['sample'])
 
 qtl_results_df = pd.DataFrame(columns=['feature_id','snp_id','p_value','beta'])
 
@@ -60,16 +66,21 @@ for feature_id in feature_list:
     if len(snps) == 0:
         continue
     snps = snps[individual_idxs,:]
-    
-    kinship_mat = kinship_df.loc[individual_ids,individual_ids].as_matrix()
+
+    if kinship_df:
+        kinship_mat = kinship_df.loc[individual_ids,individual_ids].as_matrix()
+    else:
+        kinship_mat = None
 
     #map individual_ids to samples
     sample_ids = individual2sample_df.loc[individual_ids,'sample'].values
     phenotype = phenotype_df.loc[feature_id,sample_ids].as_matrix()
     
-    
     #generate covariate matrix
-    cov_matrix = np.concatenate([np.ones((len(sample_ids),1)),covariate_df.loc[sample_ids,:].as_matrix()],axis=1)
+    if covariate_df:
+        cov_matrix = np.concatenate([np.ones((len(sample_ids),1)),covariate_df.loc[sample_ids,:].as_matrix()],axis=1)
+    else:
+        cov_matrix = None
     
     #fit modelrun
     LMM = limix.qtl.qtl_test_lmm(snps, phenotype,K=kinship_mat)
