@@ -15,13 +15,22 @@ individual2sample_filename = data_path + 'Geuvadis_CEU_gte.txt'
 
 output_dir = data_path+'limix_QTL_results'
 
+chromosome = '1'
+
 
 phenotype_df = pd.read_csv(pheno_filename,sep='\t',index_col=0)
-annotation_df = pd.read_csv(anno_filename,sep='\t',index_col=0)
+annotation_col_dtypes = {'feature_id':np.object,
+                         'gene_id':np.object,
+                         'gene_name':np.object,
+                         'chromosome':np.object,
+                         'start':np.int64,
+                         'end':np.int64,
+                         'strand':np.object}
+annotation_df = pd.read_csv(anno_filename,sep='\t',index_col=0,dtype=annotation_col_dtypes)
 
 
-#output_writer = qtl_output.hdf5_writer(output_dir+'/qtl_results.h5')
-output_writer = qtl_output.text_writer(output_dir+'/qtl_results.txt')
+#output_writer = qtl_output.hdf5_writer(output_dir+'/qtl_results_{}.h5'.format(chromosome))
+output_writer = qtl_output.text_writer(output_dir+'/qtl_results_{}.txt'.format(chromosome))
 
 bim,fam,bed = limix.io.read_plink(geno_prefix,verbose=False)
 fam.set_index('iid',inplace=True)
@@ -43,7 +52,7 @@ qtl_results_df = pd.DataFrame(columns=['feature_id','snp_id','p_value','beta'])
 
 
 ws = 250000
-feature_list = list(set(annotation_df.index)&set(phenotype_df.index))
+feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
 
 
 for feature_id in feature_list:
