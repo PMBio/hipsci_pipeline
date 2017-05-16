@@ -4,6 +4,7 @@ import limix
 import qtl_output
 import glob
 import os
+from sklearn.preprocessing import Imputer
 
 def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output_dir,
                      covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
@@ -64,6 +65,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
         if len(snps) == 0:
             continue
         snp_matrix = snps[:,individual_idxs].transpose()
+        snp_matrix = Imputer(missing_values=3.,strategy='mean',axis=0,copy=False).fit_transform(snp_matrix)
     
         if kinship_df is not None:
             kinship_mat = kinship_df.loc[individual_ids,individual_ids].as_matrix()
