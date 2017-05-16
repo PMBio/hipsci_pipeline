@@ -61,7 +61,6 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir,
         snps = bed[snp_idxs,:].compute()
         if len(snps) == 0:
             continue
-        snps = mean_impute_missing_genotypes(snps)
         snp_matrix = snps[:,individual_idxs].transpose()
     
         if kinship_df is not None:
@@ -113,29 +112,6 @@ def merge_QTL_results(results_dir):
         hdf5_outfile.add_result_df(df)
     
     hdf5_outfile.close()
-
-
-def mean_impute_missing_genotypes(snps):
-    '''
-    Mean-imputes missing genotypes, assuming missing values ==3.
-    Takes input snp matrix of shape (S,N) (SNPs by individuals).
-    
-    >>> snp_matrix = np.array([[0,1,2,2,2,3],
-    ...               [2,3,3,2,2,2],
-    ...               [0,0,0,3,3,3]])
-    >>> mean_impute_missing_genotypes(snp_matrix)
-    array([[ 0. ,  1. ,  2. ,  2. ,  2. ,  1.4],
-           [ 2. ,  2. ,  2. ,  2. ,  2. ,  2. ],
-           [ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ]])
-    '''
-    
-    rows = []
-    for row in snps:
-        row = row.astype(float)
-        mean_genotype = np.mean([x for x in row if not x==3])
-        np.place(row, row==3, mean_genotype)
-        rows.append(row)
-    return np.array(rows)
 
     
 if __name__=='__main__':
