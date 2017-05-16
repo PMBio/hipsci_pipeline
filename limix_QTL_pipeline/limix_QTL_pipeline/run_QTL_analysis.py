@@ -6,7 +6,7 @@ import glob
 import os
 from sklearn.preprocessing import Imputer
 
-def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output_dir,
+def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromsome,window_size,output_dir,
                      covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
     '''Core function to take input and run QTL tests on a given chromosome.'''
     
@@ -145,7 +145,7 @@ if __name__=='__main__':
     
     ws = 250000
     
-    run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir,
+    run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,ws,output_dir,
                      covariates_filename=covariates_filename,
                      kinship_filename=kinship_filename,
                      sample_mapping_filename=individual2sample_filename)
@@ -160,5 +160,5 @@ if __name__=='__main__':
     ws = 250000
     
     for chromosome in ['1','2']:
-        run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir)
+        run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,ws,output_dir)
     merge_QTL_results(output_dir)
