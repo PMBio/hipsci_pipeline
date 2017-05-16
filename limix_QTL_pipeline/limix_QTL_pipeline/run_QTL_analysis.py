@@ -5,7 +5,7 @@ import qtl_output
 import glob
 import os
 
-def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir,
+def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output_dir,
                      covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
     
     phenotype_df = pd.read_csv(pheno_filename,sep='\t',index_col=0)
@@ -51,7 +51,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir,
         start = annotation_df.loc[feature_id,'start']
         end = annotation_df.loc[feature_id,'end']
         center_pos = start + (start-end)/2
-        cis = bim.query("chrom == '%s' & pos > %d & pos < %d" % (chrom, center_pos-ws, center_pos+ws))
+        cis = bim.query("chrom == '%s' & pos > %d & pos < %d" % (chrom, center_pos-window_size, center_pos+window_size))
         snp_idxs = cis['i'].values
         snp_names = cis['snp'].values
     
