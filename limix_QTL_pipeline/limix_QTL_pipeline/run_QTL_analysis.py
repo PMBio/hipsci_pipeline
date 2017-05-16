@@ -5,6 +5,35 @@ import qtl_output
 import glob
 import os
 from sklearn.preprocessing import Imputer
+import argparse
+
+
+def get_args():
+    parser = argparse.ArgumentParser(description='Run QTL analysis given genotype, phenotype, and annotation.')
+    parser.add_argument('-geno_prefix','--geno_prefix', required=True)
+    parser.add_argument('-anno_file','--anno_file', required=True)
+    parser.add_argument('-pheno_file','--pheno_file', required=True)
+    parser.add_argument('-output_dir','--output_dir', required=True)
+    parser.add_argument('-cis_window_kb','--cis_window_kb', required=True)
+    parser.add_argument('-chromosome','--chromosome',required=True)
+    parser.add_argument('-covariates_file','--covariates_file',required=False)
+    parser.add_argument('-kinship_file','--kinship_file',required=False)
+    parser.add_argument('-samplemap_file','--samplemap_file',required=False)
+    args = parser.parse_args()
+
+    geno_prefix = args.geno_prefix
+    anno_file = args.anno_file
+    pheno_file = args.pheno_file
+    output_dir = args.output_dir
+    cis_window_kb = args.cis_window_kb
+    chromosome = args.chromosome
+    covariates_file = args.covariates_file
+    kinship_file = args.kinship_file
+    samplemap_file = args.samplemap_file
+
+    return (geno_prefix, anno_file, pheno_file, output_dir, cis_window_kb,
+            chromosome, covariates_file, kinship_file,samplemap_file)
+
 
 def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,window_size,output_dir,
                      covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
@@ -128,3 +157,13 @@ def _ensure_dir(file_path):
     directory = os.path.dirname(file_path)
     if not os.path.exists(directory):
         os.makedirs(directory)
+        
+
+if __name__=='__main__':
+    (geno_prefix, anno_file, pheno_file, output_dir, cis_window_kb, chromosome,
+     covariates_file, kinship_file, samplemap_file ) = get_args()
+    window_size = cis_window_kb*1000
+    run_QTL_analysis(pheno_file,anno_file,geno_prefix,chromosome,window_size,output_dir,
+                     covariates_filename=covariates_file,
+                     kinship_filename=kinship_file,
+                     sample_mapping_filename=samplemap_file)
