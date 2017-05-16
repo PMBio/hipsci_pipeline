@@ -6,9 +6,12 @@ import glob
 import os
 from sklearn.preprocessing import Imputer
 
-def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output_dir,
+def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,window_size,output_dir,
                      covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
+    '''Core function to take input and run QTL tests on a given chromosome.'''
     
+    
+    #Load input data files    
     phenotype_df = pd.read_csv(pheno_filename,sep='\t',index_col=0)
     annotation_col_dtypes = {'feature_id':np.object,
                              'gene_id':np.object,
@@ -18,10 +21,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
                              'end':np.int64,
                              'strand':np.object}
     annotation_df = pd.read_csv(anno_filename,sep='\t',index_col=0,dtype=annotation_col_dtypes)
-    
-    _ensure_dir(output_dir)
-    output_writer = qtl_output.text_writer(output_dir+'qtl_results_{}.txt'.format(chromosome))
-    
+        
     bim,fam,bed = limix.io.read_plink(geno_prefix,verbose=False)
     fam.set_index('iid',inplace=True)
     
@@ -41,11 +41,16 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
         #assume the mapping is the identity mapping
         identifiers = list(phenotype_df.columns)
         individual2sample_df = pd.DataFrame(data=identifiers,index=identifiers,columns=['sample'])
+
+    #Open output files
+    _ensure_dir(output_dir)
+    output_writer = qtl_output.text_writer(output_dir+'qtl_results_{}.txt'.format(chromosome))
+
     
-    
+    #Determine features to be tested
     feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
     
-    
+    #Test features
     for feature_id in feature_list:
         
         chrom = str(annotation_df.loc[feature_id,'chromosome'])
@@ -96,6 +101,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
     
     output_writer.close()
     
+    #write annotation and snp data to file
     snp_df = pd.DataFrame()
     snp_df['snp_id'] = bim['snp']
     snp_df['chromosome'] = bim['chrom']
@@ -107,7 +113,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
 def merge_QTL_results(results_dir):
     '''Merge QTL results for individual chromosomes into a combined, indexed
     hdf5 file.'''
-    qtl_results_files = glob.glob(results_dir+'qtl_results_*.txt')
+    qtl_results_files = sorted(glob.glob(results_dir+'qtl_results_*.txt'))
     
     hdf5_outfile = qtl_output.hdf5_writer(results_dir+'qtl_results.h5')
     
@@ -122,37 +128,3 @@ def _ensure_dir(file_path):
     directory = os.path.dirname(file_path)
     if not os.path.exists(directory):
         os.makedirs(directory)
-    
-if __name__=='__main__':
-    '''Run a test case'''
-    data_path = '../data/geuvadis_CEU_YRI_test_data/'
-    covariates_filename = data_path+'Geuvadis_CEU_YRI_covariates.txt'
-    geno_prefix = data_path+'Geuvadis_chr1'
-    pheno_filename = data_path+'Geuvadis_CEU_YRI_Expr.txt'
-    anno_filename = data_path+'Geuvadis_CEU_YRI_formatted_annotation_data.txt'
-    kinship_filename= data_path+'Geuvadis_chr1_kinship.txt'
-    individual2sample_filename = data_path + 'Geuvadis_CEU_gte.txt'
-    
-    output_dir = data_path+'limix_QTL_results_kinship_covs/'
-    
-    chromosome = '1'
-    
-    ws = 250000
-    
-    run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir,
-                     covariates_filename=covariates_filename,
-                     kinship_filename=kinship_filename,
-                     sample_mapping_filename=individual2sample_filename)
-
-    data_path = '../data/geuvadis_CEU_test_data/'
-    geno_prefix = data_path+'Genotypes/Geuvadis'
-    pheno_filename = data_path+'Expression/Geuvadis_CEU_Expr.txt'
-    anno_filename = data_path+'Expression/Geuvadis_CEU_formatted_annotation_data.txt'
-    
-    output_dir = data_path+'TestOutput/limix_QTL_results/'
-        
-    ws = 250000
-    
-    for chromosome in ['1','2']:
-        run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir)
-    merge_QTL_results(output_dir)
