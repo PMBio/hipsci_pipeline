@@ -6,7 +6,7 @@ import glob
 import os
 from sklearn.preprocessing import Imputer
 
-def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromsome,window_size,output_dir,
+def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,window_size,output_dir,
                      covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
     '''Core function to take input and run QTL tests on a given chromosome.'''
     
@@ -113,7 +113,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromsome,window_s
 def merge_QTL_results(results_dir):
     '''Merge QTL results for individual chromosomes into a combined, indexed
     hdf5 file.'''
-    qtl_results_files = glob.glob(results_dir+'qtl_results_*.txt')
+    qtl_results_files = sorted(glob.glob(results_dir+'qtl_results_*.txt'))
     
     hdf5_outfile = qtl_output.hdf5_writer(results_dir+'qtl_results.h5')
     
