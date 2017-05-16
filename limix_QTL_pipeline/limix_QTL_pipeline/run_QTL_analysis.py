@@ -8,7 +8,10 @@ from sklearn.preprocessing import Imputer
 
 def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output_dir,
                      covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
+    '''Core function to take input and run QTL tests on a given chromosome.'''
     
+    
+    #Load input data files    
     phenotype_df = pd.read_csv(pheno_filename,sep='\t',index_col=0)
     annotation_col_dtypes = {'feature_id':np.object,
                              'gene_id':np.object,
@@ -18,10 +21,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
                              'end':np.int64,
                              'strand':np.object}
     annotation_df = pd.read_csv(anno_filename,sep='\t',index_col=0,dtype=annotation_col_dtypes)
-    
-    _ensure_dir(output_dir)
-    output_writer = qtl_output.text_writer(output_dir+'qtl_results_{}.txt'.format(chromosome))
-    
+        
     bim,fam,bed = limix.io.read_plink(geno_prefix,verbose=False)
     fam.set_index('iid',inplace=True)
     
@@ -41,11 +41,16 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
         #assume the mapping is the identity mapping
         identifiers = list(phenotype_df.columns)
         individual2sample_df = pd.DataFrame(data=identifiers,index=identifiers,columns=['sample'])
+
+    #Open output files
+    _ensure_dir(output_dir)
+    output_writer = qtl_output.text_writer(output_dir+'qtl_results_{}.txt'.format(chromosome))
+
     
-    
+    #Determine features to be tested
     feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
     
-    
+    #Test features
     for feature_id in feature_list:
         
         chrom = str(annotation_df.loc[feature_id,'chromosome'])
@@ -96,6 +101,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
     
     output_writer.close()
     
+    #write annotation and snp data to file
     snp_df = pd.DataFrame()
     snp_df['snp_id'] = bim['snp']
     snp_df['chromosome'] = bim['chrom']
