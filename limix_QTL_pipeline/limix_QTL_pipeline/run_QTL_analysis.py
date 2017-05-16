@@ -3,6 +3,7 @@ import numpy as np
 import limix
 import qtl_output
 import glob
+import os
 
 def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir,
                      covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
@@ -17,7 +18,8 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir,
                              'strand':np.object}
     annotation_df = pd.read_csv(anno_filename,sep='\t',index_col=0,dtype=annotation_col_dtypes)
     
-    output_writer = qtl_output.text_writer(output_dir+'/qtl_results_{}.txt'.format(chromosome))
+    _ensure_dir(output_dir)
+    output_writer = qtl_output.text_writer(output_dir+'qtl_results_{}.txt'.format(chromosome))
     
     bim,fam,bed = limix.io.read_plink(geno_prefix,verbose=False)
     fam.set_index('iid',inplace=True)
@@ -103,9 +105,9 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir,
 def merge_QTL_results(results_dir):
     '''Merge QTL results for individual chromosomes into a combined, indexed
     hdf5 file.'''
-    qtl_results_files = glob.glob(results_dir+'/qtl_results_*.txt')
+    qtl_results_files = glob.glob(results_dir+'qtl_results_*.txt')
     
-    hdf5_outfile = qtl_output.hdf5_writer(results_dir+'/qtl_results.h5')
+    hdf5_outfile = qtl_output.hdf5_writer(results_dir+'qtl_results.h5')
     
     for filename in qtl_results_files:
         df = pd.read_csv(filename,sep='\t')
@@ -113,6 +115,11 @@ def merge_QTL_results(results_dir):
     
     hdf5_outfile.close()
 
+def _ensure_dir(file_path):
+    '''Check if directory exists for output, and create it if it doesn't.'''
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     
 if __name__=='__main__':
     '''Run a test case'''
@@ -124,7 +131,7 @@ if __name__=='__main__':
     kinship_filename= data_path+'Geuvadis_chr1_kinship.txt'
     individual2sample_filename = data_path + 'Geuvadis_CEU_gte.txt'
     
-    output_dir = data_path+'limix_QTL_results_kinship_covs'
+    output_dir = data_path+'limix_QTL_results_kinship_covs/'
     
     chromosome = '1'
     
@@ -140,7 +147,7 @@ if __name__=='__main__':
     pheno_filename = data_path+'Expression/Geuvadis_CEU_Expr.txt'
     anno_filename = data_path+'Expression/Geuvadis_CEU_formatted_annotation_data.txt'
     
-    output_dir = data_path+'TestOutput/limix_QTL_results'
+    output_dir = data_path+'TestOutput/limix_QTL_results/'
         
     ws = 250000
     
