@@ -4,6 +4,7 @@
 from run_QTL_analysis import run_QTL_analysis,merge_QTL_results
 from hashlib import md5
 import subprocess
+import pycksum
 
 if __name__=='__main__':
     '''Run a test case'''
@@ -18,21 +19,21 @@ if __name__=='__main__':
     output_dir = data_path+'limix_QTL_results_kinship_covs/'
     
     chromosome = '1'
-    
-    ws = 250000
+
+    cis_window_kb = 250    
+    ws = cis_window_kb*1000
     
     run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,ws,output_dir,
                      covariates_filename=covariates_filename,
                      kinship_filename=kinship_filename,
                      sample_mapping_filename=individual2sample_filename)
 
-    results_md5_dict = {output_dir+'qtl_results_1.txt':'4e269da9c707b7b5a73cfc6effcdf45f'}
-    for f in results_md5_dict.keys():
-        assert(md5(f).hexdigest()==results_md5_dict[f])
+    results_cksum_dict = {output_dir+'qtl_results_1.txt':1367243178}
+    for f in results_cksum_dict.keys():
+        assert(pycksum.cksum(open(f,'r'))==results_cksum_dict[f])
 
 
     output_dir = data_path+'limix_QTL_results_kinship_covs_cmd_line/'
-    cis_window_kb = 250
     subprocess.call('python run_QTL_analysis.py '
                     '--geno_prefix {geno_prefix} '
                     '--anno_file {anno_file} '
@@ -55,10 +56,9 @@ if __name__=='__main__':
                             ),
                     shell=True)
 
-#    results_md5_dict = {output_dir+'qtl_results_1.txt':'4e269da9c707b7b5a73cfc6effcdf45f'}
-#    for f in results_md5_dict.keys():
-#        assert(md5(f).hexdigest()==results_md5_dict[f])
-
+    #re-use the cksum dict from above - these cases should be identical
+    for f in results_cksum_dict.keys():
+        assert(pycksum.cksum(open(f,'r'))==results_cksum_dict[f])
         
 
     data_path = '../data/geuvadis_CEU_test_data/'
@@ -74,7 +74,7 @@ if __name__=='__main__':
         run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,ws,output_dir)
     merge_QTL_results(output_dir)
     
-    results_md5_dict = {output_dir+'qtl_results_1.txt':'a7429ca50ac531c79f3626616f079f91',
-                        output_dir+'qtl_results_2.txt':'f2423bbe8605a98d614372d62e3671c3'}
-    for f in results_md5_dict.keys():
-        assert(md5(f).hexdigest()==results_md5_dict[f])
+    results_cksum_dict = {output_dir+'qtl_results_1.txt':1422162382,
+                        output_dir+'qtl_results_2.txt':1802823894}
+    for f in results_cksum_dict.keys():
+        assert(pycksum.cksum(open(f,'r'))==results_cksum_dict[f])
