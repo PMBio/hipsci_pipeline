@@ -21,18 +21,7 @@ def get_args():
     parser.add_argument('-samplemap_file','--samplemap_file',required=False)
     args = parser.parse_args()
 
-    geno_prefix = args.geno_prefix
-    anno_file = args.anno_file
-    pheno_file = args.pheno_file
-    output_dir = args.output_dir
-    cis_window_kb = args.cis_window_kb
-    chromosome = args.chromosome
-    covariates_file = args.covariates_file
-    kinship_file = args.kinship_file
-    samplemap_file = args.samplemap_file
-
-    return (geno_prefix, anno_file, pheno_file, output_dir, cis_window_kb,
-            chromosome, covariates_file, kinship_file,samplemap_file)
+    return args
 
 
 def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,window_size,output_dir,
@@ -160,9 +149,19 @@ def _ensure_dir(file_path):
         
 
 if __name__=='__main__':
-    (geno_prefix, anno_file, pheno_file, output_dir, cis_window_kb, chromosome,
-     covariates_file, kinship_file, samplemap_file ) = get_args()
+    args = get_args()
+    geno_prefix = args.geno_prefix
+    anno_file = args.anno_file
+    pheno_file = args.pheno_file
+    output_dir = args.output_dir
+    cis_window_kb = args.cis_window_kb
+    chromosome = args.chromosome
+    covariates_file = args.covariates_file
+    kinship_file = args.kinship_file
+    samplemap_file = args.samplemap_file
+
     window_size = cis_window_kb*1000
+
     run_QTL_analysis(pheno_file,anno_file,geno_prefix,chromosome,window_size,output_dir,
                      covariates_filename=covariates_file,
                      kinship_filename=kinship_file,
