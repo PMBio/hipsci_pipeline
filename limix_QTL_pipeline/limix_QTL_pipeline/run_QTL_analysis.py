@@ -124,6 +124,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,window_
     snp_df['snp_id'] = bim['snp']
     snp_df['chromosome'] = bim['chrom']
     snp_df['position'] = bim['pos']
+    snp_df['assessed_allele'] = bim['a1']
     
     snp_df.to_csv(output_dir+'/snp_metadata.txt',sep='\t',index=False)
     annotation_df.to_csv(output_dir+'/feature_metadata.txt',sep='\t')
