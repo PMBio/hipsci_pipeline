@@ -160,7 +160,7 @@ if __name__=='__main__':
     kinship_file = args.kinship_file
     samplemap_file = args.samplemap_file
 
-    window_size = cis_window_kb*1000
+    window_size = int(cis_window_kb)*1000
 
     run_QTL_analysis(pheno_file,anno_file,geno_prefix,chromosome,window_size,output_dir,
                      covariates_filename=covariates_file,

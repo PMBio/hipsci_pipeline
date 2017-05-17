@@ -3,6 +3,7 @@
 
 from run_QTL_analysis import run_QTL_analysis,merge_QTL_results
 from hashlib import md5
+import subprocess
 
 if __name__=='__main__':
     '''Run a test case'''
@@ -29,6 +30,36 @@ if __name__=='__main__':
     for f in results_md5_dict.keys():
         assert(md5(f).hexdigest()==results_md5_dict[f])
 
+
+    output_dir = data_path+'limix_QTL_results_kinship_covs_cmd_line/'
+    cis_window_kb = 250
+    subprocess.call('python run_QTL_analysis.py '
+                    '--geno_prefix {geno_prefix} '
+                    '--anno_file {anno_file} '
+                    '--pheno_file {pheno_file} '
+                    '--output_dir {output_dir} '
+                    '--cis_window_kb {cis_window_kb} '
+                    '--chromosome {chromosome} '
+                    '--covariates_file {covariates_file} '
+                    '--kinship_file {kinship_file} '
+                    '--samplemap_file {samplemap_file} '
+                    .format(geno_prefix=geno_prefix,
+                            anno_file=anno_filename,
+                            pheno_file=pheno_filename,
+                            output_dir=output_dir,
+                            cis_window_kb=cis_window_kb,
+                            chromosome=chromosome,
+                            covariates_file=covariates_filename,
+                            kinship_file=kinship_filename,
+                            samplemap_file=individual2sample_filename
+                            ),
+                    shell=True)
+
+#    results_md5_dict = {output_dir+'qtl_results_1.txt':'4e269da9c707b7b5a73cfc6effcdf45f'}
+#    for f in results_md5_dict.keys():
+#        assert(md5(f).hexdigest()==results_md5_dict[f])
+
+        
 
     data_path = '../data/geuvadis_CEU_test_data/'
     geno_prefix = data_path+'Genotypes/Geuvadis'
