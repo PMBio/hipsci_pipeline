@@ -12,7 +12,7 @@ class hdf5_writer:
         self.h5file.close()
 
     def add_result_df(self,qtl_results_df):
-        column_names = ['feature_id','snp_id','p_value','beta']
+        column_names = ['feature_id','snp_id','p_value','beta','n_samples']
         qtl_result = self.table.row
         for idx,df_row in qtl_results_df.iterrows():
             for col_name in column_names:
@@ -23,7 +23,7 @@ class hdf5_writer:
 class text_writer:
 
     def __init__(self,output_filename):
-        self.column_names = ['feature_id','snp_id','p_value','beta']
+        self.column_names = ['feature_id','snp_id','p_value','beta','n_samples']
         with open(output_filename,'w') as f:
             header = '\t'.join(self.column_names)
             f.write(header+'\n')
@@ -42,3 +42,4 @@ class QTL_result_hdf5(tables.IsDescription):
     snp_id  = tables.StringCol(16)   # 16-character String
     p_value = tables.Float64Col()    # double (double-precision)
     beta = tables.Float64Col()    # double (double-precision)
+    n_samples = tables.Int32Col()    # integer

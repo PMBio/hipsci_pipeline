@@ -110,11 +110,12 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,window_
         
         #add these results to qtl_results
     
-        temp_df = pd.DataFrame(index = range(len(snp_names)),columns=['feature_id','snp_id','p_value','beta'])
+        temp_df = pd.DataFrame(index = range(len(snp_names)),columns=['feature_id','snp_id','p_value','beta','n_samples'])
         temp_df['snp_id'] = snp_names
         temp_df['feature_id'] = feature_id
         temp_df['beta'] = LMM.getBetaSNP()[0]
         temp_df['p_value'] = LMM.getPv()[0]
+        temp_df['n_samples'] = sum(~np.isnan(phenotype))
         output_writer.add_result_df(temp_df)
     
     output_writer.close()
