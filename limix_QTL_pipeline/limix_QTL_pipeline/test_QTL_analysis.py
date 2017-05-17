@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from run_QTL_analysis import run_QTL_analysis,merge_QTL_results
-from hashlib import md5
 import subprocess
 import pycksum
 
