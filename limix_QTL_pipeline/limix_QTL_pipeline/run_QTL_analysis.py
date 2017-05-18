@@ -30,41 +30,17 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,window_
     
     
     #Load input data files    
-    phenotype_df = pd.read_csv(pheno_filename,sep='\t',index_col=0)
-    annotation_col_dtypes = {'feature_id':np.object,
-                             'gene_id':np.object,
-                             'gene_name':np.object,
-                             'chromosome':np.object,
-                             'start':np.int64,
-                             'end':np.int64,
-                             'strand':np.object}
-    annotation_df = pd.read_csv(anno_filename,sep='\t',index_col=0,dtype=annotation_col_dtypes)
-        
-    bim,fam,bed = limix.io.read_plink(geno_prefix,verbose=False)
-    fam.set_index('iid',inplace=True)
-    
-    if kinship_filename:
-        kinship_df = pd.read_csv(kinship_filename,sep='\t',index_col=0)
-    else:
-        kinship_df = None
-    
-    if covariates_filename:
-        covariate_df = pd.read_csv(covariates_filename,sep='\t',index_col=0)
-    else:
-        covariate_df = None
-    
-    if sample_mapping_filename:
-        individual2sample_df = pd.read_csv(sample_mapping_filename,sep='\t',header=None,names=['iid','sample'],index_col=0)
-    else:
-        #assume the mapping is the identity mapping
-        identifiers = list(phenotype_df.columns)
-        individual2sample_df = pd.DataFrame(data=identifiers,index=identifiers,columns=['sample'])
+    phenotype_df = _get_phenotype_df(pheno_filename)
+    annotation_df = _get_annotation_df(anno_filename)
+    bim,fam,bed = _get_genotype_data(geno_prefix)
+    kinship_df = _get_kinship_df(kinship_filename)    
+    covariate_df = _get_covariate_df(covariates_filename)
+    individual2sample_df = _get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns))
 
     #Open output files
     _ensure_dir(output_dir)
     output_writer = qtl_output.text_writer(output_dir+'qtl_results_{}.txt'.format(chromosome))
 
-    
     #Determine features to be tested
     feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
     
@@ -148,7 +124,48 @@ def _ensure_dir(file_path):
     directory = os.path.dirname(file_path)
     if not os.path.exists(directory):
         os.makedirs(directory)
-        
+
+def _get_kinship_df(kinship_filename):
+    if kinship_filename:
+        kinship_df = pd.read_csv(kinship_filename,sep='\t',index_col=0)
+    else:
+        kinship_df = None
+    return kinship_df
+
+def _get_samplemapping_df(sample_mapping_filename,sample_labels):
+    if sample_mapping_filename:
+        individual2sample_df = pd.read_csv(sample_mapping_filename,sep='\t',header=None,names=['iid','sample'],index_col=0)
+    else:
+        #assume the mapping is the identity mapping
+        identifiers = sample_labels
+        individual2sample_df = pd.DataFrame(data=identifiers,index=identifiers,columns=['sample'])
+    return individual2sample_df
+
+def _get_covariate_df(covariates_filename):
+    if covariates_filename:
+        covariate_df = pd.read_csv(covariates_filename,sep='\t',index_col=0)
+    else:
+        covariate_df = None
+    return covariate_df
+
+def _get_genotype_data(geno_prefix):
+    bim,fam,bed = limix.io.read_plink(geno_prefix,verbose=False)
+    fam.set_index('iid',inplace=True)
+    return bim,fam,bed
+
+def _get_annotation_df(anno_filename):
+    annotation_col_dtypes = {'feature_id':np.object,
+                         'gene_id':np.object,
+                         'gene_name':np.object,
+                         'chromosome':np.object,
+                         'start':np.int64,
+                         'end':np.int64,
+                         'strand':np.object}
+    annotation_df = pd.read_csv(anno_filename,sep='\t',index_col=0,dtype=annotation_col_dtypes)
+    return annotation_df
+
+def _get_phenotype_df(pheno_filename):
+    return pd.read_csv(pheno_filename,sep='\t',index_col=0)
 
 if __name__=='__main__':
     args = get_args()
