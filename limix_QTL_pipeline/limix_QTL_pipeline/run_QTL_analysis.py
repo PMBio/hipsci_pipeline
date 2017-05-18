@@ -44,6 +44,9 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,window_
     #Determine features to be tested
     feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
     
+    #Array to store indices of snps tested
+    tested_snp_idxs = []
+    
     #Test features
     for feature_id in feature_list:
         
@@ -54,7 +57,9 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,window_
         cis = bim.query("chrom == '%s' & pos > %d & pos < %d" % (chrom, center_pos-window_size, center_pos+window_size))
         snp_idxs = cis['i'].values
         snp_names = cis['snp'].values
-    
+        
+        tested_snp_idxs.extend(snp_idxs)
+        
         #indices for relevant individuals in genotype matrix
         individual_ids = list(set(fam.index)&set(individual2sample_df.index))
         individual_idxs = fam.loc[individual_ids,'i'].values
@@ -96,6 +101,8 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,window_
     
     output_writer.close()
     
+    #gather unique indexes of tested snps
+    tested_snp_idxs = list(set(tested_snp_idxs))
     #write annotation and snp data to file
     snp_df = pd.DataFrame()
     snp_df['snp_id'] = bim['snp']
@@ -103,8 +110,8 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,window_
     snp_df['position'] = bim['pos']
     snp_df['assessed_allele'] = bim['a1']
     
-    snp_df.to_csv(output_dir+'/snp_metadata.txt',sep='\t',index=False)
-    annotation_df.to_csv(output_dir+'/feature_metadata.txt',sep='\t')
+    snp_df.ix[tested_snp_idxs,:].to_csv(output_dir+'/snp_metadata_{}.txt'.format(chromosome),sep='\t',index=False)
+    annotation_df.loc[feature_list,:].to_csv(output_dir+'/feature_metadata_{}.txt'.format(chromosome),sep='\t')
 
 def merge_QTL_results(results_dir):
     '''Merge QTL results for individual chromosomes into a combined, indexed
