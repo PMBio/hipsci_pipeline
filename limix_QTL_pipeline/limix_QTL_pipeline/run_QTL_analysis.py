@@ -25,6 +25,13 @@ def get_args():
     parser.add_argument('-covariates_file','--covariates_file',required=False)
     parser.add_argument('-kinship_file','--kinship_file',required=False)
     parser.add_argument('-samplemap_file','--samplemap_file',required=False)
+    parser.add_argument("--cis",
+                        action="store_true",
+                        help="Run cis analysis.")
+    parser.add_argument("--trans",
+                        action="store_true",
+                        help="Run trans analysis.")
+
     args = parser.parse_args()
 
     return args
@@ -194,6 +201,13 @@ if __name__=='__main__':
     covariates_file = args.covariates_file
     kinship_file = args.kinship_file
     samplemap_file = args.samplemap_file
+    cis = args.cis
+    trans = args.trans
+    
+    if (cis and trans):
+        raise ValueError("cis and trans cannot be specified simultaneously")
+    if not (cis or trans):
+        raise ValueError("One of cis and trans must be specified")
 
     window_size = int(cis_window_kb)*1000
 

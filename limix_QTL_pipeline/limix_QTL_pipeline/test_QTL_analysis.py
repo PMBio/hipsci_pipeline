@@ -44,6 +44,7 @@ if __name__=='__main__':
                     '--covariates_file {covariates_file} '
                     '--kinship_file {kinship_file} '
                     '--samplemap_file {samplemap_file} '
+                    '--cis'
                     .format(geno_prefix=geno_prefix,
                             anno_file=anno_filename,
                             pheno_file=pheno_filename,
