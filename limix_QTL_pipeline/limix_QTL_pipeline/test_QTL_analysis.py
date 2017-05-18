@@ -27,7 +27,7 @@ if __name__=='__main__':
                      kinship_filename=kinship_filename,
                      sample_mapping_filename=individual2sample_filename)
 
-    results_cksum_dict = {output_dir+'qtl_results_1.txt':787727069}
+    results_cksum_dict = {output_dir+'qtl_results_1.txt':3559543307}
     for f in results_cksum_dict.keys():
         print(f,pycksum.cksum(open(f,'r')))
         assert(pycksum.cksum(open(f,'r'))==results_cksum_dict[f])
@@ -75,8 +75,8 @@ if __name__=='__main__':
         run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,ws,output_dir)
     merge_QTL_results(output_dir)
     
-    results_cksum_dict = {output_dir+'qtl_results_1.txt':615852636,
-                        output_dir+'qtl_results_2.txt':2754405498}
+    results_cksum_dict = {output_dir+'qtl_results_1.txt':618826852,
+                        output_dir+'qtl_results_2.txt':3434084892}
     for f in results_cksum_dict.keys():
         print(f,pycksum.cksum(open(f,'r')))
         assert(pycksum.cksum(open(f,'r'))==results_cksum_dict[f])

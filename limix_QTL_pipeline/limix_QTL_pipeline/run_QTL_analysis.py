@@ -14,7 +14,13 @@ def get_args():
     parser.add_argument('-anno_file','--anno_file', required=True)
     parser.add_argument('-pheno_file','--pheno_file', required=True)
     parser.add_argument('-output_dir','--output_dir', required=True)
-    parser.add_argument('-cis_window_kb','--cis_window_kb', required=True)
+    parser.add_argument('-cis_window_kb','--cis_window_kb', required=True,
+                        help=
+                        'The size of the cis window to take SNPs from, in kb.'
+                        'The window will extend between:                     '
+                        '    (feature_start - (cis_window_kb/2))             '
+                        ' and:                                               '
+                        '    (feature_end + (cis_window_kb/2))               ')
     parser.add_argument('-chromosome','--chromosome',required=True)
     parser.add_argument('-covariates_file','--covariates_file',required=False)
     parser.add_argument('-kinship_file','--kinship_file',required=False)
@@ -53,8 +59,11 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,window_
         chrom = str(annotation_df.loc[feature_id,'chromosome'])
         start = annotation_df.loc[feature_id,'start']
         end = annotation_df.loc[feature_id,'end']
-        center_pos = start + (start-end)/2
-        cis = bim.query("chrom == '%s' & pos > %d & pos < %d" % (chrom, center_pos-window_size, center_pos+window_size))
+        #make robust to features specified back-to-front
+        lowest = min([start,end])
+        highest = max([start,end])
+        half_window_size = window_size/2
+        cis = bim.query("chrom == '%s' & pos > %d & pos < %d" % (chrom, lowest-half_window_size, highest+half_window_size))
         snp_idxs = cis['i'].values
         snp_names = cis['snp'].values
         
