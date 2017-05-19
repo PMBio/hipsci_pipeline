@@ -4,7 +4,7 @@ class hdf5_writer:
 
     def __init__(self,output_filename):
         self.h5file = tables.open_file(output_filename,'w')
-        self.group = self.h5file.create_group('/','qtl_results')
+#        self.group = self.h5file.create_group('/')
 
     def close(self):
         self.h5file.close()
@@ -13,8 +13,7 @@ class hdf5_writer:
         assert(len(set(qtl_results_df['feature_id']==1)))
         feature_id = qtl_results_df['feature_id'].values[0]
         column_names = ['snp_id','p_value','beta','n_samples']
-        group = self.h5file.create_group('/qtl_results/',feature_id)
-        table = self.h5file.create_table(group,'results',QTL_result_hdf5,"QTL analysis results")
+        table = self.h5file.create_table(self.h5file.root,feature_id,QTL_result_hdf5,"QTL analysis results")
         qtl_result = table.row
         for idx,df_row in qtl_results_df.iterrows():
             for col_name in column_names:
