@@ -10,7 +10,7 @@ if __name__=='__main__':
     data_path = '../data/geuvadis_CEU_YRI_test_data/'
     covariates_filename = data_path+'Geuvadis_CEU_YRI_covariates.txt'
     geno_prefix = data_path+'Geuvadis_chr1'
-    pheno_filename = data_path+'Geuvadis_CEU_YRI_Expr.txt'
+    pheno_filename = data_path+'Geuvadis_CEU_YRI_Expr.txt.gz'
     anno_filename = data_path+'Geuvadis_CEU_YRI_formatted_annotation_data.txt'
     kinship_filename= data_path+'Geuvadis_chr1_kinship.txt'
     individual2sample_filename = data_path + 'Geuvadis_CEU_gte.txt'
