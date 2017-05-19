@@ -3,7 +3,23 @@
 
 from run_QTL_analysis import run_QTL_analysis,merge_QTL_results
 import subprocess
-import pycksum
+import numpy as np
+import pandas as pd
+
+def hdf5_results_checking(filename,fun=lambda df: np.mean(df['beta']) ):
+    '''For a given hdf5 results file, returns a value derived from the first dataframe
+    in the file.'''
+    with pd.HDFStore(filename,'r') as h5file:
+        feature_id = sorted(h5file.keys())[0]
+        df = h5file.select(feature_id)
+    return fun(df)
+
+def results_checking(results_checking_dict,error_tolerance=1e-6):
+    for f in results_checking_dict.keys():
+        check_value = hdf5_results_checking(f)
+        print(f,check_value)
+        assert(abs(results_checking_dict[f]-check_value)<error_tolerance)
+
 
 if __name__=='__main__':
     '''Run a test case'''
@@ -27,11 +43,8 @@ if __name__=='__main__':
                      kinship_filename=kinship_filename,
                      sample_mapping_filename=individual2sample_filename)
 
-    results_cksum_dict = {output_dir+'qtl_results_1.h5':196904881}
-    for f in results_cksum_dict.keys():
-        print(f,pycksum.cksum(open(f,'r')))
-#        assert(pycksum.cksum(open(f,'r'))==results_cksum_dict[f])
-
+    results_checking_dict = {output_dir+'qtl_results_1.h5':-0.01572}
+    results_checking(results_checking_dict)
 
     output_dir = data_path+'limix_QTL_results_kinship_covs_cmd_line/'
     subprocess.call('python run_QTL_analysis.py '
@@ -57,11 +70,8 @@ if __name__=='__main__':
                             ),
                     shell=True)
 
-    #re-use the cksum dict from above - these cases should be identical
-    for f in results_cksum_dict.keys():
-        print(f,pycksum.cksum(open(f,'r')))
-#        assert(pycksum.cksum(open(f,'r'))==results_cksum_dict[f])
-        
+    #re-use the checking dict from above - these cases should be identical
+    results_checking(results_checking_dict)
 
     data_path = '../data/geuvadis_CEU_test_data/'
     geno_prefix = data_path+'Genotypes/Geuvadis'
@@ -74,10 +84,7 @@ if __name__=='__main__':
     
     for chromosome in ['1','2']:
         run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,ws,output_dir)
-#    merge_QTL_results(output_dir)
     
-    results_cksum_dict = {output_dir+'qtl_results_1.h5':2150843741,
-                        output_dir+'qtl_results_2.h5':1440084320}
-    for f in results_cksum_dict.keys():
-        print(f,pycksum.cksum(open(f,'r')))
-#        assert(pycksum.cksum(open(f,'r'))==results_cksum_dict[f])
+    results_checking_dict = {output_dir+'qtl_results_1.h5':0.034497,
+                        output_dir+'qtl_results_2.h5':0.002150}
+    results_checking(results_checking_dict)
