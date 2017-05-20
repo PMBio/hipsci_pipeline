@@ -52,7 +52,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,window_
 
     #Open output files
     _ensure_dir(output_dir)
-    output_writer = qtl_output.text_writer(output_dir+'qtl_results_{}.txt'.format(chromosome))
+    output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}.h5'.format(chromosome))
 
     #Determine features to be tested
     feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
