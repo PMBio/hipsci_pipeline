@@ -5,6 +5,7 @@ from run_QTL_analysis import run_QTL_analysis,merge_QTL_results
 import subprocess
 import numpy as np
 import pandas as pd
+import pytest
 
 def hdf5_results_checking(filename,fun=lambda df: np.mean(df['beta']) ):
     '''For a given hdf5 results file, returns a value derived from the first dataframe
@@ -21,8 +22,8 @@ def results_checking(results_checking_dict,error_tolerance=1e-6):
         assert(abs(results_checking_dict[f]-check_value)<error_tolerance)
 
 
-if __name__=='__main__':
-    '''Run a test case'''
+def test_QTL_analysis():
+    '''Run a set of test cases'''
     data_path = '../data/geuvadis_CEU_YRI_test_data/'
     covariates_filename = data_path+'Geuvadis_CEU_YRI_covariates.txt'
     geno_prefix = data_path+'Geuvadis_chr1'
