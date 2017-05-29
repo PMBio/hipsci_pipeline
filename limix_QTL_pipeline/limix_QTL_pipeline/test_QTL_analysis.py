@@ -49,7 +49,7 @@ def test_QTL_analysis():
 
     output_dir = data_path+'limix_QTL_results_kinship_covs_cmd_line/'
     subprocess.call('python run_QTL_analysis.py '
-                    '--geno_prefix {geno_prefix} '
+                    '--plink {geno_prefix} '
                     '--anno_file {anno_file} '
                     '--pheno_file {pheno_file} '
                     '--output_dir {output_dir} '

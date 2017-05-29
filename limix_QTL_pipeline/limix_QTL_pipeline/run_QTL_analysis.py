@@ -10,7 +10,8 @@ import argparse
 
 def get_args():
     parser = argparse.ArgumentParser(description='Run QTL analysis given genotype, phenotype, and annotation.')
-    parser.add_argument('-geno_prefix','--geno_prefix', required=True)
+    parser.add_argument('-gen','--gen',required=False)
+    parser.add_argument('-plink','--plink',required=False)
     parser.add_argument('-anno_file','--anno_file', required=True)
     parser.add_argument('-pheno_file','--pheno_file', required=True)
     parser.add_argument('-output_dir','--output_dir', required=True)
@@ -192,7 +193,8 @@ def _get_phenotype_df(pheno_filename):
 
 if __name__=='__main__':
     args = get_args()
-    geno_prefix = args.geno_prefix
+    plink  = args.plink
+    gen = args.gen
     anno_file = args.anno_file
     pheno_file = args.pheno_file
     output_dir = args.output_dir
@@ -203,6 +205,11 @@ if __name__=='__main__':
     samplemap_file = args.samplemap_file
     cis = args.cis
     trans = args.trans
+
+    if ((plink is None) and (gen is None)):
+        raise ValueError("No plink or gen file path specified")
+    if ((plink is not None) and (gen is not None)):
+        raise ValueError("Only a plink or a gen file path should be specified, not both")        
     
     if (cis and trans):
         raise ValueError("cis and trans cannot be specified simultaneously")
