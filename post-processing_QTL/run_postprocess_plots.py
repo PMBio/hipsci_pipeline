@@ -24,7 +24,7 @@ traits=['peptide_lines_filtered_unique_genes_filtered_intensity_scalarcorrected'
 trait_labels=['Peptide QTL','Protein QTL (method 2)']
 
 for trait in traits:
-    summary_gene_feature(output_file='qtl_results_genome', feature_report='ensembl_gene_id',chr_list=np.arange(1,3),folder_data='/Users/mirauta/Data/MS/hipsci/TMT/'+trait)
+    summary_gene_feature(output_file='qtl_results_genome', feature_report='ensembl_gene_id',chr_list=np.arange(10,12),folder_data='/Users/mirauta/Data/MS/hipsci/TMT/'+trait)
 
 plot_summary(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',\
              folder_destination=folder_destination+'Images_pipeline/',plot_name='qtl_summary',\
