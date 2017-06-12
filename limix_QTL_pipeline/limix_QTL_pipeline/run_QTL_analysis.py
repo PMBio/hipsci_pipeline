@@ -10,12 +10,12 @@ import argparse
 
 def get_args():
     parser = argparse.ArgumentParser(description='Run QTL analysis given genotype, phenotype, and annotation.')
-    parser.add_argument('-gen','--gen',required=False)
+    parser.add_argument('-bgen','--bgen',required=False)
     parser.add_argument('-plink','--plink',required=False)
     parser.add_argument('-anno_file','--anno_file', required=True)
     parser.add_argument('-pheno_file','--pheno_file', required=True)
     parser.add_argument('-output_dir','--output_dir', required=True)
-    parser.add_argument('-cis_window_kb','--cis_window_kb', required=True,
+    parser.add_argument('-window_kb','--window_kb', required=True,
                         help=
                         'The size of the cis window to take SNPs from, in kb.'
                         'The window will extend between:                     '
@@ -198,11 +198,11 @@ def _get_phenotype_df(pheno_filename):
 if __name__=='__main__':
     args = get_args()
     plink  = args.plink
-    gen = args.gen
+    bgen = args.bgen
     anno_file = args.anno_file
     pheno_file = args.pheno_file
     output_dir = args.output_dir
-    cis_window_kb = args.cis_window_kb
+    window_kb = args.cis_window_kb
     chromosome = args.chromosome
     covariates_file = args.covariates_file
     kinship_file = args.kinship_file
@@ -210,7 +210,7 @@ if __name__=='__main__':
     cis = args.cis
     trans = args.trans
 
-    if ((plink is None) and (gen is None)):
+    if ((plink is None) and (bgen is None)):
         raise ValueError("No plink or gen file path specified")
     if ((plink is not None) and (gen is not None)):
         raise ValueError("Only a plink or a gen file path should be specified, not both")        
@@ -220,7 +220,7 @@ if __name__=='__main__':
     if not (cis or trans):
         raise ValueError("One of cis and trans must be specified")
 
-    window_size = int(cis_window_kb)*1000
+    window_size = int(window_kb)*1000
     geno_prefix = plink
 
     run_QTL_analysis(pheno_file,anno_file,geno_prefix,window_size,output_dir,
