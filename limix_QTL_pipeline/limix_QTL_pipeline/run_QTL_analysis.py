@@ -10,7 +10,8 @@ import argparse
 
 def get_args():
     parser = argparse.ArgumentParser(description='Run QTL analysis given genotype, phenotype, and annotation.')
-    parser.add_argument('-geno_prefix','--geno_prefix', required=True)
+    parser.add_argument('-gen','--gen',required=False)
+    parser.add_argument('-plink','--plink',required=False)
     parser.add_argument('-anno_file','--anno_file', required=True)
     parser.add_argument('-pheno_file','--pheno_file', required=True)
     parser.add_argument('-output_dir','--output_dir', required=True)
@@ -21,7 +22,7 @@ def get_args():
                         '    (feature_start - (cis_window_kb/2))             '
                         ' and:                                               '
                         '    (feature_end + (cis_window_kb/2))               ')
-    parser.add_argument('-chromosome','--chromosome',required=True)
+    parser.add_argument('-chromosome','--chromosome',required=False,default='all')
     parser.add_argument('-covariates_file','--covariates_file',required=False)
     parser.add_argument('-kinship_file','--kinship_file',required=False)
     parser.add_argument('-samplemap_file','--samplemap_file',required=False)
@@ -37,7 +38,7 @@ def get_args():
     return args
 
 
-def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,window_size,output_dir,
+def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output_dir,chromosome='all',
                      covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
     '''Core function to take input and run QTL tests on a given chromosome.'''
     
@@ -55,7 +56,11 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,chromosome,window_
     output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}.h5'.format(chromosome))
 
     #Determine features to be tested
-    feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
+    if chromosome=='all':
+        feature_list = list(set(annotation_df.index)&set(phenotype_df.index))
+    else:
+        feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
+        
     
     #Array to store indices of snps tested
     tested_snp_idxs = []
@@ -192,7 +197,8 @@ def _get_phenotype_df(pheno_filename):
 
 if __name__=='__main__':
     args = get_args()
-    geno_prefix = args.geno_prefix
+    plink  = args.plink
+    gen = args.gen
     anno_file = args.anno_file
     pheno_file = args.pheno_file
     output_dir = args.output_dir
@@ -203,6 +209,11 @@ if __name__=='__main__':
     samplemap_file = args.samplemap_file
     cis = args.cis
     trans = args.trans
+
+    if ((plink is None) and (gen is None)):
+        raise ValueError("No plink or gen file path specified")
+    if ((plink is not None) and (gen is not None)):
+        raise ValueError("Only a plink or a gen file path should be specified, not both")        
     
     if (cis and trans):
         raise ValueError("cis and trans cannot be specified simultaneously")
@@ -210,8 +221,10 @@ if __name__=='__main__':
         raise ValueError("One of cis and trans must be specified")
 
     window_size = int(cis_window_kb)*1000
+    geno_prefix = plink
 
-    run_QTL_analysis(pheno_file,anno_file,geno_prefix,chromosome,window_size,output_dir,
+    run_QTL_analysis(pheno_file,anno_file,geno_prefix,window_size,output_dir,
+                     chromosome=chromosome,
                      covariates_filename=covariates_file,
                      kinship_filename=kinship_file,
                      sample_mapping_filename=samplemap_file)
