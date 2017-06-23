@@ -31,7 +31,7 @@ def get_args():
     parser.add_argument('-maf','--maf',required=False,default=0.05)
     parser.add_argument('-hwe','--hwe',required=False,default=0.001)
     parser.add_argument('-cr','--cr',required=False,default=0.95)
-    parser.add_argument('-block_size','--block_size',required=False,default=100)
+    parser.add_argument('-block_size','--block_size',required=False,default=1000)
     parser.add_argument("--cis",
                         action="store_true",
                         help="Run cis analysis.", default=True)
@@ -246,7 +246,7 @@ if __name__=='__main__':
 
     run_QTL_analysis(pheno_file,anno_file,geno_prefix,window_size,output_dir,
                      min_maf=min_maf, min_hwe_P=min_hwe_P,
-                     min_call_rate=min_call_rate,blocksize=blocksize, cis_mode=cis,
+                     min_call_rate=min_call_rate,blocksize=block_size, cis_mode=cis,
                      chromosome=chromosome,
                      covariates_filename=covariates_file,
                      kinship_filename=kinship_file,
