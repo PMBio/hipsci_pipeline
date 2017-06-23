@@ -11,5 +11,10 @@ To do so please start by making a conda enviroment, [conda](https://conda.io/doc
 `conda install -c conda-forge pandas-plink`
 `pip install limix --upgrade`
 
+
+//Doesn't work yet.
+`git clone https://github.com/PMBio/hipsci_pipeline.git`
+>>>>>>> origin/master
+
 //Doesn't work yet.
 `git clone https://github.com/PMBio/hipsci_pipeline.git`
