@@ -108,7 +108,10 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
             cov_matrix = None
         
         #fit modelrun
-        LMM = limix.qtl.qtl_test_lmm(snp_matrix, phenotype,K=kinship_mat,covs=cov_matrix)
+        index=np.isfinite(phenotype)
+        if cov_matrix is not None: cov_matrix=cov_matrix[index]
+        if kinship_mat is not None: kinship_mat=kinship_mat[index][:,index]
+        LMM = limix.qtl.qtl_test_lmm(snp_matrix[index], phenotype[index],K=kinship_mat,covs=cov_matrix)
         
         #add these results to qtl_results
     
