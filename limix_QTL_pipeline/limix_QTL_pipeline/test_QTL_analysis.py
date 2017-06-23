@@ -24,22 +24,25 @@ def results_checking(results_checking_dict,error_tolerance=1e-6):
 
 def test_QTL_analysis():
     '''Run a set of test cases'''
-    data_path = '../data/geuvadis_CEU_YRI_test_data/'
-    covariates_filename = data_path+'Geuvadis_CEU_YRI_covariates.txt'
-    geno_prefix = data_path+'Geuvadis_chr1'
-    pheno_filename = data_path+'Geuvadis_CEU_YRI_Expr.txt.gz'
-    anno_filename = data_path+'Geuvadis_CEU_YRI_formatted_annotation_data.txt'
-    kinship_filename= data_path+'Geuvadis_chr1_kinship.txt'
+    data_path = '../geuvadis_CEU_test_data/'
+    covariates_filename = data_path+'Expression/Geuvadis_CEU_YRI_covariates.txt'
+    geno_prefix = data_path+'Genotypes/Geuvadis'
+    pheno_filename = data_path+'Expression/Geuvadis_CEU_YRI_Expr.txt.gz'
+    anno_filename = data_path+'Expression/Geuvadis_CEU_Annot.txt'
+    kinship_filename= data_path+'Genotypes/Geuvadis_chr1_kinship.txt'
     individual2sample_filename = data_path + 'Geuvadis_CEU_gte.txt'
-    
+    min_maf = 0.05
+    min_hwe_P=0.001
+    min_call_rate =0.95
+    blocksize = 100
     output_dir = data_path+'limix_QTL_results_kinship_covs/'
     
     chromosome = '1'
-
-    cis_window_kb = 250    
-    ws = cis_window_kb*1000
     
+    ws = 2500000
     run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir,
+                     min_maf, min_hwe_P,
+                     min_call_rate,blocksize,
                      chromosome=chromosome,
                      covariates_filename=covariates_filename,
                      kinship_filename=kinship_filename,
@@ -54,7 +57,7 @@ def test_QTL_analysis():
                     '--anno_file {anno_file} '
                     '--pheno_file {pheno_file} '
                     '--output_dir {output_dir} '
-                    '--cis_window_kb {cis_window_kb} '
+                    '--window {ws} '
                     '--chromosome {chromosome} '
                     '--covariates_file {covariates_file} '
                     '--kinship_file {kinship_file} '
@@ -64,7 +67,7 @@ def test_QTL_analysis():
                             anno_file=anno_filename,
                             pheno_file=pheno_filename,
                             output_dir=output_dir,
-                            cis_window_kb=cis_window_kb,
+                            ws=ws,
                             chromosome=chromosome,
                             covariates_file=covariates_filename,
                             kinship_file=kinship_filename,
@@ -81,7 +84,7 @@ def test_QTL_analysis():
                     '--anno_file {anno_file} '
                     '--pheno_file {pheno_file} '
                     '--output_dir {output_dir} '
-                    '--cis_window_kb {cis_window_kb} '
+                    '--window {ws} '
                     '--covariates_file {covariates_file} '
                     '--kinship_file {kinship_file} '
                     '--samplemap_file {samplemap_file} '
@@ -90,8 +93,7 @@ def test_QTL_analysis():
                             anno_file=anno_filename,
                             pheno_file=pheno_filename,
                             output_dir=output_dir,
-                            cis_window_kb=cis_window_kb,
-                            chromosome=chromosome,
+                            ws=ws,
                             covariates_file=covariates_filename,
                             kinship_file=kinship_filename,
                             samplemap_file=individual2sample_filename
@@ -104,7 +106,6 @@ def test_QTL_analysis():
 
     #run another test case
     
-    data_path = '../data/geuvadis_CEU_test_data/'
     geno_prefix = data_path+'Genotypes/Geuvadis'
     pheno_filename = data_path+'Expression/Geuvadis_CEU_Expr.txt'
     anno_filename = data_path+'Expression/Geuvadis_CEU_formatted_annotation_data.txt'
