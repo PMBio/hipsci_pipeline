@@ -170,6 +170,18 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
                 #fit modelrun
                 LMM = limix.qtl.qtl_test_lmm(snp_matrix, phenotype,K=kinship_mat,covs=cov_matrix)
                 if(n_perm!=0):
+                    countPermutations = np.zeros((snp_matrix.shape[1]), dtype=np.int)
+                    nBetterCorrelation = np.zeros((snp_matrix.shape[1]), dtype=np.int)
+                    for permC in range(0,n_perm) :
+                        LMM_perm = limix.qtl.qtl_test_lmm(snp_matrix, np.random.permutation(phenotype),K=kinship_mat,covs=cov_matrix)
+                        #print(np.random.permutation(phenotype))
+                        for snp in range(0,len(LMM_perm.getPv()[0])):
+                            if(LMM_perm.getPv()[0][snp]<=LMM.getPv()[0][snp]):
+                                nBetterCorrelation[snp]+=1
+                            else:
+                                print(LMM_perm.getPv()[0][snp])
+                                print(LMM.getPv()[0][snp])
+                            countPermutations[snp]+=1
                     #Here we need to take care of the permutation data/
                     #Relink phenotype to genotype (several options)
                     #Drop using speed ups from fastQTL.
