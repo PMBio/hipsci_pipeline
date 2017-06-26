@@ -176,13 +176,14 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
                     #Calculate P-value using beta dist.
 
                 #add these results to qtl_results
-                temp_df = pd.DataFrame(index = range(len(snp_names)),columns=['feature_id','snp_id','p_value','beta','n_samples','corr_p_value'])
+                #temp_df = pd.DataFrame(index = range(len(snp_names)),columns=['feature_id','snp_id','p_value','beta','n_samples','corr_p_value'])
+                temp_df = pd.DataFrame(index = range(len(snp_names)),columns=['feature_id','snp_id','p_value','beta','n_samples'])
                 temp_df['snp_id'] = snp_names
                 temp_df['feature_id'] = feature_id
                 temp_df['beta'] = LMM.getBetaSNP()[0]
                 temp_df['p_value'] = LMM.getPv()[0]
                 temp_df['n_samples'] = sum(~np.isnan(phenotype))
-                temp_df['corr_p_value'] = sum(~np.isnan(phenotype))
+                #temp_df['corr_p_value'] = sum(~np.isnan(phenotype))
 
                 results_df = results_df.append(temp_df)
             if not results_df.empty :
