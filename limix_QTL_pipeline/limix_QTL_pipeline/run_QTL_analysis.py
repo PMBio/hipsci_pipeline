@@ -32,6 +32,7 @@ def get_args():
     parser.add_argument('-hwe','--hwe',required=False,default=0.001)
     parser.add_argument('-cr','--cr',required=False,default=0.95)
     parser.add_argument('-block_size','--block_size',required=False,default=1000)
+    parser.add_argument('-n_perm','--n_perm',required=False,default=0)
     parser.add_argument("--cis",
                         action="store_true",
                         help="Run cis analysis.", default=True)
@@ -44,7 +45,7 @@ def get_args():
     return args
 
 
-def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output_dir, min_maf, min_hwe_P,min_call_rate,blocksize,cis_mode,chromosome='all',
+def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output_dir, min_maf, min_hwe_P,min_call_rate,blocksize,cis_mode,n_perm,chromosome='all',
                      covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
     '''Core function to take input and run QTL tests on a given chromosome.'''
     
@@ -69,7 +70,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
 
     if(cis_mode):
         #Remove features from the annotation that are on chromosomes which are not present anyway.
-        annotation_df = annotation_df[annotation_df['chromosome'].map(lambda x: x in list(set(bim['chrom'])))]
+        annotation_df = annotation_df = annotation_df[np.in1d(annotation_df['chromosome'],list(set(bim['chrom'])))]
         #Crude filtering for sites on non allosomes.
         annotation_df = annotation_df[annotation_df['chromosome'].map(lambda x: x in list(map(str, range(1, 23))))]
     
@@ -98,9 +99,8 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
         else :
             snpQuery = bim.query("(chrom == '%s' & (pos < %d | pos > %d))|chrom != '%s'" % (chrom, lowest-window_size, highest+window_size,chrom))
             #Crude filtering for sites on non allosomes.
-            snpQuery = snpQuery.iloc[snpQuery['chrom'].map(lambda x: x in list(map(str, range(1, 23))))]
+            snpQuery = snpQuery.loc[snpQuery['chrom'].map(lambda x: x in list(map(str, range(1, 23))))]
 
-        
         if len(snpQuery) != 0:
             results_df = pd.DataFrame()
             for snpGroup in chunker(snpQuery, blocksize):
@@ -169,13 +169,22 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
 
                 #fit modelrun
                 LMM = limix.qtl.qtl_test_lmm(snp_matrix, phenotype,K=kinship_mat,covs=cov_matrix)
+                if(n_perm!=0):
+                    #Here we need to take care of the permutation data/
+                    #Relink phenotype to genotype (several options)
+                    #Drop using speed ups from fastQTL.
+                    #Calculate P-value using beta dist.
+
                 #add these results to qtl_results
+                #temp_df = pd.DataFrame(index = range(len(snp_names)),columns=['feature_id','snp_id','p_value','beta','n_samples','corr_p_value'])
                 temp_df = pd.DataFrame(index = range(len(snp_names)),columns=['feature_id','snp_id','p_value','beta','n_samples'])
                 temp_df['snp_id'] = snp_names
                 temp_df['feature_id'] = feature_id
                 temp_df['beta'] = LMM.getBetaSNP()[0]
                 temp_df['p_value'] = LMM.getPv()[0]
                 temp_df['n_samples'] = sum(~np.isnan(phenotype))
+                #temp_df['corr_p_value'] = sum(~np.isnan(phenotype))
+
                 results_df = results_df.append(temp_df)
             if not results_df.empty :
                 output_writer.add_result_df(results_df)
@@ -228,6 +237,7 @@ if __name__=='__main__':
     min_hwe_P = args.hwe
     min_call_rate = args.cr
     block_size = args.block_size
+    n_perm = args.n_perm
     cis = args.cis
     trans = args.trans
 
@@ -247,7 +257,7 @@ if __name__=='__main__':
     run_QTL_analysis(pheno_file,anno_file,geno_prefix,window_size,output_dir,
                      min_maf=min_maf, min_hwe_P=min_hwe_P,
                      min_call_rate=min_call_rate,blocksize=block_size, cis_mode=cis,
-                     chromosome=chromosome,
+                     n_perm=n_perm,chromosome=chromosome,
                      covariates_filename=covariates_file,
                      kinship_filename=kinship_file,
                      sample_mapping_filename=samplemap_file)
