@@ -16,14 +16,8 @@ def do_snp_qc_bgen(snp_df, min_call_rate, min_maf, min_hwe_P):
         return snp_df.columns, failed_snp_names
     #Determine MAF.
     genotypeCounter = np.zeros((len(snp_df.columns),3), dtype=np.int)
-    for snp in range(0, len(snp_df.columns)):
-        for sample in range(0, len(snp_df.index)):
-            if not math.isnan(snp_df.iloc[sample,snp]) :
-                #print(snp_df.iloc[sample,snp])
-                #print(i)
-                #print(snp)
-                #print(int(round(snp_df.iloc[snp,i])))
-                genotypeCounter[snp,int(round(snp_df.iloc[sample,snp]))] +=1
+    for allele_index in [0,1,2]:
+        genotypeCounter[:,allele_index] = np.nansum(np.around(snp_df.values)==allele_index,0)
 
     #Here we make sure that the major allele is temporarly 'coded' as 0 & directly calculate the MAF (based on allele counts and non NA samples)
     mac = np.zeros((len(snp_df.columns)), dtype=np.int)
@@ -103,33 +97,29 @@ def do_snp_qc_bgen(snp_df, min_call_rate, min_maf, min_hwe_P):
 
     return snp_df.columns, failed_snp_names
 
-def convertProbabilitiesToDosage(snpMatrix, minProbability) {
+def convertProbabilitiesToDosage(snpProbMatrix, minProbability) {
 
-    dosages = new float[probs.length];
+    snpDosageMatrix = np.zeros((len(snpMatrix.columns),len(snpMatrix.index)), dtype=np.float)
 
-        for (int i = 0; i < probs.length; ++i) {
+    for (int i = 0; i < probs.length; ++i) {
 
-            boolean containsMinProbability = false;
+        boolean containsMinProbability = false;
 
-            for (float prob : probs[i]) {
-                if (prob >= minProbability) {
-                    containsMinProbability = true;
-                    break;
-                }
+        for (float prob : probs[i]) {
+            if (prob >= minProbability) {
+                containsMinProbability = true;
+                break;
             }
+        }
 
-            if (containsMinProbability) {
-
-                dosages[i] = (probs[i][0] * 2) + probs[i][1];
-                if (dosages[i] > 2) {
-                    dosages[i] = 2;
-                }
+        if (containsMinProbability) {
+            dosages[i] = 2 if ((probs[i][0] * 2) + probs[i][1])>2 else ((probs[i][0] * 2) + probs[i][1]);
    } else {
             dosages[i] = -1;
         }
     }
 
-    return dosages;
+    return snpDosageMatrix;
 
 
 #     }

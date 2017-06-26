@@ -16,14 +16,8 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
         return snp_df.columns, failed_snp_names
     #Determine MAF.
     genotypeCounter = np.zeros((len(snp_df.columns),3), dtype=np.int)
-    for snp in range(0, len(snp_df.columns)):
-        for sample in range(0, len(snp_df.index)):
-            if not math.isnan(snp_df.iloc[sample,snp]) :
-                #print(snp_df.iloc[sample,snp])
-                #print(i)
-                #print(snp)
-                #print(int(round(snp_df.iloc[snp,i])))
-                genotypeCounter[snp,int(round(snp_df.iloc[sample,snp]))] +=1
+    for allele_index in [0,1,2]:
+        genotypeCounter[:,allele_index] = np.nansum(np.around(snp_df.values)==allele_index,0)
 
     #Here we make sure that the major allele is temporarly 'coded' as 0 & directly calculate the MAF (based on allele counts and non NA samples)
     mac = np.zeros((len(snp_df.columns)), dtype=np.int)
