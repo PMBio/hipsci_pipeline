@@ -69,7 +69,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
 
     if(cis_mode):
         #Remove features from the annotation that are on chromosomes which are not present anyway.
-        annotation_df = annotation_df[annotation_df['chromosome'].map(lambda x: x in list(set(bim['chrom'])))]
+        annotation_df = annotation_df = annotation_df[np.in1d(annotation_df['chromosome'],list(set(bim['chrom'])))]
         #Crude filtering for sites on non allosomes.
         annotation_df = annotation_df[annotation_df['chromosome'].map(lambda x: x in list(map(str, range(1, 23))))]
     
@@ -98,9 +98,8 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
         else :
             snpQuery = bim.query("(chrom == '%s' & (pos < %d | pos > %d))|chrom != '%s'" % (chrom, lowest-window_size, highest+window_size,chrom))
             #Crude filtering for sites on non allosomes.
-            snpQuery = snpQuery.iloc[snpQuery['chrom'].map(lambda x: x in list(map(str, range(1, 23))))]
+            snpQuery = snpQuery.loc[snpQuery['chrom'].map(lambda x: x in list(map(str, range(1, 23))))]
 
-        
         if len(snpQuery) != 0:
             results_df = pd.DataFrame()
             for snpGroup in chunker(snpQuery, blocksize):
