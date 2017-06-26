@@ -25,7 +25,7 @@ def get_samplemapping_df(sample_mapping_filename,sample_labels,key_from):
     else:
         #assume the mapping is the identity mapping
         identifiers = sample_labels
-        mapping_df = pd.DataFrame(data=identifiers,index=identifiers,columns=['iid','sample'])
+        mapping_df = pd.DataFrame(data=np.vstack([identifiers,identifiers]).T,index=identifiers,columns=[‘iid’,‘sample’])
     return mapping_df
 
 def get_covariate_df(covariates_filename):
