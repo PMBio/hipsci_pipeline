@@ -23,16 +23,17 @@ def get_args():
                         'The window will extend between:                     '
                         '    (feature_start - (window))             '
                         ' and:                                               '
-                        '    (feature_end + (window))               ')
+                        '    (feature_end + (window))               ',default=250000)
     parser.add_argument('-chromosome','--chromosome',required=False,default='all')
-    parser.add_argument('-covariates_file','--covariates_file',required=False)
-    parser.add_argument('-kinship_file','--kinship_file',required=False)
-    parser.add_argument('-samplemap_file','--samplemap_file',required=False)
+    parser.add_argument('-covariates_file','--covariates_file',required=False,default=None)
+    parser.add_argument('-kinship_file','--kinship_file',required=False,default=None)
+    parser.add_argument('-samplemap_file','--samplemap_file',required=False,default=None)
     parser.add_argument('-maf','--maf',required=False,default=0.05)
     parser.add_argument('-hwe','--hwe',required=False,default=0.001)
     parser.add_argument('-cr','--cr',required=False,default=0.95)
     parser.add_argument('-block_size','--block_size',required=False,default=1000)
     parser.add_argument('-n_perm','--n_perm',required=False,default=0)
+    parser.add_argument('-snps','--snps',required=False,default=None)
     parser.add_argument("--cis",
                         action="store_true",
                         help="Run cis analysis.", default=True)
@@ -45,25 +46,39 @@ def get_args():
     return args
 
 
-def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output_dir, min_maf, min_hwe_P,min_call_rate,blocksize,cis_mode,n_perm,chromosome='all',
+def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,window_size,output_dir, min_maf, min_hwe_P,min_call_rate,blocksize,cis_mode,n_perm=0,snps_filename=None,chromosome='all',
                      covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
     '''Core function to take input and run QTL tests on a given chromosome.'''
+
+    #Load input data files & filter for relevant data
+    #Load input data filesf
+    if(plinkGenotype):
+        bim,fam,bed = qtl_loader_utils.get_genotype_data(geno_prefix)
+    else :
+        geno_prefix+='.bgen'
+        print(geno_prefix)
     
-    
-    #Load input data files    
-    bim,fam,bed = qtl_loader_utils.get_genotype_data(geno_prefix)
     phenotype_df = qtl_loader_utils.get_phenotype_df(pheno_filename)
+    annotation_df = qtl_loader_utils.get_annotation_df(anno_filename)
+
     individual2sample_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'iid')
     sample2individual_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'sample')
-    annotation_df = qtl_loader_utils.get_annotation_df(anno_filename)
-    phenotype_df = phenotype_df.loc[annotation_df.index.values,individual2sample_df.loc[list(set(fam.index)&set(individual2sample_df.index)),'sample'].values]
 
-    kinship_df = qtl_loader_utils.get_kinship_df(kinship_filename)    
-    kinship_df = kinship_df.loc[list(set(fam.index)&set(individual2sample_df.index)),list(set(fam.index)&set(individual2sample_df.index))]
-
+    kinship_df = qtl_loader_utils.get_kinship_df(kinship_filename) 
+    if kinship_df is not None:
+        kinship_df = kinship_df.loc[list(set(fam.index)&set(individual2sample_df.index)),list(set(fam.index)&set(individual2sample_df.index))]
+        #Filter from individual2sample_df & sample2individual_df since we don't want to filter from the genotypes.
+        individual2sample_df = individual2sample_df.loc[kinship_df.index,:]
+        sample2individual_df = sample2individual_df[sample2individual_df['iid'].map(lambda x: x in list(map(str, kinship_df.index)))]
+        
     covariate_df = qtl_loader_utils.get_covariate_df(covariates_filename)
-    covariate_df = covariate_df.loc[individual2sample_df.loc[list(set(fam.index)&set(individual2sample_df.index)),'sample'].values,]
-
+    phenotype_df = phenotype_df.loc[annotation_df.index.values,individual2sample_df.loc[list(set(fam.index)&set(individual2sample_df.index)),'sample'].values]
+    if covariate_df is not None:
+        phenotype_df = phenotype_df.loc[:,covariate_df.index]
+        covariate_df = covariate_df.loc[phenotype_df.columns,:]
+    
+    snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
+    
     #Open output files
     qtl_loader_utils.ensure_dir(output_dir)
     output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}.h5'.format(chromosome))
@@ -101,6 +116,9 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
             #Crude filtering for sites on non allosomes.
             snpQuery = snpQuery.loc[snpQuery['chrom'].map(lambda x: x in list(map(str, range(1, 23))))]
 
+        if (len(snpQuery) != 0) and (snp_filter_df is not None):
+            snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x in list(map(str, snp_filter_df.index)))]
+   
         if len(snpQuery) != 0:
             results_df = pd.DataFrame()
             for snpGroup in chunker(snpQuery, blocksize):
@@ -250,6 +268,7 @@ if __name__=='__main__':
     min_call_rate = args.cr
     block_size = args.block_size
     n_perm = args.n_perm
+    snps_filename = args.snps
     cis = args.cis
     trans = args.trans
 
@@ -257,19 +276,22 @@ if __name__=='__main__':
         raise ValueError("No genotypes provided. Either specify a path to a binary plink genotype file or a bgen file.")
     if ((plink is not None) and (bgen is not None)):
         raise ValueError("Only one genotype file can be provided at once, not both plink and bgen")        
-    
+
+    if (bgen is not None) : 
+        plinkGenotype=False
+        geno_prefix = bgen
+        raise ValueError("Not supported")
+    else: 
+        plinkGenotype=True
+        geno_prefix = plink
+
     if (cis and trans):
         raise ValueError("cis and trans cannot be specified simultaneously")
-    
-    if bgen : 
-        raise ValueError("Not supported")
 
-    geno_prefix = plink
-
-    run_QTL_analysis(pheno_file,anno_file,geno_prefix,window_size,output_dir,
-                     min_maf=min_maf, min_hwe_P=min_hwe_P,
-                     min_call_rate=min_call_rate,blocksize=block_size, cis_mode=cis,
-                     n_perm=n_perm,chromosome=chromosome,
+    run_QTL_analysis(pheno_file,anno_file,geno_prefix,plinkGenotype,int(window_size),output_dir,
+                     min_maf=float(min_maf), min_hwe_P=float(min_hwe_P),
+                     min_call_rate=float(min_call_rate),blocksize=int(block_size), cis_mode=cis,
+                     n_perm=int(n_perm), snps_filename=snps_filename, chromosome=chromosome,
                      covariates_filename=covariates_file,
                      kinship_filename=kinship_file,
                      sample_mapping_filename=samplemap_file)

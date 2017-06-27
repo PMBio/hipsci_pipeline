@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import math
 
-def do_snp_qc_bgen(snp_df, min_call_rate, min_maf, min_hwe_P):
+def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P, min_hmachR2):
    
     #Determine call rate.
     call_rate = 1-snp_df.isnull().sum()/len(snp_df.index)
@@ -21,7 +21,7 @@ def do_snp_qc_bgen(snp_df, min_call_rate, min_maf, min_hwe_P):
 
     #Here we make sure that the major allele is temporarly 'coded' as 0 & directly calculate the MAF (based on allele counts and non NA samples)
     mac = np.zeros((len(snp_df.columns)), dtype=np.int)
-    gc = np.zeros((len(snp_df.columns)), dtype=np.int)
+    gc = np.nansum(snp_df.values,0)
     maf = np.zeros((len(snp_df.columns)), dtype=np.float)
     for snp in range(0, len(snp_df.columns)):
         if genotypeCounter[snp,0]<genotypeCounter[snp,2]:
@@ -29,7 +29,6 @@ def do_snp_qc_bgen(snp_df, min_call_rate, min_maf, min_hwe_P):
             genotypeCounter[snp,0] = genotypeCounter[snp,2]
             genotypeCounter[snp,2] = tmp
         mac[snp] = int((genotypeCounter[snp,2]*2)+genotypeCounter[snp,1])
-        gc[snp] = (genotypeCounter[snp,2]+genotypeCounter[snp,1]+genotypeCounter[snp,0])
         maf[snp] = mac[snp] / (float(2*gc[snp]))
     
     selection = maf < min_maf
@@ -41,6 +40,7 @@ def do_snp_qc_bgen(snp_df, min_call_rate, min_maf, min_hwe_P):
         return snp_df.columns, failed_snp_names
     
     mac=mac[~selection]
+    gc=gc[~selection]
     genotypeCounter = genotypeCounter[~selection,]
     
     #Determine HWE.
@@ -94,32 +94,57 @@ def do_snp_qc_bgen(snp_df, min_call_rate, min_maf, min_hwe_P):
     selection = hweP < min_hwe_P
     failed_snp_names.extend(list(snp_df.columns[selection]))
     snp_df = snp_df.loc[:,list(snp_df.columns[~selection])]
-
+    
+    if(len(snp_df.columns)==0):
+        return snp_df.columns, failed_snp_names
+    
+    gc = gc[~selection]
+    genotypeCounter = genotypeCounter[~selection,]
+    
+    machR2 = np.zeros((len(snp_df.columns)), dtype=np.float)
+    for snp in range(0, len(snp_df.columns)):
+        dosageSum = 0.0
+        dosageSqrSum = 0.0
+        dosageSum += genotypeCounter[snp,1]
+        dosageSum += genotypeCounter[snp,2]*2
+        dosageSqrSum += math.pow(1, 2)*genotypeCounter[snp,1]
+        dosageSqrSum += math.pow(2, 2)*genotypeCounter[snp,2]
+        nonMissingCount = gc[genotypeCounter[snp]]
+        estimatedAlleleFrequency = dosageSum / (2 * nonMissingCount)
+        if (estimatedAlleleFrequency <= 0 or estimatedAlleleFrequency >= 1) :
+            machR2[snp] = 1
+        tmpR2 = ((dosageSqrSum / nonMissingCount) - math.pow((dosageSum / nonMissingCount), 2)) / (2 * estimatedAlleleFrequency * (1 - estimatedAlleleFrequency))
+        machR2[snp] = 1 if tmpR2 > 1.0 else tmpR2
+    selection = machR2 < min_hmachR2
+    
+    failed_snp_names.extend(list(snp_df.columns[selection]))
+    snp_df = snp_df.loc[:,list(snp_df.columns[~selection])]
+    
     return snp_df.columns, failed_snp_names
 
-def convertProbabilitiesToDosage(snpProbMatrix, minProbability) {
+#def convertProbabilitiesToDosage(snpProbMatrix, minProbability) {
 
-    snpDosageMatrix = np.zeros((len(snpMatrix.columns),len(snpMatrix.index)), dtype=np.float)
+#    snpDosageMatrix = np.zeros((len(snpMatrix.columns),len(snpMatrix.index)), dtype=np.float)
 
-    for (int i = 0; i < probs.length; ++i) {
+#    for (int i = 0; i < probs.length; ++i) {
 
-        boolean containsMinProbability = false;
+#        boolean containsMinProbability = false;
 
-        for (float prob : probs[i]) {
-            if (prob >= minProbability) {
-                containsMinProbability = true;
-                break;
-            }
-        }
+#        for (float prob : probs[i]) {
+#            if (prob >= minProbability) {
+#                containsMinProbability = true;
+#                break;
+#            }
+#        }
 
-        if (containsMinProbability) {
-            dosages[i] = 2 if ((probs[i][0] * 2) + probs[i][1])>2 else ((probs[i][0] * 2) + probs[i][1]);
-   } else {
-            dosages[i] = -1;
-        }
-    }
+#        if (containsMinProbability) {
+#            dosages[i] = 2 if ((probs[i][0] * 2) + probs[i][1])>2 else ((probs[i][0] * 2) + probs[i][1]);
+#   } else {
+#            dosages[i] = -1;
+#        }
+#    }
 
-    return snpDosageMatrix;
+#    return snpDosageMatrix;
 
 
 #     }
@@ -133,35 +158,7 @@ def convertProbabilitiesToDosage(snpProbMatrix, minProbability) {
 #      * @param dosages
 #      * @return
 #      */
-#     public static double calculateMachR2(float[][] probs) {
 
-#         //Here we perform the conversion to dosages manually to make sure all probs are used regardless of the calling threshold
-#         float[] dosages = ProbabilitiesConvertor.convertProbabilitiesToDosage(probs, 0);
-
-#         int nonMissingCount = 0;
-#         double dosageSum = 0;
-#         double dosageSqrSum = 0;
-
-#         for (float dosage : dosages) {
-#             if (dosage > 2) {
-#                 throw new GenotypeDataException("Error in calculating MACH r2, found dosage larger than 2: " + dosage);
-#             }
-#             if (dosage >= 0) {
-#                 ++nonMissingCount;
-#                 dosageSum += dosage;
-#                 dosageSqrSum += Math.pow(dosage, 2);
-#             }
-#             //else missing and ignore
-#         }
-
-#         double estimatedAlleleFrequency = dosageSum / (2 * nonMissingCount);
-
-#         if (estimatedAlleleFrequency <= 0 || estimatedAlleleFrequency >= 1) {
-#             return 1;
-#         }
-        
-#         double machR2 = ((dosageSqrSum / nonMissingCount) - Math.pow((dosageSum / nonMissingCount), 2)) / (2 * estimatedAlleleFrequency * (1 - estimatedAlleleFrequency));
-#         return machR2 > 1.0 ? 1.0 : machR2;
 #         /**
 #      *
 #      * @param probs

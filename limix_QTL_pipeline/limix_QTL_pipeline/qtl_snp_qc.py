@@ -21,7 +21,7 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
 
     #Here we make sure that the major allele is temporarly 'coded' as 0 & directly calculate the MAF (based on allele counts and non NA samples)
     mac = np.zeros((len(snp_df.columns)), dtype=np.int)
-    gc = np.zeros((len(snp_df.columns)), dtype=np.int)
+    gc = np.nansum(snp_df.values,0)
     maf = np.zeros((len(snp_df.columns)), dtype=np.float)
     for snp in range(0, len(snp_df.columns)):
         if genotypeCounter[snp,0]<genotypeCounter[snp,2]:
@@ -41,6 +41,7 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
         return snp_df.columns, failed_snp_names
     
     mac=mac[~selection]
+    gc=gc[~selection]
     genotypeCounter = genotypeCounter[~selection,]
     
     #Determine HWE.

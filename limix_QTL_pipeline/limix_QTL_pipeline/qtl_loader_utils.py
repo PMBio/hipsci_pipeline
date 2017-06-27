@@ -10,6 +10,14 @@ def ensure_dir(file_path):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
+##Read snp filterlist
+def get_snp_df(snps_filename):
+    if snps_filename:
+        snp_filter_df = pd.read_csv(snps_filename,sep='\t',index_col=0)
+    else:
+        snp_filter_df = None
+    return snp_filter_df
+
 def get_kinship_df(kinship_filename):
     if kinship_filename:
         kinship_df = pd.read_csv(kinship_filename,sep='\t',index_col=0)
