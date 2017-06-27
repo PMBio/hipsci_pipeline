@@ -4,7 +4,7 @@ import sys
 import h5py
 import numpy as np
 import limix.stats.fdr as FDR
-from  Utilities import *
+#from  Utilities import *
 import pandas
 
 def local_adjustment(pv, N=1,  method=''):
@@ -56,7 +56,7 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
                 beta= np.array([frez[f]['beta'] for f in  features ])
                 for i, b in  enumerate(beta): b [b!=b]=1
                 snp_id= np.array([frez[f]['snp_id'] for f in  features ])
-                position= np.array([fsnp[snp_id.astype('U')[indf]].transpose()['position'] for indf, f in  enumerate(features) ])
+                position= np.array([fsnp[snp_id[indf].astype('U')].transpose()['position'] for indf, f in  enumerate(features) ])
                 for i, p in  enumerate(position): p [p!=p]=1
     
                 fgm=fg.create_group('metadata')
@@ -97,13 +97,15 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
         frez.close()
         fOut.close()
 
-def replication_two_features(folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/',    traits=['peptide_test','protein_test'],
+def replication_two_features(folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/',  folder_data2=None,  traits=['peptide_test','protein_test'],
     qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',
     results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id'):
     
     _doc=" aggregates qtl results from two traits at feature_report level; return replication of pvalues for trait1  signigicant snps in trait2 "
 
-    featureh5=[h5py.File(folder_data+feature+'/'+feature_report+'_'+results_genome_file+'.h5','r') for feature in traits]
+    if folder_data2 is None:
+        folder_data2 =folder_data 
+    featureh5=[h5py.File(folder_data+traits[0]+'/'+feature_report+'_'+results_genome_file+'.h5','r'),h5py.File(folder_data2+traits[1]+'/'+feature_report+'_'+results_genome_file+'.h5','r')]
     
     feature_ids=np.intersect1d(list(featureh5[0].keys()),list(featureh5[1].keys()))
  
