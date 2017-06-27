@@ -8,7 +8,7 @@ import glob
 import os
 from sklearn.preprocessing import Imputer
 import argparse
-
+from qtl_fdr_utilities import calculate_corrected_pvalues
 
 def get_args():
     parser = argparse.ArgumentParser(description='Run QTL analysis given genotype, phenotype, and annotation.')
@@ -19,11 +19,11 @@ def get_args():
     parser.add_argument('-output_dir','--output_dir', required=True)
     parser.add_argument('-window','--window', required=True,
                         help=
-                        'The size of the cis window to take SNPs from, in kb.'
+                        'The size of the cis window to take SNPs from.'
                         'The window will extend between:                     '
                         '    (feature_start - (window))             '
                         ' and:                                               '
-                        '    (feature_end + (window))               ',default=250000)
+                        '    (feature_end + (window))               ')
     parser.add_argument('-chromosome','--chromosome',required=False,default='all')
     parser.add_argument('-covariates_file','--covariates_file',required=False,default=None)
     parser.add_argument('-kinship_file','--kinship_file',required=False,default=None)
@@ -36,7 +36,7 @@ def get_args():
     parser.add_argument('-snps','--snps',required=False,default=None)
     parser.add_argument("--cis",
                         action="store_true",
-                        help="Run cis analysis.", default=True)
+                        help="Run cis analysis.", default=False)
     parser.add_argument("--trans",
                         action="store_true",
                         help="Run trans analysis.", default=False)
@@ -57,7 +57,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,wind
     else :
         geno_prefix+='.bgen'
         print(geno_prefix)
-    
+    print("Intersecting data.")
     phenotype_df = qtl_loader_utils.get_phenotype_df(pheno_filename)
     annotation_df = qtl_loader_utils.get_annotation_df(anno_filename)
 
@@ -76,9 +76,8 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,wind
     if covariate_df is not None:
         phenotype_df = phenotype_df.loc[:,covariate_df.index]
         covariate_df = covariate_df.loc[phenotype_df.columns,:]
-    
     snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
-    
+    print("Number of samples with genotype & phenotype data: " + str(phenotype_df.shape[0]))
     #Open output files
     qtl_loader_utils.ensure_dir(output_dir)
     output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}.h5'.format(chromosome))
@@ -121,6 +120,9 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,wind
    
         if len(snpQuery) != 0:
             results_df = pd.DataFrame()
+            print ('For, feature: ' + feature_id + ' ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
+            if(n_perm!=0):
+                bestPermutationPval = np.ones((n_perm), dtype=np.float)
             for snpGroup in chunker(snpQuery, blocksize):
                 snp_idxs = snpGroup['i'].values
                 snp_names = snpGroup['snp'].values
@@ -188,22 +190,19 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,wind
                 #fit modelrun
                 LMM = limix.qtl.qtl_test_lmm(snp_matrix, phenotype,K=kinship_mat,covs=cov_matrix)
                 if(n_perm!=0):
-                    countPermutations = np.zeros((snp_matrix.shape[1]), dtype=np.int)
-                    nBetterCorrelation = np.zeros((snp_matrix.shape[1]), dtype=np.int)
-                    for permC in range(0,n_perm) :
+                    #countPermutations = np.zeros((snp_matrix.shape[1]), dtype=np.int)
+                    #nBetterCorrelation = np.zeros((snp_matrix.shape[1]), dtype=np.int)
+                    for perm in range(0,n_perm) :
                         LMM_perm = limix.qtl.qtl_test_lmm(snp_matrix, np.random.permutation(phenotype),K=kinship_mat,covs=cov_matrix)
                         #print(np.random.permutation(phenotype))
-                        for snp in range(0,len(LMM_perm.getPv()[0])):
-                            if(LMM_perm.getPv()[0][snp]<=LMM.getPv()[0][snp]):
-                                nBetterCorrelation[snp]+=1
-                            else:
-                                print(LMM_perm.getPv()[0][snp])
-                                print(LMM.getPv()[0][snp])
-                            countPermutations[snp]+=1
-                    #Here we need to take care of the permutation data/
-                    #Relink phenotype to genotype (several options)
-                    #Drop using speed ups from fastQTL.
-                    #Calculate P-value using beta dist.
+                        if(bestPermutationPval[perm] > min(LMM_perm.getPv()[0])):
+                                bestPermutationPval[perm] = min(LMM_perm.getPv()[0])
+                        #print(bestPermutationPval[perm])
+                        #for snp in range(0,len(LMM_perm.getPv()[0])):
+                            #print(LMM_perm.getPv()[0][snp])
+                            #countPermutations[snp]+=1;
+                            #if(bestPermutationPval[perm]<=LMM.getPv()[0][snp]):
+                                #nBetterCorrelation[snp]+=1
 
                 #add these results to qtl_results
                 #temp_df = pd.DataFrame(index = range(len(snp_names)),columns=['feature_id','snp_id','p_value','beta','n_samples','corr_p_value'])
@@ -213,8 +212,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,wind
                 temp_df['beta'] = LMM.getBetaSNP()[0]
                 temp_df['p_value'] = LMM.getPv()[0]
                 temp_df['n_samples'] = sum(~np.isnan(phenotype))
-                #temp_df['corr_p_value'] = sum(~np.isnan(phenotype))
-
+                #temp_df['corr_p_value'] = np.ones((len(LMM.getPv()[0])))
                 results_df = results_df.append(temp_df)
             if not results_df.empty :
                 output_writer.add_result_df(results_df)
@@ -287,6 +285,8 @@ if __name__=='__main__':
 
     if (cis and trans):
         raise ValueError("cis and trans cannot be specified simultaneously")
+    if (not cis and not trans):
+        cis = True
 
     run_QTL_analysis(pheno_file,anno_file,geno_prefix,plinkGenotype,int(window_size),output_dir,
                      min_maf=float(min_maf), min_hwe_P=float(min_hwe_P),
