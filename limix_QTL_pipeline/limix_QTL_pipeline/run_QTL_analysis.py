@@ -33,6 +33,7 @@ def get_args():
     parser.add_argument('-cr','--cr',required=False,default=0.95)
     parser.add_argument('-block_size','--block_size',required=False,default=1000)
     parser.add_argument('-n_perm','--n_perm',required=False,default=0)
+    parser.add_argument('-snps','--snps',required=False,default=None)
     parser.add_argument("--cis",
                         action="store_true",
                         help="Run cis analysis.", default=True)
@@ -45,7 +46,7 @@ def get_args():
     return args
 
 
-def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output_dir, min_maf, min_hwe_P,min_call_rate,blocksize,cis_mode,n_perm,chromosome='all',
+def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output_dir, min_maf, min_hwe_P,min_call_rate,blocksize,cis_mode,n_perm,snps,chromosome='all',
                      covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
     '''Core function to take input and run QTL tests on a given chromosome.'''
     
@@ -58,11 +59,13 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
     annotation_df = qtl_loader_utils.get_annotation_df(anno_filename)
     phenotype_df = phenotype_df.loc[annotation_df.index.values,individual2sample_df.loc[list(set(fam.index)&set(individual2sample_df.index)),'sample'].values]
 
-    kinship_df = qtl_loader_utils.get_kinship_df(kinship_filename)    
+    kinship_df = qtl_loader_utils.get_kinship_df(kinship_filename)
     kinship_df = kinship_df.loc[list(set(fam.index)&set(individual2sample_df.index)),list(set(fam.index)&set(individual2sample_df.index))]
 
     covariate_df = qtl_loader_utils.get_covariate_df(covariates_filename)
     covariate_df = covariate_df.loc[individual2sample_df.loc[list(set(fam.index)&set(individual2sample_df.index)),'sample'].values,]
+    
+    #Here we need to do more proper filtering for non perfectly overlapping samples and give warnings.
 
     #Open output files
     qtl_loader_utils.ensure_dir(output_dir)
@@ -101,6 +104,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,window_size,output
             #Crude filtering for sites on non allosomes.
             snpQuery = snpQuery.loc[snpQuery['chrom'].map(lambda x: x in list(map(str, range(1, 23))))]
 
+        #Here we can filter snpQuery using snps.
         if len(snpQuery) != 0:
             results_df = pd.DataFrame()
             for snpGroup in chunker(snpQuery, blocksize):
@@ -250,6 +254,7 @@ if __name__=='__main__':
     min_call_rate = args.cr
     block_size = args.block_size
     n_perm = args.n_perm
+    snps = args.snps
     cis = args.cis
     trans = args.trans
 
@@ -269,7 +274,7 @@ if __name__=='__main__':
     run_QTL_analysis(pheno_file,anno_file,geno_prefix,window_size,output_dir,
                      min_maf=min_maf, min_hwe_P=min_hwe_P,
                      min_call_rate=min_call_rate,blocksize=block_size, cis_mode=cis,
-                     n_perm=n_perm,chromosome=chromosome,
+                     n_perm=n_perm, snps=snps, chromosome=chromosome,
                      covariates_filename=covariates_file,
                      kinship_filename=kinship_file,
                      sample_mapping_filename=samplemap_file)
