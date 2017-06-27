@@ -219,6 +219,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,wind
         else :
             fail_qc_features.append(feature_id)
     output_writer.close()
+    #This we need to change in the written file.
     print(calculate_corrected_pvalues(bestPermutationPval,actualPval))
     
     #gather unique indexes of tested snps
