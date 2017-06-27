@@ -1,6 +1,7 @@
 from matplotlib.patches import Rectangle
 import matplotlib.gridspec as gridspec
 import sys
+
 from matplotlib_venn import venn2, venn2_circles
 from matplotlib_venn import venn3, venn3_circles
 import matplotlib.pyplot as plt
@@ -14,13 +15,14 @@ import numpy as np
 import os
 import scipy.stats as scst
 import statsmodels.sandbox.stats.multicomp as scst2
-from postprocess_functions_genome_results import *
+sys.path.append('../')
+from scripts.postprocess_functions_genome_results import *
 
 def plot_summary(folder_name='/Users/mirauta/Scripts/QTL_pipeline_plots/',folder_destination='',plot_name='qtl_summary',\
                  traits=['Exon_1234'],trait_labels=None,
                  file_name_results_genome='Feature_results_genome', qtl_results_file='QTL_results_',\
                  thresholds=[0.05,0.01],thrrep=0.05,colors=np.array(['orange','darkblue','green','m']),cis=2.5*10**5, figsize=(12,12), gene_list=None,\
-                 plot_calibration_flag=False):
+                 plot_tss_distance_flag=False,plot_calibration_flag=False):
     
     if not os.path.exists(folder_destination):
         os.makedirs(folder_destination)
@@ -48,7 +50,7 @@ def plot_summary(folder_name='/Users/mirauta/Scripts/QTL_pipeline_plots/',folder
     fdr=np.array([5,4,3,2,1])[::-1]
  
     for iy,yy in enumerate(local_adjusted):
-        print(yy)
+#        print(yy)
  
 #        plt.plot(fdr[::-1] ,[(-np.log10(FDR.qvalues1(yy))>thr).sum() for thr in fdr],color=colors[iy],markersize=3,label=trait_labels[iy])
         plt.plot(fdr[::-1] ,[(-np.log10(scst2.fdrcorrection0(yy)[1])>thr).sum() for thr in fdr],color=colors[iy],label=trait_labels[iy],lw=3)
@@ -59,27 +61,27 @@ def plot_summary(folder_name='/Users/mirauta/Scripts/QTL_pipeline_plots/',folder
     plt.xticks(fdr,fdr[::-1])
     if trait_labels is not None: plt.legend(loc=2,fontsize=9)
 
-
-    axes = fig.add_subplot(2, 2, 3, axisbg='white')
-    axes.spines['top'].set_visible(False)
-    axes.spines['right'].set_visible(False)
-    axes.yaxis.set_ticks_position('left')
-    axes.xaxis.set_ticks_position('bottom')
-    def get_distance_tss(gene,fh5):
-        if ( fh5[gene]['metadata/feature_strand'][:].astype('U')[0]=='+'):
-            return fh5[gene]['summary_data/min_p_value_position'][:][0]-fh5[gene]['metadata/start'][:][0]
+    if plot_tss_distance_flag:
+        axes = fig.add_subplot(2, 2, 3, axisbg='white')
+        axes.spines['top'].set_visible(False)
+        axes.spines['right'].set_visible(False)
+        axes.yaxis.set_ticks_position('left')
+        axes.xaxis.set_ticks_position('bottom')
+        def get_distance_tss(gene,fh5):
+            if ( fh5[gene]['metadata/feature_strand'][:].astype('U')[0]=='+'):
+                return fh5[gene]['summary_data/min_p_value_position'][:][0]-fh5[gene]['metadata/start'][:][0]
+            else:
+                return -fh5[gene]['summary_data/min_p_value_position'][:][0]+fh5[gene]['metadata/end'][:][0]
+    
+        if gene_list is None:
+            distance_tss=  [np.array([get_distance_tss(gene,fh5) for gene in  np.array(list(fh5.keys()))[ local_adjusted[indf]<10**-3]]) for indf,fh5 in enumerate(featureh5)]
         else:
-            return -fh5[gene]['summary_data/min_p_value_position'][:][0]+fh5[gene]['metadata/end'][:][0]
-
-    if gene_list is None:
-        distance_tss=  [np.array([get_distance_tss(gene,fh5) for gene in  np.array(list(fh5.keys()))[ local_adjusted[indf]<10**-3]]) for indf,fh5 in enumerate(featureh5)]
-    else:
-        distance_tss=  [np.array([get_distance_tss(gene,fh5) for gene in np.intersect1d(gene_list,np.array(list(fh5.keys())))[ local_adjusted[indf]<10**-3]]) for indf,fh5 in enumerate(featureh5)]
-    axes.hist([np.clip(d[np.isfinite(d)],-cis,cis) for d in distance_tss], bins=7,width=15000,label=trait_labels,color=colors[:len(traits)])
-    plt.ylabel('#pGenes \n(PV<0.001)',fontsize=13);plt.xlabel('distance from TSS',fontsize=13);
-    plt.legend(loc=2,fontsize=9)
-    plt.xticks(np.linspace(-cis,cis,5),np.array([str(int(l))+'k' for l in np.linspace(-cis,cis,5)/1e3]))
-        
+            distance_tss=  [np.array([get_distance_tss(gene,fh5) for gene in np.intersect1d(gene_list,np.array(list(fh5.keys())))[ local_adjusted[indf]<10**-3]]) for indf,fh5 in enumerate(featureh5)]
+        axes.hist([np.clip(d[np.isfinite(d)],-cis,cis) for d in distance_tss], bins=7,width=15000,label=trait_labels,color=colors[:len(traits)])
+        plt.ylabel('#pGenes \n(PV<0.001)',fontsize=13);plt.xlabel('distance from TSS',fontsize=13);
+        plt.legend(loc=2,fontsize=9)
+        plt.xticks(np.linspace(-cis,cis,5),np.array([str(int(l))+'k' for l in np.linspace(-cis,cis,5)/1e3]))
+            
 
     if plot_calibration_flag:
         plt.subplot(2,2,4)
@@ -164,12 +166,12 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
 #==============================================================================
  
 
-def plot_replication(rez=None,folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/',    traits=['protein_test','peptide_test'],trait_labels=['protein_test','peptide_test'],\
+def plot_replication(rez=None,folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/', folder_data2 ='/Users/mirauta/Data/MS/hipsci/TMT/',   traits=['protein_test','peptide_test'],trait_labels=['protein_test','peptide_test'],\
     qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',\
     results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',folder_destination='/Users/mirauta/Results/hipsci/Images_pipeline',\
     figsize=5, red_dots_features=None,red_dot='ro',plot_name=''):
     if rez is None:
-        rez=replication_two_features(folder_data =folder_data,    traits=np.array(traits), qtl_results_file=qtl_results_file,    snp_metadata_file=snp_metadata_file,    feature_metadata_file=feature_metadata_file, results_genome_file=results_genome_file,    feature_report= feature_report)
+        rez=replication_two_features(folder_data =folder_data, folder_data2 =folder_data2,    traits=np.array(traits), qtl_results_file=qtl_results_file,    snp_metadata_file=snp_metadata_file,    feature_metadata_file=feature_metadata_file, results_genome_file=results_genome_file,    feature_report= feature_report)
    
     fig=plt.figure(figsize=(figsize,figsize))
     mpl.rcParams.update(mpl.rcParamsDefault)
