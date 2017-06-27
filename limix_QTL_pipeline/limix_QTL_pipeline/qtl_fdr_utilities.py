@@ -11,5 +11,6 @@ def estimate_beta_function_paras(top_pvalues_perm):
 def calculate_corrected_pvalues(top_pvalues_perm,nominal_pvalues):
     alpha_para,beta_para = estimate_beta_function_paras(top_pvalues_perm)
     beta_dist = scipy.stats.beta(alpha_para,beta_para)
+    #apply correction to nominal p_values - potentially slow
     corrected_pvalues = np.array([beta_dist.cdf(x) for x in nominal_pvalues])
     return corrected_pvalues
