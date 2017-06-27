@@ -4,23 +4,27 @@ class hdf5_writer:
 
     def __init__(self,output_filename):
         self.h5file = tables.open_file(output_filename,'w')
-#        self.group = self.h5file.create_group('/')
 
     def close(self):
         self.h5file.close()
 
     def add_result_df(self,qtl_results_df):
-        assert(len(set(qtl_results_df['feature_id']==1)))
+        assert(len(set(qtl_results_df['feature_id'].values)==1))
         feature_id = qtl_results_df['feature_id'].values[0]
         column_names = ['snp_id','p_value','beta','n_samples','corr_p_value']
-        table = self.h5file.create_table(self.h5file.root,feature_id,QTL_result_hdf5,"QTL analysis results")
+        try:
+            #get the existing table for this feature
+            table = self.h5file.get_node('/'+feature_id)
+        except tables.exceptions.NoSuchNodeError:
+            #this table doesn't exist yet - create it
+            table = self.h5file.create_table(self.h5file.root,feature_id,QTL_result_hdf5,"QTL analysis results")
+            pass
         qtl_result = table.row
         for idx,df_row in qtl_results_df.iterrows():
             for col_name in column_names:
                 qtl_result[col_name] = df_row[col_name]
             qtl_result.append()
         table.flush()
-        table.cols.snp_id.create_index()
  
 class text_writer:
 
