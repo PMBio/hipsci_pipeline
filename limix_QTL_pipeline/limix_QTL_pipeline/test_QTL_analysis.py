@@ -109,15 +109,15 @@ def test_QTL_analysis():
     
     geno_prefix = data_path+'Genotypes/Geuvadis'
     pheno_filename = data_path+'Expression/Geuvadis_CEU_Expr.txt'
-    anno_filename = data_path+'Expression/Geuvadis_CEU_formatted_annotation_data.txt'
+    anno_filename = data_path+'Expression/Geuvadis_CEU_Annot.txt'
     
     output_dir = data_path+'TestOutput/limix_QTL_results/'
         
     ws = 250000
     
     for chromosome in ['1','2']:
-        run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,ws,output_dir,chromosome=chromosome)
-    
+        run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,True,ws,output_dir,min_maf, min_hwe_P,min_call_rate,blocksize,cis_mode=True, n_perm=0,chromosome=chromosome)
+
     results_checking_dict = {output_dir+'qtl_results_1.h5':0.034497,
                         output_dir+'qtl_results_2.h5':0.002150}
     results_checking(results_checking_dict)
