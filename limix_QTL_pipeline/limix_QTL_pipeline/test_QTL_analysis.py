@@ -116,7 +116,7 @@ def test_QTL_analysis():
     ws = 250000
     
     for chromosome in ['1','2']:
-        run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,True,ws,output_dir,min_maf, min_hwe_P,min_call_rate,blocksize,cis_mode=True, n_perm=0,chromosome=chromosome)
+        run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,True,ws,output_dir,min_maf, min_hwe_P,min_call_rate,blocksize,cis_mode=True, n_perm=50,chromosome=chromosome)
 
     results_checking_dict = {output_dir+'qtl_results_1.h5':0.034497,
                         output_dir+'qtl_results_2.h5':0.002150}
