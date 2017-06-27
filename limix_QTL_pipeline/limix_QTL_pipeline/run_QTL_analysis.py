@@ -119,10 +119,10 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,wind
             snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x in list(map(str, snp_filter_df.index)))]
    
         if len(snpQuery) != 0:
-            results_df = pd.DataFrame()
             print ('For, feature: ' + feature_id + ' ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
             if(n_perm!=0):
                 bestPermutationPval = np.ones((n_perm), dtype=np.float)
+                actualPval = []
             for snpGroup in chunker(snpQuery, blocksize):
                 snp_idxs = snpGroup['i'].values
                 snp_names = snpGroup['snp'].values
@@ -205,20 +205,21 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,wind
                                 #nBetterCorrelation[snp]+=1
 
                 #add these results to qtl_results
-                #temp_df = pd.DataFrame(index = range(len(snp_names)),columns=['feature_id','snp_id','p_value','beta','n_samples','corr_p_value'])
-                temp_df = pd.DataFrame(index = range(len(snp_names)),columns=['feature_id','snp_id','p_value','beta','n_samples'])
+                temp_df = pd.DataFrame(index = range(len(snp_names)),columns=['feature_id','snp_id','p_value','beta','n_samples','corr_p_value'])
                 temp_df['snp_id'] = snp_names
                 temp_df['feature_id'] = feature_id
                 temp_df['beta'] = LMM.getBetaSNP()[0]
                 temp_df['p_value'] = LMM.getPv()[0]
+                actualPval.extend(list(LMM.getPv()[0]))
                 temp_df['n_samples'] = sum(~np.isnan(phenotype))
-                #temp_df['corr_p_value'] = np.ones((len(LMM.getPv()[0])))
-                results_df = results_df.append(temp_df)
-            if not results_df.empty :
-                output_writer.add_result_df(results_df)
+                #insert default dummy value
+                temp_df['corr_p_value'] = 1.0
+                if not temp_df.empty :
+                    output_writer.add_result_df(temp_df)
         else :
             fail_qc_features.append(feature_id)
     output_writer.close()
+    print(calculate_corrected_pvalues(bestPermutationPval,actualPval))
     
     #gather unique indexes of tested snps
     tested_snp_idxs = list(set(tested_snp_idxs))
