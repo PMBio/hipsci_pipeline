@@ -36,14 +36,14 @@ def test_QTL_analysis():
     min_call_rate =0.95
     blocksize = 1000
     output_dir = data_path+'limix_QTL_results_kinship_covs/'
-    
+    randomSeed = 73
     chromosome = '1'
     
     ws = 2500000
     
     run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,True,ws,output_dir,
                      min_maf, min_hwe_P,
-                     min_call_rate,blocksize,cis_mode=True, n_perm=0, snps_filename=None,
+                     min_call_rate,blocksize, cis_mode=True, seed=randomSeed, n_perm=0, snps_filename=None, feature_filename = None,
                      chromosome=chromosome,
                      covariates_filename=covariates_filename,
                      kinship_filename=kinship_filename,
@@ -116,7 +116,7 @@ def test_QTL_analysis():
     ws = 250000
     
     for chromosome in ['1','2']:
-        run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,True,ws,output_dir,min_maf, min_hwe_P,min_call_rate,blocksize,cis_mode=True, n_perm=50,chromosome=chromosome)
+        run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,True,ws,output_dir,min_maf, min_hwe_P,min_call_rate,blocksize,cis_mode=True, seed=randomSeed, n_perm=50,chromosome=chromosome)
 
     results_checking_dict = {output_dir+'qtl_results_1.h5':0.034497,
                         output_dir+'qtl_results_2.h5':0.002150}

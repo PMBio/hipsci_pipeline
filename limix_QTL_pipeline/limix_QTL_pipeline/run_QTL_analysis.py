@@ -9,6 +9,8 @@ import os
 from sklearn.preprocessing import Imputer
 import argparse
 from qtl_fdr_utilities import calculate_corrected_pvalues
+import random
+import math
 
 def get_args():
     parser = argparse.ArgumentParser(description='Run QTL analysis given genotype, phenotype, and annotation.')
@@ -34,6 +36,8 @@ def get_args():
     parser.add_argument('-block_size','--block_size',required=False,default=1000)
     parser.add_argument('-n_perm','--n_perm',required=False,default=0)
     parser.add_argument('-snps','--snps',required=False,default=None)
+    parser.add_argument('-features','--features',required=False,default=None)
+    parser.add_argument('-seed','--seed',required=False,default=None)
     parser.add_argument("--cis",
                         action="store_true",
                         help="Run cis analysis.", default=False)
@@ -46,10 +50,12 @@ def get_args():
     return args
 
 
-def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,window_size,output_dir, min_maf, min_hwe_P,min_call_rate,blocksize,cis_mode,n_perm=0,snps_filename=None,chromosome='all',
+def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,window_size,output_dir, min_maf, min_hwe_P,min_call_rate,blocksize,cis_mode,seed=None,n_perm=0,snps_filename=None,feature_filename=None,chromosome='all',
                      covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
     '''Core function to take input and run QTL tests on a given chromosome.'''
-
+    #Pick a random seed to do exactly the same permutations in blocks.
+    if(seed is not None):
+        seed = math.floor(random.random()*1000)
     #Load input data files & filter for relevant data
     #Load input data filesf
     if(plinkGenotype):
@@ -58,6 +64,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,wind
         geno_prefix+='.bgen'
         print(geno_prefix)
     print("Intersecting data.")
+    feature_filter_df = qtl_loader_utils.get_snp_df(feature_filename)
     phenotype_df = qtl_loader_utils.get_phenotype_df(pheno_filename)
     annotation_df = qtl_loader_utils.get_annotation_df(anno_filename)
 
@@ -73,10 +80,15 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,wind
         
     covariate_df = qtl_loader_utils.get_covariate_df(covariates_filename)
     phenotype_df = phenotype_df.loc[annotation_df.index.values,individual2sample_df.loc[list(set(fam.index)&set(individual2sample_df.index)),'sample'].values]
+    
+    if(feature_filter_df is not None):
+        phenotype_df = phenotype_df.loc[feature_filter_df.index,:]
+    
     if covariate_df is not None:
         phenotype_df = phenotype_df.loc[:,covariate_df.index]
         covariate_df = covariate_df.loc[phenotype_df.columns,:]
     snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
+    
     print("Number of samples with genotype & phenotype data: " + str(phenotype_df.shape[0]))
     #Open output files
     qtl_loader_utils.ensure_dir(output_dir)
@@ -192,6 +204,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,wind
                 if(n_perm!=0):
                     #countPermutations = np.zeros((snp_matrix.shape[1]), dtype=np.int)
                     #nBetterCorrelation = np.zeros((snp_matrix.shape[1]), dtype=np.int)
+                    np.random.seed(seed)
                     for perm in range(0,n_perm) :
                         LMM_perm = limix.qtl.qtl_test_lmm(snp_matrix, np.random.permutation(phenotype),K=kinship_mat,covs=cov_matrix)
                         #print(np.random.permutation(phenotype))
@@ -210,18 +223,21 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,wind
                 temp_df['feature_id'] = feature_id
                 temp_df['beta'] = LMM.getBetaSNP()[0]
                 temp_df['p_value'] = LMM.getPv()[0]
-                actualPval.extend(list(LMM.getPv()[0]))
+                if(n_perm!=0):
+                    actualPval.extend(list(LMM.getPv()[0]))
                 temp_df['n_samples'] = sum(~np.isnan(phenotype))
                 #insert default dummy value
                 temp_df['corr_p_value'] = 1.0
                 if not temp_df.empty :
                     output_writer.add_result_df(temp_df)
+            #This we need to change in the written file.
+            if(n_perm!=0):
+                #updated_permuted_p_in_hdf5(bestPermutationPval, feature_id);
+                print(calculate_corrected_pvalues(bestPermutationPval,actualPval))
         else :
             fail_qc_features.append(feature_id)
     output_writer.close()
-    #This we need to change in the written file.
-    print(calculate_corrected_pvalues(bestPermutationPval,actualPval))
-    
+
     #gather unique indexes of tested snps
     tested_snp_idxs = list(set(tested_snp_idxs))
     #write annotation and snp data to file
@@ -269,6 +285,8 @@ if __name__=='__main__':
     block_size = args.block_size
     n_perm = args.n_perm
     snps_filename = args.snps
+    random_seed = args.seed
+    feature_filename = args.features
     cis = args.cis
     trans = args.trans
 
@@ -293,7 +311,7 @@ if __name__=='__main__':
     run_QTL_analysis(pheno_file,anno_file,geno_prefix,plinkGenotype,int(window_size),output_dir,
                      min_maf=float(min_maf), min_hwe_P=float(min_hwe_P),
                      min_call_rate=float(min_call_rate),blocksize=int(block_size), cis_mode=cis,
-                     n_perm=int(n_perm), snps_filename=snps_filename, chromosome=chromosome,
-                     covariates_filename=covariates_file,
+                     seed=random_seed, n_perm=int(n_perm), snps_filename=snps_filename, feature_filename=feature_filename,
+                     chromosome=chromosome, covariates_filename=covariates_file,
                      kinship_filename=kinship_file,
                      sample_mapping_filename=samplemap_file)
