@@ -2,6 +2,8 @@ import numpy as np
 import scipy.stats
 #from joblib import Parallel
 
+#V0.1
+
 def estimate_beta_function_paras(top_pvalues_perm):
     mean = np.mean(top_pvalues_perm)
     variance = np.var(top_pvalues_perm)

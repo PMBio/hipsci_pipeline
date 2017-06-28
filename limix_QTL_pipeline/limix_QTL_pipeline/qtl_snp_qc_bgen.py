@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import math
 
+#V0.1
+
 def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P, min_hmachR2):
    
     #Determine call rate.

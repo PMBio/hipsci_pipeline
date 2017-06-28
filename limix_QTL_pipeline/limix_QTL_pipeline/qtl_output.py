@@ -1,6 +1,8 @@
 import tables
 import qtl_fdr_utilities
 
+#V0.1
+
 class hdf5_writer:
 
     def __init__(self,output_filename):
