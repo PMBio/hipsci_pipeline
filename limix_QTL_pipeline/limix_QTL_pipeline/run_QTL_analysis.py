@@ -8,8 +8,9 @@ import glob
 import os
 from sklearn.preprocessing import Imputer
 import argparse
-import random
 import math
+
+#V0.1
 
 def get_args():
     parser = argparse.ArgumentParser(description='Run QTL analysis given genotype, phenotype, and annotation.')
@@ -36,7 +37,7 @@ def get_args():
     parser.add_argument('-n_perm','--n_perm',required=False,default=0)
     parser.add_argument('-snps','--snps',required=False,default=None)
     parser.add_argument('-features','--features',required=False,default=None)
-    parser.add_argument('-seed','--seed',required=False,default=73)
+    parser.add_argument('-seed','--seed',required=False)
     parser.add_argument("--cis",
                         action="store_true",
                         help="Run cis analysis.", default=False)
@@ -49,7 +50,7 @@ def get_args():
     return args
 
 
-def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,window_size,output_dir, min_maf, min_hwe_P,min_call_rate,blocksize,cis_mode,seed=73,n_perm=0,snps_filename=None,feature_filename=None,chromosome='all',
+def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,window_size,output_dir, min_maf, min_hwe_P,min_call_rate,blocksize,cis_mode,seed,n_perm=0,snps_filename=None,feature_filename=None,chromosome='all',
                      covariates_filename=None,kinship_filename=None,sample_mapping_filename=None):
     '''Core function to take input and run QTL tests on a given chromosome.'''
     #Load input data files & filter for relevant data
@@ -304,7 +305,9 @@ if __name__=='__main__':
         raise ValueError("cis and trans cannot be specified simultaneously")
     if (not cis and not trans):
         cis = True
-
+    if (seed is None):
+        seed = np.random.randint(40000)
+    
     run_QTL_analysis(pheno_file,anno_file,geno_prefix,plinkGenotype,int(window_size),output_dir,
                      min_maf=float(min_maf), min_hwe_P=float(min_hwe_P),
                      min_call_rate=float(min_call_rate),blocksize=int(block_size), cis_mode=cis,
