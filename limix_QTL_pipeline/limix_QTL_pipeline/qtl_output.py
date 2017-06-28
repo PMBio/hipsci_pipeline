@@ -34,7 +34,7 @@ class hdf5_writer:
         table = self.h5file.get_node('/'+feature_id)
         for row in table:
             row['corr_p_value'] = correction_function(row['p_value'])
-            print correction_function(row['p_value'])
+            #print(correction_function(row['p_value']))
         table.flush()
         
  
