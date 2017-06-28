@@ -155,6 +155,7 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,wind
                 snp_df = snp_df.loc[individual_ids,:]
                 
                 #SNP QC.
+                    #We should do the QC on non-repeated samples so we should take only 1 of the kinship 1 values.
                 if not contains_missing_samples:
                     #remove snps from snp_df if they fail QC
                     snp_df = snp_df.loc[:,snp_df.columns[~snp_df.columns.isin(fail_qc_snps_all)]]
