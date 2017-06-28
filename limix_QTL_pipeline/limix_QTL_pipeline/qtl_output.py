@@ -1,4 +1,5 @@
 import tables
+import qtl_fdr_utilities
 
 class hdf5_writer:
 
@@ -9,7 +10,7 @@ class hdf5_writer:
         self.h5file.close()
 
     def add_result_df(self,qtl_results_df):
-        assert(len(set(qtl_results_df['feature_id'].values)==1))
+        assert(len(set(qtl_results_df['feature_id'].values))==1)
         feature_id = qtl_results_df['feature_id'].values[0]
         column_names = ['snp_id','p_value','beta','n_samples','corr_p_value']
         try:
@@ -25,6 +26,17 @@ class hdf5_writer:
                 qtl_result[col_name] = df_row[col_name]
             qtl_result.append()
         table.flush()
+
+    def apply_pval_correction(self,feature_id,top_pvalues_perm):
+        '''Function to correct p values based on nominal p values and the top
+        hits from permutation runs for the given feature.'''
+        correction_function = qtl_fdr_utilities.define_correction_function(top_pvalues_perm)
+        table = self.h5file.get_node('/'+feature_id)
+        for row in table:
+            row['corr_p_value'] = correction_function(row['p_value'])
+            print correction_function(row['p_value'])
+        table.flush()
+        
  
 class text_writer:
 
