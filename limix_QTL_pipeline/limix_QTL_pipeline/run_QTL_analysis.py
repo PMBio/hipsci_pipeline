@@ -201,6 +201,8 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,wind
                 if(n_perm!=0):
                     #countPermutations = np.zeros((snp_matrix.shape[1]), dtype=np.int)
                     #nBetterCorrelation = np.zeros((snp_matrix.shape[1]), dtype=np.int)
+                        #If we are going to need another permutation based on breaking the genotypes (Not the phenotypes).
+                        #In this case we want to add the snps to one matrix, to speed up the tests and calculate later which come from what permutaiton.
                     np.random.seed(seed)
                     for perm in range(0,n_perm) :
                         LMM_perm = limix.qtl.qtl_test_lmm(snp_matrix, np.random.permutation(phenotype),K=kinship_mat,covs=cov_matrix)
