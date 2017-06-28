@@ -131,7 +131,6 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,wind
             print ('For, feature: ' + feature_id + ' ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
             if(n_perm!=0):
                 bestPermutationPval = np.ones((n_perm), dtype=np.float)
-                actualPval = []
             for snpGroup in chunker(snpQuery, blocksize):
                 snp_idxs = snpGroup['i'].values
                 snp_names = snpGroup['snp'].values
@@ -223,8 +222,6 @@ def run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,plinkGenotype,wind
                 temp_df['feature_id'] = feature_id
                 temp_df['beta'] = LMM.getBetaSNP()[0]
                 temp_df['p_value'] = LMM.getPv()[0]
-                if(n_perm!=0):
-                    actualPval.extend(list(LMM.getPv()[0]))
                 temp_df['n_samples'] = sum(~np.isnan(phenotype))
                 #insert default dummy value
                 temp_df['corr_p_value'] = 1.0
