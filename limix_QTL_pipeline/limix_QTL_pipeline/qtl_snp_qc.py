@@ -29,7 +29,6 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
             genotypeCounter[snp,0] = genotypeCounter[snp,2]
             genotypeCounter[snp,2] = tmp
         mac[snp] = int((genotypeCounter[snp,2]*2)+genotypeCounter[snp,1])
-        gc[snp] = (genotypeCounter[snp,2]+genotypeCounter[snp,1]+genotypeCounter[snp,0])
         maf[snp] = mac[snp] / (float(2*gc[snp]))
     
     selection = maf < min_maf
@@ -47,6 +46,7 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
     #Determine HWE.
     hweP = np.zeros((len(snp_df.columns)), dtype=np.float)
     
+    #This can also be multi-threaded if we place it in an separate function. (And multi-threading is as easy as it seems)
     for snp in range(0, len(snp_df.columns)):
         rare_copies = mac[snp]
         genotypes = gc[snp]
