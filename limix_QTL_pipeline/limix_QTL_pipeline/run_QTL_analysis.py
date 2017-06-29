@@ -334,14 +334,14 @@ def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, ide
         
         ##Re-flate genotype matrix
         kinship_df.values[[np.arange(kinship_df.shape[0])]*2] = 0
-        snp_matrix_DF_copy = snp_matrix_DF.copy(deep=True)
+
         for current_name in geneticaly_unique_individuals :
-            snp_matrix_DF_copy.loc[current_name,:] = u_snp_matrix.loc[current_name,:]
+            snp_matrix_DF.loc[current_name,:] = u_snp_matrix.loc[current_name,:]
             selection = kinship_df.loc[current_name,:].values>=identityScore
             if(selection.sum()>0):
-                snp_matrix_DF_copy.iloc[selection,:] = u_snp_matrix.loc[current_name,:].values
+                snp_matrix_DF.iloc[selection,:] = u_snp_matrix.loc[current_name,:].values
         
-        return(snp_matrix_DF_copy.values)
+        return(snp_matrix_DF.values)
 
 if __name__=='__main__':
     args = get_args()
