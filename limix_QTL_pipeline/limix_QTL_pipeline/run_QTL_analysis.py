@@ -191,6 +191,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(pass_qc_snps_all)]]
                 else:
                     #Do snp QC for relevant section.
+                    print ('Feature: ' + feature_id + ' contains missing data.')
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_df.shape[0]:
                         passed_snp_names,failed_snp_names = do_snp_qc(snp_df.loc[:geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P)
                     else:
