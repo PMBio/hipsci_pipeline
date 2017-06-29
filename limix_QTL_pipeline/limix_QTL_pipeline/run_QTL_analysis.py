@@ -368,7 +368,6 @@ def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, ide
             selection = kinship_df_copy.loc[current_name,:].values>=identityScore
             if(selection.sum()>0):
                 snp_matrix_DF_copy.iloc[selection,:] = u_snp_matrix.loc[current_name,:].values
-        print(snp_matrix_DF_copy)
         return(snp_matrix_DF_copy.values)
 
 if __name__=='__main__':
