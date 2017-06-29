@@ -337,7 +337,6 @@ def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, ide
         ##Re-flate genotype matrix
         kinship_df.values[[np.arange(kinship_df.shape[0])]*2] = 0
         #snp_matrix_DF_copy = snp_matrix_DF.copy(deep=True)
-        #Here I assume the original copy of snp_matrix_DF does not get changed. @Daniel / @Bogdan is this correct?
         for current_name in geneticaly_unique_individuals :
             snp_matrix_DF.loc[current_name,:] = u_snp_matrix.loc[current_name,:]
             selection = kinship_df.loc[current_name,:].values>=identityScore
