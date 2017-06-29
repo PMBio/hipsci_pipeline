@@ -75,6 +75,10 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     individual2sample_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'iid')
     sample2individual_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'sample')
 
+    #Subset linking to relevant genotypes.
+    individual2sample_df = individual2sample_df[fam.index,:]
+    sample2individual_df = sample2individual_df.loc[sample2individual_df['iid'].map(lambda x: x in list(map(str, fam.index))),:]
+
     kinship_df = qtl_loader_utils.get_kinship_df(kinship_filename) 
     if kinship_df is not None:
         kinship_df = kinship_df.loc[list(set(fam.index)&set(individual2sample_df.index)),list(set(fam.index)&set(individual2sample_df.index))]
@@ -82,10 +86,14 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         individual2sample_df = individual2sample_df.loc[kinship_df.index,:]
         sample2individual_df = sample2individual_df[sample2individual_df['iid'].map(lambda x: x in list(map(str, kinship_df.index)))]
         geneticaly_unique_individuals = get_unique_genetic_samples(kinship_df, relatedness_score);
-        
+    
     covariate_df = qtl_loader_utils.get_covariate_df(covariates_filename)
     phenotype_df = phenotype_df.loc[annotation_df.index.values,individual2sample_df.loc[list(set(fam.index)&set(individual2sample_df.index)),'sample'].values]
     
+    #Subset linking to relevant phenotypes.
+    sample2individual_df = sample2individual_df.loc[phenotype_df.columns,:]
+    individual2sample_df = individual2sample_df[individual2sample_df['sample'].map(lambda x: x in list(map(str, phenotype_df.columns)))]
+
     if(feature_filter_df is not None):
         phenotype_df = phenotype_df.loc[feature_filter_df.index,:]
     
@@ -93,10 +101,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         phenotype_df = phenotype_df.loc[:,covariate_df.index]
         covariate_df = covariate_df.loc[phenotype_df.columns,:]
         minimum_test_samples += covariate_df.shape[1]
-    
-    sample2individual_df = sample2individual_df.loc[phenotype_df.columns,:]
-    individual2sample_df = individual2sample_df[individual2sample_df['sample'].map(lambda x: x in list(map(str, phenotype_df.columns)))]
-    
+
     snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
     
     print("Number of samples with genotype & phenotype data: " + str(phenotype_df.shape[1]))
