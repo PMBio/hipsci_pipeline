@@ -48,7 +48,7 @@ def test_QTL_analysis():
                      kinship_filename=kinship_filename, sample_mapping_filename=individual2sample_filename)
 
     results_checking_dict = {output_dir+'qtl_results_1.h5':-0.015720008359251764}
-    #results_checking(results_checking_dict)
+    results_checking(results_checking_dict)
     
     output_dir = data_path+'limix_QTL_results_kinship_covs_cmd_line/'
     subprocess.call('python run_QTL_analysis.py '
@@ -76,7 +76,7 @@ def test_QTL_analysis():
                     shell=True)
 
     results_checking_dict = {output_dir+'qtl_results_1.h5':-0.015720008359251764}
-    #results_checking(results_checking_dict)
+    results_checking(results_checking_dict)
 
     #run again, without specifying chromosome
     subprocess.call('python run_QTL_analysis.py '
@@ -119,7 +119,7 @@ def test_QTL_analysis():
 
     results_checking_dict = {output_dir+'qtl_results_1.h5':0.034497,
                         output_dir+'qtl_results_2.h5':0.002150}
-    #results_checking(results_checking_dict)
+    results_checking(results_checking_dict)
 
 
 if __name__=='__main__':
