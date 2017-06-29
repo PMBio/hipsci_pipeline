@@ -320,9 +320,25 @@ def get_unique_genetic_samples(kinship_df, identityScore):
 
     return(kinship_df.columns)
 
-def force_normal_distribution(phenotype):
-    normalized_phenotype = phenotype
-    return(phenotype)
+def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
+    _doc='rank transform x into ref/ gaussian;keep the range; keep ties'
+    
+    indextoupdate=np.isfinite(phenotype);
+    y1=phenotype[indextoupdate]
+    yuni,yindex=np.unique(y1, return_inverse=True)
+    if method=='gaussnorm':
+        std=np.nanstd(y1)
+        mean=np.nanmean(y1)
+        sref = scst.norm.isf(np.linspace(scst.norm.cdf((np.nanmin(y1)-mean)/std), scst.norm.cdf((np.nanmax(y1)-mean)/std),num=yuni.shape[0])[::-1])
+        
+    elif method=='ranknorm':
+        try:
+            sref=np.sort(reference[np.isfinite(reference)])[np.linspace(0,reference.shape[0]-0.001, num=yuni.shape[0]).astype(int)]
+        except: print ('reference missing. provide reference to force_normal_distribution or choose gaussnorm')
+    phenotypenorm=phenotype.copy()
+    phenotypenorm[indextoupdate]=sref[yindex]
+    
+    return phenotypenorm
 
 def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, identityScore, snp_matrix_DF,kinship_df):
         u_snp_matrix = snp_matrix_DF.loc[geneticaly_unique_individuals,:]
