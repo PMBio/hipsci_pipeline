@@ -41,7 +41,7 @@ def test_QTL_analysis():
     
     ws = 2500000
     
-    run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,True,ws,output_dir,
+    run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,True,output_dir,ws,
                      min_maf, min_hwe_P, min_call_rate,
                      blocksize,cis_mode=True, seed=randomSeed, n_perm=100, snps_filename=None,feature_filename = None,
                      chromosome=chromosome,
