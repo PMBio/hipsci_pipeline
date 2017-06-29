@@ -1,5 +1,8 @@
 import numpy as np
 import scipy.stats
+#from joblib import Parallel
+
+#V0.1
 
 def estimate_beta_function_paras(top_pvalues_perm):
     mean = np.mean(top_pvalues_perm)
@@ -18,4 +21,5 @@ def calculate_corrected_pvalues(top_pvalues_perm,nominal_pvalues):
     correction_function = define_correction_function(top_pvalues_perm)
     #apply correction to nominal p_values - potentially slow
     corrected_pvalues = np.array([correction_function(x) for x in nominal_pvalues])
+    #corrected_pvalues = Parallel(n_jobs=-2)(np.array([correction_function(x) for x in nominal_pvalues]))
     return corrected_pvalues

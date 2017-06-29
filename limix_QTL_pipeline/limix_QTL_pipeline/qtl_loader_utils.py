@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import os
 
+#V0.1
+
 ##loader functions
 def ensure_dir(file_path):
     '''Check if directory exists for output, and create it if it doesn't.'''
