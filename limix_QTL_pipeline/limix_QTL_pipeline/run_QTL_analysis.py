@@ -25,7 +25,7 @@ def get_args():
                         'The window will extend between:                     '
                         '    (feature_start - (window))             '
                         ' and:                                               '
-                        '    (feature_end + (window))               ')
+                        '    (feature_end + (window))               ',default=250000)
     parser.add_argument('-chromosome','--chromosome',required=False,default='all')
     parser.add_argument('-covariates_file','--covariates_file',required=False,default=None)
     parser.add_argument('-kinship_file','--kinship_file',required=False,default=None)
