@@ -144,7 +144,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
 
             phenotype_ds = phenotype_df.loc[feature_id,sample_ids]
             contains_missing_samples = any(phenotype_ds.isnull().values)
-
+            if(contains_missing_samples):
+                print ('Feature: ' + feature_id + ' contains missing data.')
             phenotype_ds.dropna(inplace=True)
             if phenotype_ds.empty | len(phenotype_ds)<minimum_test_samples :
                 print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
@@ -191,9 +192,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(pass_qc_snps_all)]]
                 else:
                     #Do snp QC for relevant section.
-                    print ('Feature: ' + feature_id + ' contains missing data.')
+                    
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_df.shape[0]:
-                        passed_snp_names,failed_snp_names = do_snp_qc(snp_df.loc[:geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P)
+                        passed_snp_names,failed_snp_names = do_snp_qc(snp_df.loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P)
                     else:
                         passed_snp_names,failed_snp_names = do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P)
                     snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(pass_qc_snps_all)]]
