@@ -231,7 +231,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         for perm_id in range(1,n_perm) :
                             temp = np.concatenate((temp, get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df)),axis=1)
                         print(temp.shape)
-                        LMM_perm = limix.qtl.qtl_test_lmm(temp, np.random.permutation(phenotype),K=kinship_mat,covs=cov_matrix)
+                        LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,covs=cov_matrix)
                         perm = 0;
                         for relevantOutput in chunker(LMM_perm.getPv()[0],snp_matrix_DF.shape[1]) :
                             if(bestPermutationPval[perm] > min(relevantOutput)): 
@@ -247,7 +247,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                             np.random.shuffle(index_samples)
                             temp = np.concatenate((temp, snp_matrix_DF.iloc[index_samples,:].values),axis=1)
                         print(temp.shape)
-                        LMM_perm = limix.qtl.qtl_test_lmm(temp, np.random.permutation(phenotype),K=kinship_mat,covs=cov_matrix)
+                        LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,covs=cov_matrix)
                         perm = 0;
                         for relevantOutput in chunker(LMM_perm.getPv()[0],snp_matrix_DF.shape[1]) :
                             if(bestPermutationPval[perm] > min(relevantOutput)): 
