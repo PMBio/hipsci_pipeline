@@ -93,9 +93,13 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         phenotype_df = phenotype_df.loc[:,covariate_df.index]
         covariate_df = covariate_df.loc[phenotype_df.columns,:]
         minimum_test_samples += covariate_df.shape[1]
+    
+    sample2individual_df = sample2individual_df.loc[phenotype_df.columns,:]
+    individual2sample_df = individual2sample_df[individual2sample_df['sample'].map(lambda x: x in list(map(str, phenotype_df.columns)))]
+    
     snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
     
-    print("Number of samples with genotype & phenotype data: " + str(phenotype_df.shape[0]))
+    print("Number of samples with genotype & phenotype data: " + str(phenotype_df.shape[1]))
     #Open output files
     qtl_loader_utils.ensure_dir(output_dir)
     output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}.h5'.format(chromosome))
@@ -141,9 +145,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
    
         if len(snpQuery) != 0:
             sample_ids = individual2sample_df.loc[:,'sample'].values
-
             phenotype_ds = phenotype_df.loc[feature_id,sample_ids]
             contains_missing_samples = any(phenotype_ds.isnull().values)
+
             if(contains_missing_samples):
                 print ('Feature: ' + feature_id + ' contains missing data.')
             phenotype_ds.dropna(inplace=True)
@@ -232,7 +236,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         temp = get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df)
                         for perm_id in range(1,n_perm) :
                             temp = np.concatenate((temp, get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df)),axis=1)
-                        print(temp.shape)
+                        #print(temp.shape)
                         LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,covs=cov_matrix)
                         perm = 0;
                         for relevantOutput in chunker(LMM_perm.getPv()[0],snp_matrix_DF.shape[1]) :
@@ -248,7 +252,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         for perm_id in range(1,n_perm) :
                             np.random.shuffle(index_samples)
                             temp = np.concatenate((temp, snp_matrix_DF.iloc[index_samples,:].values),axis=1)
-                        print(temp.shape)
+                        #print(temp.shape)
                         LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,covs=cov_matrix)
                         perm = 0;
                         for relevantOutput in chunker(LMM_perm.getPv()[0],snp_matrix_DF.shape[1]) :
