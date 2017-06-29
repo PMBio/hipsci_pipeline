@@ -322,7 +322,7 @@ def get_unique_genetic_samples(kinship_df, identityScore):
 
 def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
     _doc='rank transform x into ref/ gaussian;keep the range; keep ties'
-    print (method)
+    
     indextoupdate=np.isfinite(phenotype);
     y1=phenotype[indextoupdate]
     yuni,yindex=np.unique(y1, return_inverse=True)
