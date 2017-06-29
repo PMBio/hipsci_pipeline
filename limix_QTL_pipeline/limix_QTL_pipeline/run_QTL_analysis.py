@@ -33,7 +33,7 @@ def get_args():
     parser.add_argument('-maf','--maf',required=False,default=0.05)
     parser.add_argument('-hwe','--hwe',required=False,default=0.001)
     parser.add_argument('-cr','--cr',required=False,default=0.95)
-    parser.add_argument('-block_size','--block_size',required=False,default=1000)
+    parser.add_argument('-block_size','--block_size',required=False,default=500)
     parser.add_argument('-n_perm','--n_perm',required=False,default=0)
     parser.add_argument('-snps','--snps',required=False,default=None)
     parser.add_argument('-features','--features',required=False,default=None)
@@ -304,21 +304,21 @@ def chunker(seq, size):
     return (seq[pos:pos + size] for pos in range(0, len(seq), size))
 
 def get_unique_genetic_samples(kinship_df, identityScore):
-    kinship_df.values[[np.arange(kinship_df.shape[0])]*2] = 0
+    kinship_df_copy = kinship_df.copy(deep=True)
+    kinship_df_copy.values[[np.arange(kinship_df.shape[0])]*2] = 0
 
     processMatrix = True
     s_index=0
     while processMatrix is True:
-        selection = kinship_df.iloc[s_index,].values>=identityScore
+        selection = kinship_df_copy.iloc[s_index,].values>=identityScore
         #print(selection)
         if(selection.sum()>0):  
-            selection_names = kinship_df.columns[~selection]
-            kinship_df = kinship_df.loc[selection_names,selection_names]
+            selection_names = kinship_df_copy.columns[~selection]
+            kinship_df_copy = kinship_df_copy.loc[selection_names,selection_names]
         s_index+=1
-        if(s_index==kinship_df.shape[0]):
+        if(s_index==kinship_df_copy.shape[0]):
             processMatrix = False
-
-    return(kinship_df.columns)
+    return(kinship_df_copy.columns)
 
 def force_normal_distribution(phenotype):
     normalized_phenotype = phenotype
@@ -333,15 +333,16 @@ def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, ide
         u_snp_matrix.index = u_snp_matrix.index[index_samples]
         
         ##Re-flate genotype matrix
-        kinship_df.values[[np.arange(kinship_df.shape[0])]*2] = 0
-
+        kinship_df_copy = kinship_df.copy(deep=True)
+        kinship_df_copy.values[[np.arange(kinship_df.shape[0])]*2] = 0
+        snp_matrix_DF_copy = snp_matrix_DF.copy(deep=True)
         for current_name in geneticaly_unique_individuals :
-            snp_matrix_DF.loc[current_name,:] = u_snp_matrix.loc[current_name,:]
-            selection = kinship_df.loc[current_name,:].values>=identityScore
+            snp_matrix_DF_copy.loc[current_name,:] = u_snp_matrix.loc[current_name,:]
+            selection = kinship_df_copy.loc[current_name,:].values>=identityScore
             if(selection.sum()>0):
-                snp_matrix_DF.iloc[selection,:] = u_snp_matrix.loc[current_name,:].values
-        
-        return(snp_matrix_DF.values)
+                snp_matrix_DF_copy.iloc[selection,:] = u_snp_matrix.loc[current_name,:].values
+        print(snp_matrix_DF_copy)
+        return(snp_matrix_DF_copy.values)
 
 if __name__=='__main__':
     args = get_args()

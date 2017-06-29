@@ -13,19 +13,19 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
     #print(call_rate)
     #print(call_rate < min_call_rate)
     failed_snp_names  = list(snp_df.columns[selection])
-    snp_df = snp_df.loc[:,list(snp_df.columns[~selection])]
-    if(len(snp_df.columns)==0):
-        return snp_df.columns, failed_snp_names
+    snp_df_c = snp_df.loc[:,list(snp_df.columns[~selection])]
+    if(len(snp_df_c.columns)==0):
+        return snp_df_c.columns, failed_snp_names
     #Determine MAF.
-    genotypeCounter = np.zeros((len(snp_df.columns),3), dtype=np.int)
+    genotypeCounter = np.zeros((len(snp_df_c.columns),3), dtype=np.int)
     for allele_index in [0,1,2]:
-        genotypeCounter[:,allele_index] = np.nansum(np.around(snp_df.values)==allele_index,0)
+        genotypeCounter[:,allele_index] = np.nansum(np.around(snp_df_c.values)==allele_index,0)
 
     #Here we make sure that the major allele is temporarly 'coded' as 0 & directly calculate the MAF (based on allele counts and non NA samples)
-    mac = np.zeros((len(snp_df.columns)), dtype=np.int)
-    gc = np.zeros((len(snp_df.columns)), dtype=np.int)
-    maf = np.zeros((len(snp_df.columns)), dtype=np.float)
-    for snp in range(0, len(snp_df.columns)):
+    mac = np.zeros((len(snp_df_c.columns)), dtype=np.int)
+    gc = np.zeros((len(snp_df_c.columns)), dtype=np.int)
+    maf = np.zeros((len(snp_df_c.columns)), dtype=np.float)
+    for snp in range(0, len(snp_df_c.columns)):
         if genotypeCounter[snp,0]<genotypeCounter[snp,2]:
             tmp = genotypeCounter[snp,0]
             genotypeCounter[snp,0] = genotypeCounter[snp,2]
@@ -36,21 +36,21 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
     
     selection = maf < min_maf
     
-    failed_snp_names.extend(list(snp_df.columns[selection]))
-    snp_df = snp_df.loc[:,list(snp_df.columns[~selection])]
+    failed_snp_names.extend(list(snp_df_c.columns[selection]))
+    snp_df_c = snp_df_c.loc[:,list(snp_df_c.columns[~selection])]
     
-    if(len(snp_df.columns)==0):
-        return snp_df.columns, failed_snp_names
+    if(len(snp_df_c.columns)==0):
+        return snp_df_c.columns, failed_snp_names
     
     mac=mac[~selection]
     gc=gc[~selection]
     genotypeCounter = genotypeCounter[~selection,]
     
     #Determine HWE.
-    hweP = np.zeros((len(snp_df.columns)), dtype=np.float)
+    hweP = np.zeros((len(snp_df_c.columns)), dtype=np.float)
     
     #This can also be multi-threaded if we place it in an separate function. (And multi-threading is as easy as it seems)
-    for snp in range(0, len(snp_df.columns)):
+    for snp in range(0, len(snp_df_c.columns)):
         rare_copies = mac[snp]
         genotypes = gc[snp]
         
@@ -96,7 +96,7 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
 
         hweP[snp] = 1 if p_hwe > 1.0 else p_hwe;
     selection = hweP < min_hwe_P
-    failed_snp_names.extend(list(snp_df.columns[selection]))
-    snp_df = snp_df.loc[:,list(snp_df.columns[~selection])]
+    failed_snp_names.extend(list(snp_df_c.columns[selection]))
+    snp_df_c = snp_df_c.loc[:,list(snp_df_c.columns[~selection])]
 
-    return snp_df.columns, failed_snp_names
+    return snp_df_c.columns, failed_snp_names
