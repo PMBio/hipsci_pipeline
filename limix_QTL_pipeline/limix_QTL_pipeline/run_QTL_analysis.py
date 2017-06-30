@@ -73,6 +73,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
 
     individual2sample_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'iid')
     sample2individual_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'sample')
+
     ##Filter first the linking files!
     #Subset linking to relevant genotypes.
     individual2sample_df = individual2sample_df.loc[list(set(individual2sample_df.index) & set(fam.index)),:]
@@ -86,7 +87,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     kinship_df = qtl_loader_utils.get_kinship_df(kinship_filename)
     if kinship_df is not None:
         #Filter from individual2sample_df & sample2individual_df since we don't want to filter from the genotypes.
-        individual2sample_df = individual2sample_df.loc[kinship_df.index,:]
+        individual2sample_df = individual2sample_df.loc[list(set(individual2sample_df.index) & set(kinship_df.index)),:]
         sample2individual_df = sample2individual_df[sample2individual_df['iid'].map(lambda x: x in list(map(str, kinship_df.index)))]
 
     #Subset linking vs covariates.
@@ -96,6 +97,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         individual2sample_df = individual2sample_df[individual2sample_df['sample'].map(lambda x: x in list(map(str, covariate_df.index)))]
         minimum_test_samples += covariate_df.shape[1]
     ###
+
     ##Filter now the actual data!
     #Filter phenotype data based on the linking files.
     phenotype_df = phenotype_df.loc[list(set(phenotype_df.index)&set(annotation_df.index)),sample2individual_df.index.values]
