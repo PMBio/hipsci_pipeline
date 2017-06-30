@@ -257,7 +257,6 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,covs=cov_matrix)
                 #print('step 2')
                 if(n_perm!=0):
-                    np.random.seed(seed)
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
                         
                         temp = get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df)
@@ -295,7 +294,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 temp_df['p_value'] = LMM.getPv()[0]
                 temp_df['n_samples'] = sum(~np.isnan(phenotype))
                 #insert default dummy value
-                temp_df['corr_p_value'] = 1.0
+                temp_df['corr_p_value'] = -1.0
                 if not temp_df.empty :
                     data_written = True
                     output_writer.add_result_df(temp_df)
