@@ -18,6 +18,8 @@ def define_correction_function(top_pvalues_perm):
     return correction_function
 
 def calculate_corrected_pvalues(top_pvalues_perm,nominal_pvalues):
+    if(np.mean(top_pvalues_perm)==1):
+        return nominal_pvalues
     correction_function = define_correction_function(top_pvalues_perm)
     #apply correction to nominal p_values - potentially slow
     corrected_pvalues = np.array([correction_function(x) for x in nominal_pvalues])
