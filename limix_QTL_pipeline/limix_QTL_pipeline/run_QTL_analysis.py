@@ -195,8 +195,6 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 snp_df = pd.DataFrame(data=bed[snp_idxs,:].compute().transpose(),index=fam.index,columns=snp_names)
                 snp_df = snp_df.loc[individual_ids,:]
                 #print('step -1')
-                print(geneticaly_unique_individuals)
-                print(len(snp_df.columns))
                 #SNP QC.
                     #Now we do more proper QC on non-identical samples. 
                     #However, we do not use it when checking for missingness. 
@@ -227,7 +225,6 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         passed_snp_names,failed_snp_names = do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P)
                     snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(pass_qc_snps_all)]]
                 #print('step 0')
-                print(len(snp_df.columns))
                 if len(snp_df.columns) == 0:
                     print("failed: "+''.join(failed_snp_names))
                     print("passed: "+''.join(passed_snp_names))
