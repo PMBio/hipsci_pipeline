@@ -10,10 +10,12 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
     #Determine call rate.
     call_rate = 1-snp_df.isnull().sum()/len(snp_df.index)
     selection = call_rate < min_call_rate
+    #print("Pass CR: ");print(snp_df.isnull().sum())
     #print(call_rate)
     #print(call_rate < min_call_rate)
     failed_snp_names  = list(snp_df.columns[selection])
     snp_df_c = snp_df.loc[:,list(snp_df.columns[~selection])]
+    #print("Pass CR: ");print(snp_df_c.shape)
     if(len(snp_df_c.columns)==0):
         return snp_df_c.columns, failed_snp_names
     #Determine MAF.
@@ -38,7 +40,7 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
     
     failed_snp_names.extend(list(snp_df_c.columns[selection]))
     snp_df_c = snp_df_c.loc[:,list(snp_df_c.columns[~selection])]
-    
+    #print("Pass MAF: ");print(snp_df_c.shape)
     if(len(snp_df_c.columns)==0):
         return snp_df_c.columns, failed_snp_names
     
@@ -98,5 +100,5 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
     selection = hweP < min_hwe_P
     failed_snp_names.extend(list(snp_df_c.columns[selection]))
     snp_df_c = snp_df_c.loc[:,list(snp_df_c.columns[~selection])]
-
+    #print("Pass HWE: ");print(snp_df_c.shape)
     return snp_df_c.columns, failed_snp_names
