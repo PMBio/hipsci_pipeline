@@ -258,9 +258,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 if(n_perm!=0):
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
                         
-                        temp = get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df)
-                        for perm_id in range(1,n_perm) :
-                            temp = np.concatenate((temp, get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df)),axis=1)
+                        temp = get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df, n_perm)
                         LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
                         perm = 0;
                         for relevantOutput in chunker(LMM_perm.variant_pvalues,snp_matrix_DF.shape[1]) :
@@ -371,24 +369,28 @@ def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
     
     return phenotypenorm
 
-def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, identityScore, snp_matrix_DF,kinship_df):
+def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, identityScore, snp_matrix_DF,kinship_df, n_perm):
         u_snp_matrix = snp_matrix_DF.loc[geneticaly_unique_individuals,:]
+        snp_matrix_DF_copy = pd.DataFrame(np.zeros_like(snp_matrix_DF), index=snp_matrix_DF.index, columns=snp_matrix_DF.columns)
+        
         #Shuffle and reinflate
         index_samples = np.arange(u_snp_matrix.shape[0])
-#         print(index_samples)
-        np.random.shuffle(index_samples)
-        u_snp_matrix.index = u_snp_matrix.index[index_samples]
         
-        ##Re-flate genotype matrix
-        kinship_df.values[[np.arange(kinship_df.shape[0])]*2] = 0
-        snp_matrix_DF_copy = snp_matrix_DF.copy(deep=True)
-        for current_name in geneticaly_unique_individuals :
-            snp_matrix_DF_copy.loc[current_name,:] = u_snp_matrix.loc[current_name,:]
-            selection = kinship_df.loc[current_name,:].values>=identityScore
-            if(selection.sum()>0):
-                snp_matrix_DF_copy.iloc[selection,:] = u_snp_matrix.loc[current_name,:].values
-        kinship_df.values[[np.arange(kinship_df.shape[0])]*2] = 1
-        return(snp_matrix_DF_copy.values)
+        for perm_id in range(0,n_perm) :
+            np.random.shuffle(index_samples)
+            u_snp_matrix.index = u_snp_matrix.index[index_samples]
+        
+            ##Re-flate genotype matrix
+            #@Daniel/Bogdan does this work? directly putting the output of one loc into multiple?
+            #Also this is the slow part. If we can find a way to get this quicker that would speed up the analysis greatly!
+            for current_name in geneticaly_unique_individuals :
+                selection = kinship_df.loc[current_name].values>=identityScore
+                snp_matrix_DF_copy.iloc[selection] = u_snp_matrix.loc[current_name].values
+            if perm_id != 0:
+                temp = np.concatenate((temp, snp_matrix_DF_copy.values),axis=1)
+            else : 
+                temp = snp_matrix_DF_copy.values
+        return(temp)
 
 if __name__=='__main__':
     args = get_args()
