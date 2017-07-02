@@ -334,20 +334,21 @@ def chunker(seq, size):
     return (seq[pos:pos + size] for pos in range(0, len(seq), size))
 
 def get_unique_genetic_samples(kinship_df, identityScore):
-    kinship_df.values[[np.arange(kinship_df.shape[0])]*2] = 0
+    kinship_df_copy = kinship_df.copy(deep=True)
+    kinship_df_copy.values[[np.arange(kinship_df.shape[0])]*2] = 0
+
     processMatrix = True
     s_index=0
     while processMatrix is True:
-        selection = kinship_df.iloc[s_index,].values>=identityScore
+        selection = kinship_df_copy.iloc[s_index,].values>=identityScore
         #print(selection)
         if(selection.sum()>0):  
-            selection_names = kinship_df.columns[~selection]
-            kinship_df = kinship_df.loc[selection_names,selection_names]
+            selection_names = kinship_df_copy.columns[~selection]
+            kinship_df_copy = kinship_df_copy.loc[selection_names,selection_names]
         s_index+=1
-        if(s_index==kinship_df.shape[0]):
+        if(s_index==kinship_df_copy.shape[0]):
             processMatrix = False
-    kinship_df.values[[np.arange(kinship_df.shape[0])]*2] = 1
-    return(kinship_df.columns)
+    return(kinship_df_copy.columns)
 
 def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
     _doc='rank transform x into ref/ gaussian;keep the range; keep ties'
