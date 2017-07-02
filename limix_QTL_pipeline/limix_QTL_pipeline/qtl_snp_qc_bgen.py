@@ -13,19 +13,19 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P, min_hmachR2):
     #print(call_rate)
     #print(call_rate < min_call_rate)
     failed_snp_names  = list(snp_df.columns[selection])
-    snp_df = snp_df.loc[:,list(snp_df.columns[~selection])]
-    if(len(snp_df.columns)==0):
-        return snp_df.columns, failed_snp_names
+    snp_df_c = snp_df.loc[:,list(snp_df.columns[~selection])]
+    if(len(snp_df_c.columns)==0):
+        return snp_df_c.columns, failed_snp_names
     #Determine MAF.
-    genotypeCounter = np.zeros((len(snp_df.columns),3), dtype=np.int)
+    genotypeCounter = np.zeros((len(snp_df_c.columns),3), dtype=np.int)
     for allele_index in [0,1,2]:
-        genotypeCounter[:,allele_index] = np.nansum(np.around(snp_df.values)==allele_index,0)
+        genotypeCounter[:,allele_index] = np.nansum(np.around(snp_df_c.values)==allele_index,0)
 
     #Here we make sure that the major allele is temporarly 'coded' as 0 & directly calculate the MAF (based on allele counts and non NA samples)
-    mac = np.zeros((len(snp_df.columns)), dtype=np.int)
-    gc = np.zeros((len(snp_df.columns)), dtype=np.int)
-    maf = np.zeros((len(snp_df.columns)), dtype=np.float)
-    for snp in range(0, len(snp_df.columns)):
+    mac = np.zeros((len(snp_df_c.columns)), dtype=np.int)
+    gc = np.zeros((len(snp_df_c.columns)), dtype=np.int)
+    maf = np.zeros((len(snp_df_c.columns)), dtype=np.float)
+    for snp in range(0, len(snp_df_c.columns)):
         if genotypeCounter[snp,0]<genotypeCounter[snp,2]:
             tmp = genotypeCounter[snp,0]
             genotypeCounter[snp,0] = genotypeCounter[snp,2]
@@ -36,20 +36,20 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P, min_hmachR2):
     
     selection = maf < min_maf
     
-    failed_snp_names.extend(list(snp_df.columns[selection]))
-    snp_df = snp_df.loc[:,list(snp_df.columns[~selection])]
+    failed_snp_names.extend(list(snp_df_c.columns[selection]))
+    snp_df_c = snp_df_c.loc[:,list(snp_df_c.columns[~selection])]
     
-    if(len(snp_df.columns)==0):
-        return snp_df.columns, failed_snp_names
+    if(len(snp_df_c.columns)==0):
+        return snp_df_c.columns, failed_snp_names
     
     mac=mac[~selection]
     gc=gc[~selection]
     genotypeCounter = genotypeCounter[~selection,]
     
     #Determine HWE.
-    hweP = np.zeros((len(snp_df.columns)), dtype=np.float)
+    hweP = np.zeros((len(snp_df_c.columns)), dtype=np.float)
     
-    for snp in range(0, len(snp_df.columns)):
+    for snp in range(0, len(snp_df_c.columns)):
         rare_copies = mac[snp]
         genotypes = gc[snp]
         
@@ -95,17 +95,17 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P, min_hmachR2):
 
         hweP[snp] = 1 if p_hwe > 1.0 else p_hwe;
     selection = hweP < min_hwe_P
-    failed_snp_names.extend(list(snp_df.columns[selection]))
-    snp_df = snp_df.loc[:,list(snp_df.columns[~selection])]
+    failed_snp_names.extend(list(snp_df_c.columns[selection]))
+    snp_df_c = snp_df_c.loc[:,list(snp_df_c.columns[~selection])]
     
-    if(len(snp_df.columns)==0):
-        return snp_df.columns, failed_snp_names
+    if(len(snp_df_c.columns)==0):
+        return snp_df_c.columns, failed_snp_names
     
     gc = gc[~selection]
     genotypeCounter = genotypeCounter[~selection,]
     
-    machR2 = np.zeros((len(snp_df.columns)), dtype=np.float)
-    for snp in range(0, len(snp_df.columns)):
+    machR2 = np.zeros((len(snp_df_c.columns)), dtype=np.float)
+    for snp in range(0, len(snp_df_c.columns)):
         dosageSum = 0.0
         dosageSqrSum = 0.0
         dosageSum += genotypeCounter[snp,1]
@@ -120,10 +120,10 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P, min_hmachR2):
         machR2[snp] = 1 if tmpR2 > 1.0 else tmpR2
     selection = machR2 < min_hmachR2
     
-    failed_snp_names.extend(list(snp_df.columns[selection]))
-    snp_df = snp_df.loc[:,list(snp_df.columns[~selection])]
+    failed_snp_names.extend(list(snp_df_c.columns[selection]))
+    snp_df_c = snp_df_c.loc[:,list(snp_df_c.columns[~selection])]
     
-    return snp_df.columns, failed_snp_names
+    return snp_df_c.columns, failed_snp_names
 
 #def convertProbabilitiesToDosage(snpProbMatrix, minProbability) {
 
@@ -149,84 +149,5 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P, min_hmachR2):
 
 #    return snpDosageMatrix;
 
-
-#     }
-	
-	
-#/**
-#      * Calculate the MACH r2 measure
-#      *
-#      * For formula see: doi:10.1038/nrg2796 S3
-#      *
-#      * @param dosages
-#      * @return
-#      */
-
-#         /**
-#      *
-#      * @param probs
-#      * @param variantAlleles the two alleles for this variant
-#      * @param minProbability to call a genotype
-#      * @return
-#      */
-#     public static List<Alleles> convertProbabilitiesToAlleles(float[][] probs, Alleles variantAlleles, double minProbability) {
-
-#         ArrayList<Alleles> sampleAlleles = new ArrayList<Alleles>(probs.length);
-
-#         final int alleleCount = variantAlleles.getAlleleCount();
-
-#         if (alleleCount > 2 || alleleCount == 0) {
-#             throw new GenotypeDataException("Error converting posterior probabilities to called alleles. Found non biallelic SNP");
-#         }
-
-#         Alleles aa = Alleles.createAlleles(variantAlleles.get(0), variantAlleles.get(0));
-#         Alleles bb;
-
-#         if (alleleCount == 2) {
-#             bb = Alleles.createAlleles(variantAlleles.get(1), variantAlleles.get(1));
-#         } else {
-#             bb = null;
-#         }
-
-#         Alleles missing = Alleles.createAlleles(Allele.ZERO, Allele.ZERO);
-
-#         for (float[] sampleProbs : probs) {
-
-#             int maxProbIndex = -1;
-#             float maxProb = 0;
-
-#             int i = 0;
-#             for (float prob : sampleProbs) {
-#                 if (prob > 0 && prob >= minProbability && prob > maxProb) {
-#                     maxProbIndex = i;
-#                     maxProb = prob;
-#                 }
-#                 ++i;
-#             }
-
-#             if (alleleCount == 1 && maxProbIndex >= 1) {
-#                 throw new GenotypeDataException("Error converting posterior probabilities to called alleles. Illigale probability.");
-#             }
-
-#             switch (maxProbIndex) {
-#                 case -1:
-#                     sampleAlleles.add(missing);
-#                     break;
-#                 case 0:
-#                     sampleAlleles.add(aa);
-#                     break;
-#                 case 1:
-#                     sampleAlleles.add(variantAlleles);
-#                     break;
-#                 case 2:
-#                     sampleAlleles.add(bb);
-#                     break;
-#                 default:
-#                     throw new GenotypeDataException("Error converting posterior probabilities to called alleles. This should not happen, please report this bug.");
-#             }
-
-#         }
-
-#         return sampleAlleles;
 
 #     }

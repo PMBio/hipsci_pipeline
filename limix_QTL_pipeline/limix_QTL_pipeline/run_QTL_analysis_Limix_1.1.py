@@ -137,7 +137,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         feature_list = list(set(annotation_df.index)&set(phenotype_df.index))
     else:
         feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
-    
+    print("Number of features to be tested: " + str(len(feature_list)))
     #Arrays to store indices of snps tested and pass and fail QC SNPs for features without missingness.
     tested_snp_idxs = []
     pass_qc_snps_all = []
@@ -253,16 +253,15 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 if(gaussianize):
                     phenotype = force_normal_distribution(phenotype)
                 #fit modelrun
-                LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,covs=cov_matrix)
+                LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
                 #print('step 2')
                 if(n_perm!=0):
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
                         
                         temp = get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df, n_perm)
-                        #print(temp.shape)
-                        LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,covs=cov_matrix)
+                        LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
                         perm = 0;
-                        for relevantOutput in chunker(LMM_perm.getPv()[0],snp_matrix_DF.shape[1]) :
+                        for relevantOutput in chunker(LMM_perm.variant_pvalues,snp_matrix_DF.shape[1]) :
                             if(bestPermutationPval[perm] > min(relevantOutput)): 
                                 bestPermutationPval[perm] = min(relevantOutput)
                             perm+=1
@@ -276,9 +275,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                             np.random.shuffle(index_samples)
                             temp = np.concatenate((temp, snp_matrix_DF.iloc[index_samples,:].values),axis=1)
                         #print(temp.shape)
-                        LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,covs=cov_matrix)
+                        LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
                         perm = 0;
-                        for relevantOutput in chunker(LMM_perm.getPv()[0],snp_matrix_DF.shape[1]) :
+                        for relevantOutput in chunker(LMM_perm.variant_pvalues,snp_matrix_DF.shape[1]) :
                             if(bestPermutationPval[perm] > min(relevantOutput)): 
                                 bestPermutationPval[perm] = min(relevantOutput)
                             perm+=1
@@ -287,8 +286,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 temp_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['feature_id','snp_id','p_value','beta','n_samples','corr_p_value'])
                 temp_df['snp_id'] = snp_matrix_DF.columns
                 temp_df['feature_id'] = feature_id
-                temp_df['beta'] = LMM.getBetaSNP()[0]
-                temp_df['p_value'] = LMM.getPv()[0]
+                temp_df['beta'] = LMM.variant_effsizes
+                temp_df['p_value'] = LMM.variant_pvalues
                 temp_df['n_samples'] = sum(~np.isnan(phenotype))
                 #insert default dummy value
                 temp_df['corr_p_value'] = -1.0
@@ -302,7 +301,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             output_writer.apply_pval_correction(feature_id,bestPermutationPval)
         else :
             fail_qc_features.append(feature_id)
-        print('step 5')
+        #print('step 5')
     output_writer.close()
 
     #gather unique indexes of tested snps
@@ -371,7 +370,7 @@ def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
     
     return phenotypenorm
 
-def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, identityScore, snp_matrix_DF,kinship_df, n_perm):
+def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, identityScore, snp_matrix_DF,kinship_df,n_perm):
     u_snp_matrix = snp_matrix_DF.loc[geneticaly_unique_individuals,:]
         
     #Shuffle and reinflate
@@ -422,7 +421,7 @@ if __name__=='__main__':
     gaussianize = args.gaussianize
     cis = args.cis
     trans = args.trans
-
+    np.set_printoptions(threshold=np.nan)
     if ((plink is None) and (bgen is None)):
         raise ValueError("No genotypes provided. Either specify a path to a binary plink genotype file or a bgen file.")
     if ((plink is not None) and (bgen is not None)):
