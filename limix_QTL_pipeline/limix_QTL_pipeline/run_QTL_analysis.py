@@ -372,27 +372,30 @@ def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
     return phenotypenorm
 
 def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, identityScore, snp_matrix_DF,kinship_df, n_perm):
-        u_snp_matrix = snp_matrix_DF.loc[geneticaly_unique_individuals,:]
-        snp_matrix_DF_copy = pd.DataFrame(np.zeros_like(snp_matrix_DF), index=snp_matrix_DF.index, columns=snp_matrix_DF.columns)
+    u_snp_matrix = snp_matrix_DF.loc[geneticaly_unique_individuals,:]
         
-        #Shuffle and reinflate
-        index_samples = np.arange(u_snp_matrix.shape[0])
+    #Shuffle and reinflate
+    index_samples = np.arange(u_snp_matrix.shape[0])
+    locationBuffer = []
+    #Prepare location search for permuted snp_matrix_df.
+    first_entry = True
+    for current_name in geneticaly_unique_individuals :
+        selection = kinship_df.loc[current_name].values>=identityScore
+        locationBuffer += np.where(selection)
+    
+    snp_matrix_DF_copy = np.zeros_like(snp_matrix_DF)
+    for perm_id in range(0,n_perm) :
+        np.random.shuffle(index_samples)
+        u_snp_matrix.index = u_snp_matrix.index[index_samples]
         
-        for perm_id in range(0,n_perm) :
-            np.random.shuffle(index_samples)
-            u_snp_matrix.index = u_snp_matrix.index[index_samples]
-        
-            ##Re-flate genotype matrix
-            #@Daniel/Bogdan does this work? directly putting the output of one loc into multiple?
-            #Also this is the slow part. If we can find a way to get this quicker that would speed up the analysis greatly!
-            for current_name in geneticaly_unique_individuals :
-                selection = kinship_df.loc[current_name].values>=identityScore
-                snp_matrix_DF_copy.iloc[selection] = u_snp_matrix.loc[current_name].values
-            if perm_id != 0:
-                temp = np.concatenate((temp, snp_matrix_DF_copy.values),axis=1)
-            else : 
-                temp = snp_matrix_DF_copy.values
-        return(temp)
+        #Re-flate genotype matrix
+        for index in np.arange(len(geneticaly_unique_individuals)) :
+            snp_matrix_DF_copy[locationBuffer[index],] = u_snp_matrix.loc[geneticaly_unique_individuals[index]].values
+        if perm_id != 0:
+            temp = np.concatenate((temp, snp_matrix_DF_copy),axis=1)
+        else : 
+            temp = snp_matrix_DF_copy
+    return(temp)
 
 if __name__=='__main__':
     args = get_args()
