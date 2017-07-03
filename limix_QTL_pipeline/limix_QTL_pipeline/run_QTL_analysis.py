@@ -177,6 +177,10 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
                 fail_qc_features.append(feature_id)
                 continue
+            elif np.var(phenotype_ds.values) is 0:
+                print("Feature: "+feature_id+" has no variance in selected individuals.")
+                fail_qc_features.append(feature_id)
+                continue
             else :
                 print ('For, feature: ' + feature_id + ' ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
             
