@@ -37,7 +37,7 @@ class hdf5_writer:
         for row in table:
             row['corr_p_value'] = correction_function(row['p_value'])
             row.update()
-            print(row['corr_p_value'])
+            #print(row['corr_p_value'])
         table.flush()
         
  
