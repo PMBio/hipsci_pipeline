@@ -137,7 +137,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         feature_list = list(set(annotation_df.index)&set(phenotype_df.index))
     else:
         feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
-    print("Number of features to be tested: " + str(len(feature_list)))
+    print("Number of features to be tested: " + str(phenotype_df.shape[0]))
     #Arrays to store indices of snps tested and pass and fail QC SNPs for features without missingness.
     tested_snp_idxs = []
     pass_qc_snps_all = []
@@ -371,25 +371,23 @@ def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
     return phenotypenorm
 
 def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, identityScore, snp_matrix_DF,kinship_df,n_perm):
-    u_snp_matrix = snp_matrix_DF.loc[geneticaly_unique_individuals,:]
-        
+    u_snp_matrix = snp_matrix_DF.loc[geneticaly_unique_individuals,:].copy(deep=True)
+
     #Shuffle and reinflate
-    index_samples = np.arange(u_snp_matrix.shape[0])
-    locationBuffer = []
+    locationBuffer = np.zeros(snp_matrix_DF.shape[0], dtype=np.int)
     #Prepare location search for permuted snp_matrix_df.
-    first_entry = True
+    index = 0
     for current_name in geneticaly_unique_individuals :
         selection = kinship_df.loc[current_name].values>=identityScore
-        locationBuffer += np.where(selection)
+        locationBuffer[np.where(selection)] = index
+        index +=1
+    print(locationBuffer)
     
     snp_matrix_DF_copy = np.zeros_like(snp_matrix_DF)
     for perm_id in range(0,n_perm) :
         np.random.shuffle(index_samples)
-        u_snp_matrix.index = u_snp_matrix.index[index_samples]
-        
-        #Re-flate genotype matrix
-        for index in np.arange(len(geneticaly_unique_individuals)) :
-            snp_matrix_DF_copy[locationBuffer[index],] = u_snp_matrix.loc[geneticaly_unique_individuals[index]].values
+        u_snp_matrix = pd.DataFrame(data=u_snp_matrix.values[index_samples,:], columns=u_snp_matrix.columns,index=u_snp_matrix.index)
+        snp_matrix_DF_copy = u_snp_matrix.values[locationBuffer,:]
         if perm_id != 0:
             temp = np.concatenate((temp, snp_matrix_DF_copy),axis=1)
         else : 

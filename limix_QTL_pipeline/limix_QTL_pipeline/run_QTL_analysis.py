@@ -137,7 +137,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         feature_list = list(set(annotation_df.index)&set(phenotype_df.index))
     else:
         feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
-    
+    print("Number of features to be tested: " + str(phenotype_df.shape[0]))
     #Arrays to store indices of snps tested and pass and fail QC SNPs for features without missingness.
     tested_snp_idxs = []
     pass_qc_snps_all = []
@@ -302,7 +302,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             output_writer.apply_pval_correction(feature_id,bestPermutationPval)
         else :
             fail_qc_features.append(feature_id)
-        print('step 5')
+        #print('step 5')
     output_writer.close()
 
     #gather unique indexes of tested snps
@@ -371,31 +371,28 @@ def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
     
     return phenotypenorm
 
-def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, identityScore, snp_matrix_DF,kinship_df, n_perm):
-    u_snp_matrix = snp_matrix_DF.loc[geneticaly_unique_individuals,:]
-        
+def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, identityScore, snp_matrix_DF,kinship_df,n_perm):
+    u_snp_matrix = snp_matrix_DF.loc[geneticaly_unique_individuals,:].copy(deep=True)
+
     #Shuffle and reinflate
-    index_samples = np.arange(u_snp_matrix.shape[0])
-    locationBuffer = []
+    locationBuffer = np.zeros(snp_matrix_DF.shape[0], dtype=np.int)
     #Prepare location search for permuted snp_matrix_df.
-    first_entry = True
+    index = 0
+    index_samples = np.arange(u_snp_matrix.shape[0])
     for current_name in geneticaly_unique_individuals :
         selection = kinship_df.loc[current_name].values>=identityScore
-        locationBuffer += np.where(selection)
-    
-    snp_matrix_DF_copy = np.zeros_like(snp_matrix_DF)
+        locationBuffer[np.where(selection)] = index
+        index +=1
+    snp_matrix_copy = np.zeros((snp_matrix_DF.shape[0],snp_matrix_DF.shape[1]*n_perm))
+    counter = 0
+    end = (snp_matrix_DF.shape[1])
     for perm_id in range(0,n_perm) :
         np.random.shuffle(index_samples)
-        u_snp_matrix.index = u_snp_matrix.index[index_samples]
-        
-        #Re-flate genotype matrix
-        for index in np.arange(len(geneticaly_unique_individuals)) :
-            snp_matrix_DF_copy[locationBuffer[index],] = u_snp_matrix.loc[geneticaly_unique_individuals[index]].values
-        if perm_id != 0:
-            temp = np.concatenate((temp, snp_matrix_DF_copy),axis=1)
-        else : 
-            temp = snp_matrix_DF_copy
-    return(temp)
+        temp_u = u_snp_matrix.values[index_samples,:]
+        snp_matrix_copy[:,counter:end] = temp_u[locationBuffer,:]
+        counter+= snp_matrix_DF.shape[1]
+        end+= snp_matrix_DF.shape[1]
+    return(snp_matrix_copy)
 
 if __name__=='__main__':
     args = get_args()
