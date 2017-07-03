@@ -377,22 +377,21 @@ def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, ide
     locationBuffer = np.zeros(snp_matrix_DF.shape[0], dtype=np.int)
     #Prepare location search for permuted snp_matrix_df.
     index = 0
+    index_samples = np.arange(u_snp_matrix.shape[0])
     for current_name in geneticaly_unique_individuals :
         selection = kinship_df.loc[current_name].values>=identityScore
         locationBuffer[np.where(selection)] = index
         index +=1
-    print(locationBuffer)
-    
-    snp_matrix_DF_copy = np.zeros_like(snp_matrix_DF)
+    snp_matrix_copy = np.zeros((snp_matrix_DF.shape[0],snp_matrix_DF.shape[1]*n_perm))
+    counter = 0
+    end = (snp_matrix_DF.shape[1])
     for perm_id in range(0,n_perm) :
         np.random.shuffle(index_samples)
-        u_snp_matrix = pd.DataFrame(data=u_snp_matrix.values[index_samples,:], columns=u_snp_matrix.columns,index=u_snp_matrix.index)
-        snp_matrix_DF_copy = u_snp_matrix.values[locationBuffer,:]
-        if perm_id != 0:
-            temp = np.concatenate((temp, snp_matrix_DF_copy),axis=1)
-        else : 
-            temp = snp_matrix_DF_copy
-    return(temp)
+        temp_u = u_snp_matrix.values[index_samples,:]
+        snp_matrix_copy[:,counter:end] = temp_u[locationBuffer,:]
+        counter+= snp_matrix_DF.shape[1]
+        end+= snp_matrix_DF.shape[1]
+    return(snp_matrix_copy)
 
 if __name__=='__main__':
     args = get_args()
