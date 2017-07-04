@@ -173,11 +173,12 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             if(contains_missing_samples):
                 print ('Feature: ' + feature_id + ' contains missing data.')
             phenotype_ds.dropna(inplace=True)
+            
             if phenotype_ds.empty | len(phenotype_ds)<minimum_test_samples :
                 print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
                 fail_qc_features.append(feature_id)
                 continue
-            elif np.var(phenotype_ds.values) is 0:
+            elif np.var(phenotype_ds.values) == 0:
                 print("Feature: "+feature_id+" has no variance in selected individuals.")
                 fail_qc_features.append(feature_id)
                 continue
@@ -221,17 +222,20 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     
                     snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(pass_qc_snps_all)]]
                 else:
+                    tmp_unique_individuals = geneticaly_unique_individuals
+                    geneticaly_unique_individuals = get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
                     #Do snp QC for relevant section.
+                    #Get relevant slice from: phenotype_ds
                     
-                    if kinship_df is not None and len(geneticaly_unique_individuals)<snp_df.shape[0]:
+                    if kinship_df is not None and len(geneticaly_unique_individuals)>1 and len(geneticaly_unique_individuals)<snp_df.shape[0]:
                         passed_snp_names,failed_snp_names = do_snp_qc(snp_df.loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P)
                     else:
                         passed_snp_names,failed_snp_names = do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P)
-                    snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(pass_qc_snps_all)]]
+                    snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(passed_snp_names)]]
                 #print('step 0')
                 if len(snp_df.columns) == 0:
-                    print("failed: "+''.join(failed_snp_names))
-                    print("passed: "+''.join(passed_snp_names))
+                    #print("failed: "+''.join(failed_snp_names))
+                    #print("passed: "+''.join(passed_snp_names))
                     continue
                 #We could make use of relatedness when imputing.
                 fill_NaN = Imputer(missing_values=np.nan, strategy='mean', axis=0)
@@ -261,24 +265,15 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 #print('step 2')
                 if(n_perm!=0):
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
-                        
-                        temp = get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df, n_perm)
+                        temp = get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
                         LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
                         perm = 0;
                         for relevantOutput in chunker(LMM_perm.variant_pvalues,snp_matrix_DF.shape[1]) :
                             if(bestPermutationPval[perm] > min(relevantOutput)): 
                                 bestPermutationPval[perm] = min(relevantOutput)
                             perm+=1
-                    else : 
-                        u_snp_matrix = snp_matrix_DF
-                        #Shuffle genotypes.
-                        index_samples = np.arange(u_snp_matrix.shape[0])
-                        np.random.shuffle(index_samples)
-                        temp = snp_matrix_DF.iloc[index_samples,:].values
-                        for perm_id in range(1,n_perm) :
-                            np.random.shuffle(index_samples)
-                            temp = np.concatenate((temp, snp_matrix_DF.iloc[index_samples,:].values),axis=1)
-                        #print(temp.shape)
+                    else :
+                        temp = get_shuffeld_genotypes(snp_matrix_DF,kinship_df, n_perm)
                         LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
                         perm = 0;
                         for relevantOutput in chunker(LMM_perm.variant_pvalues,snp_matrix_DF.shape[1]) :
@@ -298,6 +293,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 if not temp_df.empty :
                     data_written = True
                     output_writer.add_result_df(temp_df)
+                if contains_missing_samples:
+                    geneticaly_unique_individuals = tmp_unique_individuals
                 #print('step 4')
             #This we need to change in the written file.
         if(n_perm!=0 and data_written):
@@ -393,6 +390,19 @@ def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, ide
         np.random.shuffle(index_samples)
         temp_u = u_snp_matrix.values[index_samples,:]
         snp_matrix_copy[:,counter:end] = temp_u[locationBuffer,:]
+        counter+= snp_matrix_DF.shape[1]
+        end+= snp_matrix_DF.shape[1]
+    return(snp_matrix_copy)
+
+def get_shuffeld_genotypes(snp_matrix_DF,kinship_df,n_perm):
+    snp_matrix_copy = np.zeros((snp_matrix_DF.shape[0],snp_matrix_DF.shape[1]*n_perm))
+    counter = 0
+    end = (snp_matrix_DF.shape[1])
+    
+    index_samples = np.arange(snp_matrix_DF.shape[0])
+    for perm_id in range(0,n_perm) :
+        np.random.shuffle(index_samples)
+        snp_matrix_copy[:,counter:end] = snp_matrix_DF.values[index_samples,:]
         counter+= snp_matrix_DF.shape[1]
         end+= snp_matrix_DF.shape[1]
     return(snp_matrix_copy)
