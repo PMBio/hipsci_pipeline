@@ -57,6 +57,20 @@ def get_args():
     return args
 
 
+trait='protein'
+plinkGenotype=True
+geno_prefix = '/Users/mirauta/Data/MS/hipsci/TMT/genotype_maf10/hipsci.wec.gtarray.HumanCoreExome.imputed_phased.20170327.genotypes.norm.renamed.recode.filtered'
+kinship_filename='/Users/mirauta/Data/Genotypes/hipsci/hipsci.wec.gtarray.HumanCoreExome.imputed_phased.20170327.genotypes.norm.renamed.recode.filtered.kinship'
+
+data_path = '/Users/mirauta/Data/MS/hipsci/phenotypes/'
+covariates_filename=data_path+'hipsci.proteomics.maxquant.uniprot.TMT_batch_14.20170517_covariates_valid_lines.txt'
+
+pheno_file='hipsci.proteomics.maxquant.uniprot.TMT_batch_14.20170517_'+trait+'_Reporter intensity corrected_valid_lines_recurrent_genes_test.txt'
+anno_filename=data_path+'hipsci.proteomics.maxquant.uniprot.TMT_batch_14.20170517_'+trait+'_meta_recurrent_genes.txt'
+sample_mapping_filename=data_path+'hipsci.proteomics.maxquant.uniprot.TMT_batch_14.20170517_line_map_valid_lines.txt'
+pheno_filename = data_path+pheno_file
+relatedness_score=0.95
+
 def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, output_dir, window_size=250000, min_maf=0.05, min_hwe_P=0.001, min_call_rate=0.95, blocksize=1000,
                      cis_mode=True, gaussianize=True, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, relatedness_score=0.95, snps_filename=None, feature_filename=None, chromosome='all',
                      covariates_filename=None, kinship_filename=None, sample_mapping_filename=None):
@@ -77,13 +91,13 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
 
     ##Filter first the linking files!
     #Subset linking to relevant genotypes.
-    individual2sample_df = individual2sample_df.loc[list(set(individual2sample_df.index) & set(fam.index)),:]
+    individual2sample_df = individual2sample_df.loc[np.intersect1d(individual2sample_df.index,fam.index),:]
     sample2individual_df = sample2individual_df.loc[sample2individual_df['iid'].map(lambda x: x in list(map(str, fam.index))),:]
 
     #Subset linking to relevant phenotypes.
     sample2individual_df = sample2individual_df.loc[list(set(sample2individual_df.index) & set(phenotype_df.columns)),:]
     individual2sample_df = individual2sample_df[individual2sample_df['sample'].map(lambda x: x in list(map(str, phenotype_df.columns)))]
-
+    '''here 218'''
     #Subset linking vs kinship.
     kinship_df = qtl_loader_utils.get_kinship_df(kinship_filename)
     if kinship_df is not None:
@@ -102,7 +116,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     ##Filter now the actual data!
     #Filter phenotype data based on the linking files.
     phenotype_df = phenotype_df.loc[list(set(phenotype_df.index)&set(annotation_df.index)),sample2individual_df.index.values]
-
+    
     #Filter kinship data based on the linking files.
     if kinship_df is not None:
         kinship_df = kinship_df.loc[list(set(kinship_df.index)&set(individual2sample_df.index)),list(set(kinship_df.index)&set(individual2sample_df.index))]
@@ -112,6 +126,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     if covariate_df is not None:
         covariate_df = covariate_df.loc[sample2individual_df.index.values,:]
         minimum_test_samples += covariate_df.shape[1]
+    
+    
     ###
     ##Filtering on features and SNPs to test.
     #Do filtering on features.
@@ -145,6 +161,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     fail_qc_snps_all = []
     fail_qc_features = []
     #Test features
+#    return [sample2individual_df, individual2sample_df, kinship_df,covariate_df,phenotype_df ]
+
+
     for feature_id in feature_list:
         if (len(phenotype_df.loc[feature_id,:]))<minimum_test_samples:
             print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
@@ -186,21 +205,26 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             else :
                 print ('For, feature: ' + feature_id + ' ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
             
+            '''select indices for relevant individuals in genotype matrix
+            non unique indexes
+            '''
+            individual_ids = sample2individual_df.loc[phenotype_ds.index,'iid'].values
+#                individual_idxs = fam.loc[individual_ids,'i'].values
+#            return [individual_ids,sample2individual_df,phenotype_ds]
+            
             if(n_perm!=0):
                 bestPermutationPval = np.ones((n_perm), dtype=np.float)
             for snpGroup in chunker(snpQuery, blocksize):
+                print (snpGroup)
                 snp_idxs = snpGroup['i'].values
                 snp_names = snpGroup['snp'].values
                 
                 tested_snp_idxs.extend(snp_idxs)
-                #indices for relevant individuals in genotype matrix
-                individual_ids = list(set(fam.index)&set(sample2individual_df.loc[phenotype_ds.index,'iid']))
-                individual_idxs = fam.loc[individual_ids,'i'].values
-                
+
                 #subset genotype matrix, we cannot subselect at the same time, do in two steps.
                 snp_df = pd.DataFrame(data=bed[snp_idxs,:].compute().transpose(),index=fam.index,columns=snp_names)
                 snp_df = snp_df.loc[individual_ids,:]
-                #print('step -1')
+                print('step -1')
                 #SNP QC.
                     #Now we do more proper QC on non-identical samples. 
                     #However, we do not use it when checking for missingness. 
@@ -223,17 +247,19 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     
                     snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(pass_qc_snps_all)]]
                 else:
+                    print('contains missing')
+                    return [geneticaly_unique_individuals,kinship_df,individual_ids,get_unique_genetic_samples,phenotype_ds]
                     tmp_unique_individuals = geneticaly_unique_individuals
                     geneticaly_unique_individuals = get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
                     #Do snp QC for relevant section.
                     #Get relevant slice from: phenotype_ds
-                    
+                    print('contains missing: 1')
                     if kinship_df is not None and len(geneticaly_unique_individuals)>1 and len(geneticaly_unique_individuals)<snp_df.shape[0]:
                         passed_snp_names,failed_snp_names = do_snp_qc(snp_df.loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P)
                     else:
                         passed_snp_names,failed_snp_names = do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P)
                     snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(passed_snp_names)]]
-                #print('step 0')
+                print('step 0')
                 if len(snp_df.columns) == 0:
                     #print("failed: "+''.join(failed_snp_names))
                     #print("passed: "+''.join(passed_snp_names))
@@ -251,9 +277,10 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     kinship_mat = None
                 
                 #map individual_ids to samples
-                sample_ids = individual2sample_df.loc[individual_ids,'sample'].values
+                sample_ids = sample2individual_df.loc[phenotype_ds.index,'sample']
+                print(len(sample_ids))
                 phenotype = phenotype_ds.loc[sample_ids].values
-                #print('step 1')
+                print('step 1')
                 #generate covariate matrix
                 if covariate_df is not None:
                     cov_matrix = np.concatenate([np.ones((len(sample_ids),1)),covariate_df.loc[sample_ids,:].values],axis=1)
@@ -262,7 +289,11 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 if(gaussianize):
                     phenotype = force_normal_distribution(phenotype)
                 #fit modelrun
-                LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
+                return [snp_matrix_DF, phenotype,kinship_mat,cov_matrix]
+                try:
+                    LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
+                except:
+                    return [snp_matrix_DF, phenotype,kinship_mat,cov_matrix]                    
                 #print('step 2')
                 if(n_perm!=0):
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
@@ -334,6 +365,12 @@ def merge_QTL_results(results_dir):
 
 def chunker(seq, size):
     return (seq[pos:pos + size] for pos in range(0, len(seq), size))
+
+get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
+
+def get_unique_genetic_samples_new(kinship_df, identityScore):
+        
+    return (kinship_df.index[(np.tril(kinship_df,k=-1)>=identityScore).sum(1)==0])
 
 def get_unique_genetic_samples(kinship_df, identityScore):
     kinship_df_copy = kinship_df.copy(deep=True)
