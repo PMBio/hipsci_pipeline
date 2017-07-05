@@ -94,6 +94,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     annotation_df = qtl_loader_utils.get_annotation_df(anno_filename)
 
 #    individual2sample_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'iid')
+
     sample2individual_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'sample')
     sample2individual_df['sample']=sample2individual_df.index
 
@@ -119,7 +120,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     if covariate_df is not None:
         sample2individual_df = sample2individual_df.loc[list(set(sample2individual_df.index) & set(covariate_df.index)),:]
 #        individual2sample_df = individual2sample_df[individual2sample_df['sample'].map(lambda x: x in list(map(str, covariate_df.index)))]
-        minimum_test_samples += covariate_df.shape[1]
+        
     ###
 
     ##Filter now the actual data!
@@ -135,7 +136,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     #Filter covariate data based on the linking files.
     if covariate_df is not None:
         covariate_df = covariate_df.loc[sample2individual_df.index,:]
-#        minimum_test_samples += covariate_df.shape[1]
+        minimum_test_samples += covariate_df.shape[1]
+
 # was repeating minimum_test_samples +=
     
     
@@ -145,8 +147,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     try:
         feature_filter_df = qtl_loader_utils.get_snp_df(feature_filename)
     except:
-        feature_filter_df=pd.DataFrame(index=feature_filename)
-    if(feature_filter_df is not None):
+        if feature_filter_df is not None:
+            feature_filter_df=pd.DataFrame(index=feature_filename)
+    if feature_filter_df is not None:
         phenotype_df = phenotype_df.loc[feature_filter_df.index,:]
     #Prepare to filter on snps.
     snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
@@ -311,7 +314,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 '''
                 
                 cov_matrix=cov_matrix[:,cov_matrix.sum(0)>4][:,:10]
-                LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
+                LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,M=cov_matrix,verbose=1)
                     
                 if(n_perm!=0):
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
@@ -338,6 +341,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 temp_df['beta'] = LMM.variant_effsizes
                 temp_df['p_value'] = LMM.variant_pvalues
                 temp_df['n_samples'] = sum(~np.isnan(phenotype))
+#                temp_df['beta_se'] = LMM.variant_effsizes_se
                 #insert default dummy value
                 temp_df['corr_p_value'] = -1.0
                 if not temp_df.empty :
@@ -386,21 +390,21 @@ def chunker(seq, size):
 
 #get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
 
-def get_unique_genetic_samples(kinship_df, identityScore):
+def get_unique_genetic_samples(kinship_df, relatedness_score):
 #    tril returns the lower triungular. 
-#    if two lines are > identity then  kinship_df>=identityScore should have an offdiagonal 1.
+#    if two lines are > identity then  kinship_df>=relatedness_score should have an offdiagonal 1.
 #    if there is one 1  in the tril then it means that  in the upper triul there was a line withe identical genotype
-    return (kinship_df.index[(np.tril(kinship_df>=identityScore,k=-1)).sum(1)==0])
+    return (kinship_df.index[(np.tril(kinship_df>=relatedness_score,k=-1)).sum(1)==0])
 
-#np.setdiff1d(get_unique_genetic_samples(kinship_df, identityScore=0.95),get_unique_genetic_samplesold(kinship_df, identityScore=0.95))
-#def get_unique_genetic_samplesold(kinship_df, identityScore):
+#np.setdiff1d(get_unique_genetic_samples(kinship_df, relatedness_score=0.95),get_unique_genetic_samplesold(kinship_df, relatedness_score=0.95))
+#def get_unique_genetic_samplesold(kinship_df, relatedness_score):
 #    kinship_df_copy = kinship_df.copy(deep=True)
 #    kinship_df_copy.values[[np.arange(kinship_df.shape[0])]*2] = 0
 #
 #    processMatrix = True
 #    s_index=0
 #    while processMatrix is True:
-#        selection = kinship_df_copy.iloc[s_index,].values>=identityScore
+#        selection = kinship_df_copy.iloc[s_index,].values>=relatedness_score
 #        #print(selection)
 #        if(selection.sum()>0):  
 #            selection_names = kinship_df_copy.columns[~selection]
@@ -431,17 +435,23 @@ def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
     
     return phenotypenorm
 
-get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
-def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, identityScore, snp_matrix_DF,kinship_df1,n_perm):
-    u_snp_matrix = snp_matrix_DF.loc[geneticaly_unique_individuals,:].copy(deep=True)
-## has replicates but not same lines form donor (np.setdiff1d(individual_ids,geneticaly_unique_individuals))
+#get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
+def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df1,n_perm):
+    
+#    snp_matrix_DF.iloc[np.unique(snp_matrix_DF.index,return_index=1)[1]].shape
+    '''take only one line for replicates (those with the same name)'''
+    temp=snp_matrix_DF.iloc[np.unique(snp_matrix_DF.index,return_index=1)[1]].copy(deep=True) 
+    u_snp_matrix = temp.loc[geneticaly_unique_individuals,:]
+    print(u_snp_matrix.shape)
+    kinship_df1=kinship_df1.iloc[np.unique(kinship_df1.index,return_index=1)[1],np.unique(kinship_df1.index,return_index=1)[1]]
+    '''has replicates but not same lines form donor (np.setdiff1d(individual_ids,geneticaly_unique_individuals))'''
     #Shuffle and reinflate
     locationBuffer = np.zeros(snp_matrix_DF.shape[0], dtype=np.int)
     #Prepare location search for permuted snp_matrix_df.
     index = 0
     index_samples = np.arange(u_snp_matrix.shape[0])
     for current_name in geneticaly_unique_individuals :
-        selection = kinship_df1.loc[current_name].values>=identityScore
+        selection = kinship_df1.loc[current_name].values>=relatedness_score
         locationBuffer[np.where(selection)] = index
         index +=1
     snp_matrix_copy = np.zeros((snp_matrix_DF.shape[0],snp_matrix_DF.shape[1]*n_perm))
