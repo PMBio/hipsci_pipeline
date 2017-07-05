@@ -14,7 +14,7 @@ class hdf5_writer:
     def add_result_df(self,qtl_results_df):
         assert(len(set(qtl_results_df['feature_id'].values))==1)
         feature_id = qtl_results_df['feature_id'].values[0]
-        column_names = ['snp_id','p_value','beta','n_samples','corr_p_value']
+        column_names = ['snp_id','p_value','beta','beta_se','n_samples','corr_p_value']
         try:
             #get the existing table for this feature
             table = self.h5file.get_node('/'+feature_id)
@@ -44,7 +44,7 @@ class hdf5_writer:
 class text_writer:
 
     def __init__(self,output_filename):
-        self.column_names = ['feature_id','snp_id','p_value','beta','n_samples','corr_p_value']
+        self.column_names = ['feature_id','snp_id','p_value','beta','beta_se','n_samples','corr_p_value']
         with open(output_filename,'w') as f:
             header = '\t'.join(self.column_names)
             f.write(header+'\n')
@@ -62,5 +62,6 @@ class QTL_result_hdf5(tables.IsDescription):
     snp_id  = tables.StringCol(16)   # 16-character String
     p_value = tables.Float64Col()    # double (double-precision)
     beta = tables.Float64Col()    # double (double-precision)
+    beta_se = tables.Float64Col()    # double (double-precision)
     n_samples = tables.Int32Col()    # integer
     corr_p_value = tables.Float64Col()
