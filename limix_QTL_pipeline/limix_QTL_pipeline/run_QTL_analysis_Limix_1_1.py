@@ -5,7 +5,6 @@ import qtl_output
 import qtl_loader_utils
 from qtl_snp_qc import do_snp_qc
 import glob
-import os
 from sklearn.preprocessing import Imputer
 import argparse
 import math
