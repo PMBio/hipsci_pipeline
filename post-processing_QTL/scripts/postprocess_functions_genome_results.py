@@ -8,7 +8,7 @@ import limix.stats.fdr as FDR
 import pandas
 
 def local_adjustment(pv, N=1,  method=''):
-    if method=='': return pv
+    if method is None: return pv
     if method=='Bonferroni': 
         N=pv.shape[0]
 #        print ('N is: '+str(N))
@@ -16,7 +16,8 @@ def local_adjustment(pv, N=1,  method=''):
   
     
 def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_metadata_', feature_metadata_file='feature_metadata_',output_file='qtl_results_genome',\
-                         feature_report='ensembl_gene_id',chr_list=[9],folder_data='/Users/mirauta/Data/MS/hipsci/TMT/protein_test',rewrite=False, local_adjustment_method='Bonferroni'):
+                         feature_report='ensembl_gene_id',chr_list=[9],folder_data='/Users/mirauta/Data/MS/hipsci/TMT/protein_test',rewrite=False, \
+                                                                   p_value_field='p_value',local_adjustment_method='Bonferroni'):
 
     _doc=" aggregates qtl results to feature_report level"
 
@@ -51,7 +52,7 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
 
                 fg=fOut.create_group(report_feature)
                 
-                pv= np.array([frez[f]['p_value'] for f in  features ])
+                pv= np.array([frez[f][p_value_field] for f in  features ])
                 for i, ppv in  enumerate(pv): ppv[ppv!=ppv]=1
                 beta= np.array([frez[f]['beta'] for f in  features ])
                 for i, b in  enumerate(beta): b [b!=b]=1
@@ -99,7 +100,7 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
 
 def replication_two_features(folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/',  folder_data2=None,  traits=['peptide_test','protein_test'],
     qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',
-    results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id'):
+    results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',p_value_field='p_value'):
     
     _doc=" aggregates qtl results from two traits at feature_report level; return replication of pvalues for trait1  signigicant snps in trait2 "
 
@@ -110,7 +111,7 @@ def replication_two_features(folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/', 
     feature_ids=np.intersect1d(list(featureh5[0].keys()),list(featureh5[1].keys()))
  
     rez={}
-    rez['p_value']=np.zeros(len(feature_ids))+np.nan
+    rez[p_value_field]=np.zeros(len(feature_ids))+np.nan
     rez['replicated_p_value']=np.zeros(len(feature_ids))+np.nan
     rez['replicated_self_p_value']=np.zeros(len(feature_ids))+np.nan
     rez['feature_id']=np.zeros(len(feature_ids),dtype='|S32')
@@ -124,7 +125,7 @@ def replication_two_features(folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/', 
     
         temp=featureh5[0][feature]['summary_data/min_p_value'][0]
         if temp<0.001:
-            rez['p_value'][indf]=temp
+            rez[p_value_field][indf]=temp
             rez['feature_id'][indf]=featureh5[0][feature]['summary_data/min_p_value_feature_id'][:][0]
             rez['chromosome'][indf]=featureh5[0][feature]['metadata/chromosome'][:][0]
             rez['strand'][indf]=featureh5[0][feature]['metadata/feature_strand'][:][0]
