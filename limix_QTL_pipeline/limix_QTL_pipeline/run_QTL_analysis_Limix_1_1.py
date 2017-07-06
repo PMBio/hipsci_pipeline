@@ -74,21 +74,34 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
 
     ##Filter first the linking files!
     #Subset linking to relevant genotypes.
+    orgSize = sample2individual_df.shape[0]
     sample2individual_df = sample2individual_df.loc[sample2individual_df['iid'].map(lambda x: x in list(map(str, fam.index))),:]
+    diff = orgSize- sample2individual_df.shape[0]
+    orgSize = sample2individual_df.shape[0]
+    print("Dropped: "+str(diff)+" samples becuase they are not present in the genotype file.")
+    
     #Subset linking to relevant phenotypes.
     sample2individual_df = sample2individual_df.loc[np.intersect1d(sample2individual_df.index,phenotype_df.columns),:]
-
+    diff = orgSize- sample2individual_df.shape[0]
+    orgSize = sample2individual_df.shape[0]
+    print("Dropped: "+str(diff)+" samples becuase they are not present in the phenotype file.")
     #Subset linking vs kinship.
     kinship_df = qtl_loader_utils.get_kinship_df(kinship_filename)
     if kinship_df is not None:
         #Filter from individual2sample_df & sample2individual_df since we don't want to filter from the genotypes.
         sample2individual_df = sample2individual_df[sample2individual_df['iid'].map(lambda x: x in list(map(str, kinship_df.index)))]
+        diff = orgSize- sample2individual_df.shape[0]
+        orgSize = sample2individual_df.shape[0]
+        print("Dropped: "+str(diff)+" samples becuase they are not present in the kinship file.")
     #Subset linking vs covariates.
     covariate_df = qtl_loader_utils.get_covariate_df(covariates_filename)
 
     if covariate_df is not None:
         if np.nansum(covariate_df==1,0).max()<covariate_df.shape[0]: covariate_df.insert(0, 'ones',np.ones(covariate_df.shape[0]))
         sample2individual_df = sample2individual_df.loc[list(set(sample2individual_df.index) & set(covariate_df.index)),:]
+        diff = orgSize- sample2individual_df.shape[0]
+        orgSize = sample2individual_df.shape[0]
+        print("Dropped: "+str(diff)+" samples becuase they are not present in the kinship file.")
 
     ###
     print("Number of samples with genotype & phenotype data: " + str(sample2individual_df.shape[0]))

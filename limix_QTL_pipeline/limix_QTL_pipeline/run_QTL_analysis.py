@@ -74,23 +74,40 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
 
     ##Filter first the linking files!
     #Subset linking to relevant genotypes.
+    orgSize = sample2individual_df.shape[0]
     sample2individual_df = sample2individual_df.loc[sample2individual_df['iid'].map(lambda x: x in list(map(str, fam.index))),:]
-
+    diff = orgSize- sample2individual_df.shape[0]
+    orgSize = sample2individual_df.shape[0]
+    print("Dropped: "+str(diff)+" samples becuase they are not present in the genotype file.")
+    
     #Subset linking to relevant phenotypes.
     sample2individual_df = sample2individual_df.loc[np.intersect1d(sample2individual_df.index,phenotype_df.columns),:]
-
+    diff = orgSize- sample2individual_df.shape[0]
+    orgSize = sample2individual_df.shape[0]
+    print("Dropped: "+str(diff)+" samples becuase they are not present in the phenotype file.")
     #Subset linking vs kinship.
     kinship_df = qtl_loader_utils.get_kinship_df(kinship_filename)
     if kinship_df is not None:
         #Filter from individual2sample_df & sample2individual_df since we don't want to filter from the genotypes.
         sample2individual_df = sample2individual_df[sample2individual_df['iid'].map(lambda x: x in list(map(str, kinship_df.index)))]
-
+        diff = orgSize- sample2individual_df.shape[0]
+        orgSize = sample2individual_df.shape[0]
+        print("Dropped: "+str(diff)+" samples becuase they are not present in the kinship file.")
     #Subset linking vs covariates.
     covariate_df = qtl_loader_utils.get_covariate_df(covariates_filename)
+
     if covariate_df is not None:
         if np.nansum(covariate_df==1,0).max()<covariate_df.shape[0]: covariate_df.insert(0, 'ones',np.ones(covariate_df.shape[0]))
         sample2individual_df = sample2individual_df.loc[list(set(sample2individual_df.index) & set(covariate_df.index)),:]
+        diff = orgSize- sample2individual_df.shape[0]
+        orgSize = sample2individual_df.shape[0]
+        print("Dropped: "+str(diff)+" samples becuase they are not present in the kinship file.")
+
     ###
+    print("Number of samples with genotype & phenotype data: " + str(sample2individual_df.shape[0]))
+    if(sample2individual_df.shape[0]<minimum_test_samples):
+        print("Not enough samples with both genotype & phenotype data.")
+        sys.exit()
 
     ##Filter now the actual data!
     #Filter phenotype data based on the linking files.
@@ -105,6 +122,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     if covariate_df is not None:
         covariate_df = covariate_df.loc[sample2individual_df.index,:]
         minimum_test_samples += covariate_df.shape[1]
+
     ###
     ##Filtering on features and SNPs to test.
     #Do filtering on features.
@@ -117,12 +135,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         phenotype_df = phenotype_df.loc[feature_filter_df.index,:]
     #Prepare to filter on snps.
     snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
-    ###
-    print("Number of samples with genotype & phenotype data: " + str(phenotype_df.shape[1]))
-    if(phenotype_df.shape[1]<minimum_test_samples):
-        print("Not enough samples with both genotype & phenotype data.")
-        sys.exit()
-    
+
     #Open output files
     qtl_loader_utils.ensure_dir(output_dir)
     output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}.h5'.format(chromosome))
