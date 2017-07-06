@@ -116,8 +116,8 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
     featureh5=[h5py.File(folder_name+feature+'/'+file_name_results_genome+'.h5','r')[gene_ensembl_id] for feature in traits]
     
     rez={}
-    temppos=[[fh5['data']['position'][f][:] for f in fh5['data']['position'].keys()] for fh5 in featureh5]
-    temp=np.unique(np.vstack(temppos).flatten(),return_counts=1); 
+    temppos=[np.hstack([fh5['data']['position'][f][:] for f in fh5['data']['position'].keys()]) for fh5 in featureh5]
+    temp=np.unique(np.hstack(temppos).flatten(),return_counts=1); 
     commonpos=temp[0][temp[1]==np.max(temp[1])]
     
     for dat in ['p_value','position']:
@@ -166,7 +166,7 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
 #==============================================================================
  
 
-def plot_replication(rez=None,folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/', folder_data2 ='/Users/mirauta/Data/MS/hipsci/TMT/',   traits=['protein_test','peptide_test'],trait_labels=['protein_test','peptide_test'],\
+def plot_replication(rez=None,folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/', folder_data2 =None,   traits=['protein_test','peptide_test'],trait_labels=['protein_test','peptide_test'],\
     qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',\
     results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',folder_destination='/Users/mirauta/Results/hipsci/Images_pipeline',\
     figsize=5, red_dots_features=None,red_dot='ro',plot_name=''):
