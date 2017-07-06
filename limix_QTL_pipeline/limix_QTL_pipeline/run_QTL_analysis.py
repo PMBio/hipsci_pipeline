@@ -18,7 +18,7 @@ def get_args():
     parser.add_argument('-anno_file','--anno_file', required=True)
     parser.add_argument('-pheno_file','--pheno_file', required=True)
     parser.add_argument('-output_dir','--output_dir', required=True)
-    parser.add_argument('-window','--window', required=True,
+    parser.add_argument('-window','--window', required=False,
                         help=
                         'The size of the cis window to take SNPs from.'
                         'The window will extend between:                     '
