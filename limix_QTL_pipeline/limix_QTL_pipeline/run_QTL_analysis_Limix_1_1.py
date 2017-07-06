@@ -10,7 +10,7 @@ import argparse
 import scipy.stats as scst
 import sys
 
-#V0.1
+#V0.1.1
 
 def get_args():
     parser = argparse.ArgumentParser(description='Run QTL analysis given genotype, phenotype, and annotation.')

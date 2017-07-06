@@ -1,7 +1,7 @@
 import tables
 import qtl_fdr_utilities
 
-#V0.1
+#V0.1.1
 
 class hdf5_writer:
 
