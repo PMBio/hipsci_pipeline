@@ -145,6 +145,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     fail_qc_snps_all = []
     fail_qc_features = []
     #Test features
+    if(phenotype_df.shape[1]<minimum_test_samples):
+        print("Not enough samples with both genotype & phenotype data, for current number of covariates.")
+        sys.exit()
     for feature_id in feature_list:
         if (len(phenotype_df.loc[feature_id,:]))<minimum_test_samples:
             print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
@@ -261,26 +264,20 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
 
 
 #                test if the covariates, kinship, snp and phenotype are in the same order
-                if ( all(snp_matrix_DF.index==kinship_df.loc[individual_ids,individual_ids].index)&\
-                     all(phenotype_ds.index==covariate_df.loc[sample2individual_feature['sample'],:].index)&\
+                if ((all(snp_matrix_DF.index==kinship_df.loc[individual_ids,individual_ids].index) if kinship_df is not None else True) &\
+                     (all(phenotype_ds.index==covariate_df.loc[sample2individual_feature['sample'],:].index)if covariate_df is not None else True)&\
                      all(snp_matrix_DF.index==sample2individual_feature.loc[phenotype_ds.index]['iid'])):
                     '''
                     if all lines are in order put in arrays the correct genotype and phenotype
                     x=a if cond1 else b <---> equivalent to if cond1: x=a else x=b;                 better readability of the code
                      '''
                     kinship_mat = kinship_df.loc[individual_ids,individual_ids].values if kinship_df is not None else None
-
                     cov_matrix =  covariate_df.loc[sample2individual_feature['sample'],:].values if covariate_df is not None else None
-
                     phenotype = force_normal_distribution(phenotype_ds.values) if gaussianize else phenotype_ds.values
                 else:
                     print ('there is an issue in mapping phenotypes and genotypes')
                     sys.exit()
-#                LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,M=cov_matrix[:,-4:],verbose=False)
 
-                '''for now subselect cov untill I understand why
-                in any case we should exclude covaraites with few lines
-                '''
                 LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,covs=cov_matrix)
                 if(n_perm!=0):
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
@@ -388,7 +385,6 @@ def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, rel
     '''take only one line for replicates (those with the same name)'''
     temp=snp_matrix_DF.iloc[np.unique(snp_matrix_DF.index,return_index=1)[1]].copy(deep=True)
     u_snp_matrix = temp.loc[geneticaly_unique_individuals,:]
-    print(u_snp_matrix.shape)
     kinship_df1=kinship_df1.iloc[np.unique(kinship_df1.index,return_index=1)[1],np.unique(kinship_df1.index,return_index=1)[1]]
     '''has replicates but not same lines form donor (np.setdiff1d(individual_ids,geneticaly_unique_individuals))'''
     #Shuffle and reinflate
