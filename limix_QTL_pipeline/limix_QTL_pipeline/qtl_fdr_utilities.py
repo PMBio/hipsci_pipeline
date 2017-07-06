@@ -2,7 +2,7 @@ import numpy as np
 import scipy.stats
 #from joblib import Parallel
 
-#V0.1
+#V0.1.1
 
 def estimate_beta_function_paras(top_pvalues_perm):
     mean = np.mean(top_pvalues_perm)
