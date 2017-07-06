@@ -10,7 +10,7 @@ import argparse
 import scipy.stats as scst
 import sys
 
-#V0.1
+#V0.1.1
 
 def get_args():
     parser = argparse.ArgumentParser(description='Run QTL analysis given genotype, phenotype, and annotation.')
@@ -130,9 +130,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     try:
         feature_filter_df = qtl_loader_utils.get_snp_df(feature_filename)
     except:
-        if feature_filter_df is not None:
+        if feature_filename is not None:
             feature_filter_df=pd.DataFrame(index=feature_filename)
-    if feature_filename  is not None:
+    if feature_filter_df  is not None:
         phenotype_df = phenotype_df.loc[feature_filter_df.index,:]
     #Prepare to filter on snps.
     snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
@@ -140,6 +140,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     #Open output files
     qtl_loader_utils.ensure_dir(output_dir)
     output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}.h5'.format(chromosome))
+    
+    if(write_permutations):
+        permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'perm_results_{}.h5'.format(chromosome),n_perm)
 
     if(cis_mode):
         #Remove features from the annotation that are on chromosomes which are not present anyway.
@@ -158,7 +161,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     pass_qc_snps_all = []
     fail_qc_snps_all = []
     fail_qc_features = []
-    #Test features
+    
     if(phenotype_df.shape[1]<minimum_test_samples):
         print("Not enough samples with both genotype & phenotype data, for current number of covariates.")
         sys.exit()
@@ -294,11 +297,16 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
 
                 LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,covs=cov_matrix)
                 if(n_perm!=0):
+                    if(write_permutations):
+                        perm_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['snp_id'] + ['permutation_'+str(x+1) for x in range(n_permutations)])
+                        perm_df['snp_id'] = snp_matrix_DF.columns
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
                         temp = get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
                         LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,covs=cov_matrix)
                         perm = 0;
                         for relevantOutput in chunker(LMM_perm.getPv()[0],snp_matrix_DF.shape[1]) :
+                            if(write_permutations):
+                                perm_df['permutation_'+str(perm)] = relevantOutput
                             if(bestPermutationPval[perm] > min(relevantOutput)):
                                 bestPermutationPval[perm] = min(relevantOutput)
                             perm+=1
@@ -307,6 +315,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,covs=cov_matrix)
                         perm = 0;
                         for relevantOutput in chunker(LMM_perm.getPv()[0],snp_matrix_DF.shape[1]) :
+                            if(write_permutations):
+                                perm_df['permutation_'+str(perm)] = relevantOutput
                             if(bestPermutationPval[perm] > min(relevantOutput)):
                                 bestPermutationPval[perm] = min(relevantOutput)
                             perm+=1
@@ -324,6 +334,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 if not temp_df.empty :
                     data_written = True
                     output_writer.add_result_df(temp_df)
+                        if(write_permutations):
+                            permutation_writer.add_permutation_results_df(perm_df,feature_id)
                 if contains_missing_samples:
                     geneticaly_unique_individuals = tmp_unique_individuals
                 #print('step 4')
