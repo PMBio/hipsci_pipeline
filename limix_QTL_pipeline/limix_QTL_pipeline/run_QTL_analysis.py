@@ -31,7 +31,7 @@ def get_args():
     parser.add_argument('-kinship_file','--kinship_file',required=False,default=None)
     parser.add_argument('-samplemap_file','--samplemap_file',required=False,default=None)
     parser.add_argument('-maf','--maf',required=False,default=0.05)
-    parser.add_argument('-hwe','--hwe',required=False,default=0.001)
+    parser.add_argument('-hwe','--hwe',required=False,default=0.0001)
     parser.add_argument('-cr','--cr',required=False,default=0.95)
     parser.add_argument('-block_size','--block_size',required=False,default=500)
     parser.add_argument('-n_perm','--n_perm',required=False,default=0)
@@ -39,6 +39,7 @@ def get_args():
     parser.add_argument('-features','--features',required=False,default=None)
     parser.add_argument('-seed','--seed',required=False)
     parser.add_argument('-relatedness_score','--relatedness_score',required=False,default=0.95)
+    parser.add_argument('-write_permutations','--write_permutations',required=False,default=False)
     parser.add_argument('-minimum_test_samples','--minimum_test_samples',
                     help="Force a minimal number of samples to test a phenotype, automaticaly adds number of covariates to this number.",required=False,default=10)
     parser.add_argument("--gaussianize",
@@ -56,7 +57,7 @@ def get_args():
     return args
 
 def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, output_dir, window_size=250000, min_maf=0.05, min_hwe_P=0.001, min_call_rate=0.95, blocksize=1000,
-                     cis_mode=True, gaussianize=True, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, relatedness_score=0.95, snps_filename=None, feature_filename=None, chromosome='all',
+                     cis_mode=True, gaussianize=True, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, snps_filename=None, feature_filename=None, chromosome='all',
                      covariates_filename=None, kinship_filename=None, sample_mapping_filename=None):
     '''Core function to take input and run QTL tests on a given chromosome.'''
     #Load input data files & filter for relevant data
@@ -458,6 +459,7 @@ if __name__=='__main__':
     gaussianize = args.gaussianize
     cis = args.cis
     trans = args.trans
+    write_permutations = args.write_permutations
 
     if ((plink is None) and (bgen is None)):
         raise ValueError("No genotypes provided. Either specify a path to a binary plink genotype file or a bgen file.")
@@ -479,9 +481,11 @@ if __name__=='__main__':
     if (random_seed is None):
         random_seed = np.random.randint(40000)
 
+    if(n_perm==0 and write_permutations):
+        write_permutations=False
 
     run_QTL_analysis(pheno_file, anno_file,geno_prefix, plinkGenotype, output_dir, int(window_size),
                      min_maf=float(min_maf), min_hwe_P=float(min_hwe_P), min_call_rate=float(min_call_rate), blocksize=int(block_size),
-                     cis_mode=cis, gaussianize = gaussianize, minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), n_perm=int(n_perm), relatedness_score=float(relatedness_score),
+                     cis_mode=cis, gaussianize = gaussianize, minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), n_perm=int(n_perm), write_permutations = write_permutations, relatedness_score=float(relatedness_score),
                      snps_filename=snps_filename, feature_filename=feature_filename, chromosome=chromosome, covariates_filename=covariates_file,
                      kinship_filename=kinship_file, sample_mapping_filename=samplemap_file)
