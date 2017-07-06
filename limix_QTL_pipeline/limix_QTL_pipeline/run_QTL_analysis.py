@@ -131,7 +131,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     except:
         if feature_filter_df is not None:
             feature_filter_df=pd.DataFrame(index=feature_filename)
-    if feature_filter_df is not None:
+    if feature_filename  is not None:
         phenotype_df = phenotype_df.loc[feature_filter_df.index,:]
     #Prepare to filter on snps.
     snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
