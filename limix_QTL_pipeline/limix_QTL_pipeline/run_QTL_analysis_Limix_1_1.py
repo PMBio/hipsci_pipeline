@@ -39,7 +39,7 @@ def get_args():
     parser.add_argument('-features','--features',required=False,default=None)
     parser.add_argument('-seed','--seed',required=False)
     parser.add_argument('-relatedness_score','--relatedness_score',required=False,default=0.95)
-    parser.add_argument('-write_permutations','--write_permutations',required=False,default=False)
+    parser.add_argument('-write_permutations','--write_permutations',action="store_true",required=False,default=False)
     parser.add_argument('-minimum_test_samples','--minimum_test_samples',
                     help="Force a minimal number of samples to test a phenotype, automaticaly adds number of covariates to this number.",required=False,default=10)
     parser.add_argument("--gaussianize",
@@ -301,7 +301,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
 
                 if(n_perm!=0):
                     if(write_permutations):
-                        perm_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['snp_id'] + ['permutation_'+str(x+1) for x in range(n_permutations)])
+                        perm_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['snp_id'] + ['permutation_'+str(x+1) for x in range(n_perm)])
                         perm_df['snp_id'] = snp_matrix_DF.columns
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
                         temp = get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
@@ -340,8 +340,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 if not temp_df.empty :
                     data_written = True
                     output_writer.add_result_df(temp_df)
-                        if(write_permutations):
-                            permutation_writer.add_permutation_results_df(perm_df,feature_id)
+                    if(write_permutations):
+                        permutation_writer.add_permutation_results_df(perm_df,feature_id)
                 if contains_missing_samples:
                     geneticaly_unique_individuals = tmp_unique_individuals
                 #print('step 4')
@@ -353,6 +353,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             fail_qc_features.append(feature_id)
         #print('step 5')
     output_writer.close()
+    if(write_permutations):
+        permutation_writer.close()
 
     #gather unique indexes of tested snps
     tested_snp_idxs = list(set(tested_snp_idxs))
@@ -379,6 +381,7 @@ def merge_QTL_results(results_dir):
         hdf5_outfile.add_result_df(df)
 
     hdf5_outfile.close()
+        
 
 def chunker(seq, size):
     return (seq[pos:pos + size] for pos in range(0, len(seq), size))
