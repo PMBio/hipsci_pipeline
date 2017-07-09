@@ -18,10 +18,10 @@ import statsmodels.sandbox.stats.multicomp as scst2
 sys.path.append('../')
 from scripts.postprocess_functions_genome_results import *
 
-def plot_summary(folder_name='/Users/mirauta/Scripts/QTL_pipeline_plots/',folder_destination='',plot_name='qtl_summary',\
-                 traits=['Exon_1234'],trait_labels=None,
+def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=None,\
+                 traits=[''],trait_labels=None,
                  file_name_results_genome='Feature_results_genome', qtl_results_file='QTL_results_',\
-                 thresholds=[0.05,0.01],thrrep=0.05,colors=np.array(['orange','darkblue','green','m']),cis=2.5*10**5, figsize=(12,12), gene_list=None,\
+                 colors=np.array(['orange','darkblue','green','m']),cis=2.5*10**5, figsize=(12,12), gene_list=None,\
                  plot_tss_distance_flag=False,plot_calibration_flag=False):
     
     if not os.path.exists(folder_destination):
@@ -88,7 +88,7 @@ def plot_summary(folder_name='/Users/mirauta/Scripts/QTL_pipeline_plots/',folder
     
         featureh5=[h5py.File(folder_name+feature+'/'+file_name_results_genome+'.h5','r') for feature in traits]
     
-        y=[np.hstack([np.hstack([fh5[feature_id]['data/p_value'][f][:] for f in fh5[feature_id]['data/p_value'].keys()]).flatten()  for feature_id in list(fh5.keys())]) for indf,fh5 in enumerate(featureh5)]  
+        y=[np.hstack([np.hstack([fh5[feature_id]['data/p_value_raw'][f][:] for f in fh5[feature_id]['data/p_value_raw'].keys()]).flatten()  for feature_id in list(fh5.keys())]) for indf,fh5 in enumerate(featureh5)]
 
         plt.title('Calibration',fontsize=10)
         
@@ -110,7 +110,8 @@ def plot_summary(folder_name='/Users/mirauta/Scripts/QTL_pipeline_plots/',folder
 
 
 def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_destination='/Users/mirauta/Data/MS/hipsci/TMT/Images',plot_name='manhattan',\
-                        traits=None,trait_labels=None,file_name_results_genome='ensembl_gene_id_qtl_results_genome',   qtl_results_file='qtl_results_',colors=np.array(['b','k','g','m']), figsize=4, gene_ensembl_id= 'ENSG00000182154'):
+                        traits=None,trait_labels=None,file_name_results_genome='ensembl_gene_id_qtl_results_genome',   qtl_results_file='qtl_results_',colors=np.array(['b','k','g','m']), figsize=4, gene_ensembl_id= 'ENSG00000182154',\
+                        p_value_field='p_value'):
 
 
     featureh5=[h5py.File(folder_name+feature+'/'+file_name_results_genome+'.h5','r')[gene_ensembl_id] for feature in traits]
@@ -120,7 +121,7 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
     temp=np.unique(np.hstack(temppos).flatten(),return_counts=1); 
     commonpos=temp[0][temp[1]==np.max(temp[1])]
     
-    for dat in ['p_value','position']:
+    for dat in [p_value_field,'position']:
         rez[dat]=[np.array([fh5['data'][dat][f][:][np.in1d(fh5['data']['position'][f][:],commonpos)] for f in fh5['data'][dat].keys()]) for fh5 in featureh5]
  
     #==============================================================================
@@ -143,7 +144,7 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
         a.add_patch(Rectangle((startstop[0], 0), startstop[1]-startstop[0], 5, facecolor="grey",    alpha=0.35))
         a.set_xticks( axxpos)
         a.set_xticklabels([str(np.around(i,1))+' Mb' for i in showxpos/10.0**6])
-        for indt,t in  enumerate(rez['p_value'][indf][np.argsort([tt.min() for tt in rez['p_value'][indf]])[:4]]): 
+        for indt,t in  enumerate(rez[p_value_field][indf][np.argsort([tt.min() for tt in rez[p_value_field][indf]])[:4]]):
             a.plot(xpos,-np.log10(t),'o',color=colors[indt],markersize=1.25)
         a.set_ylabel(trait_labels[indf]+"            \n QTL              \n -log10PV            ",fontsize=10,rotation=0,horizontalalignment= 'center' ,verticalalignment= 'center')
     
@@ -151,7 +152,7 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
             a.plot(xpos[np.argsort(t)[:5]],-np.log10(t[np.argsort(t)[:5]]),'*',color=colors[indt],markersize=5)
             for indf2, a2 in enumerate(ax):
                 if indf!=indf2:
-                    for indt2,t2 in enumerate(rez['p_value'][indf2][np.argsort([tt2.min() for tt2 in rez['p_value'][indf2]])[:4]]): 
+                    for indt2,t2 in enumerate(rez[p_value_field][indf2][np.argsort([tt2.min() for tt2 in rez['p_value'][indf2]])[:4]]):
                         a.plot(xpos[np.argsort(t2)[:3]],-np.log10(t[np.argsort(t2)[:3]],),'ro',markersize=2.5)
      
     print (str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0]))

@@ -1,23 +1,23 @@
 import sys
-
-#import statsmodels.api as sm
 import h5py
 import numpy as np
 import limix.stats.fdr as FDR
-#from  Utilities import *
 import pandas
 
 def local_adjustment(pv, N=1,  method=''):
-    if method is None: return pv
+    if method is None:
+        return pv
     if method=='Bonferroni': 
         N=pv.shape[0]
-#        print ('N is: '+str(N))
         return pv*N
-  
+    else:
+        print('Valid multiple testing correction  methods are: None;Bonferroni')
+
+
     
 def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_metadata_', feature_metadata_file='feature_metadata_',output_file='qtl_results_genome',\
-                         feature_report='ensembl_gene_id',chr_list=[9],folder_data='/Users/mirauta/Data/MS/hipsci/TMT/protein_test',rewrite=False, \
-                                                                   p_value_field='p_value',local_adjustment_method='Bonferroni'):
+                         feature_report='ensembl_gene_id',chr_list=[9],folder_data=None, \
+                            p_value_field='p_value',p_value_raw_field='p_value',local_adjustment_method='Bonferroni'):
 
     _doc=" aggregates qtl results to feature_report level"
 
@@ -54,6 +54,8 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
                 
                 pv= np.array([frez[f][p_value_field] for f in  features ])
                 for i, ppv in  enumerate(pv): ppv[ppv!=ppv]=1
+                pv2= np.array([frez[f][p_value_raw_field] for f in  features ])
+                for i, ppv in  enumerate(pv2): ppv[ppv!=ppv]=1
                 beta= np.array([frez[f]['beta'] for f in  features ])
                 for i, b in  enumerate(beta): b [b!=b]=1
                 snp_id= np.array([frez[f]['snp_id'] for f in  features ])
@@ -72,6 +74,10 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
                 fgd.create_dataset('features',data= features.astype('S'))
                 fgdp=fgd.create_group('p_value') 
                 for indf,f in enumerate(features): fgdp.create_dataset(f,data= pv[indf])
+
+                fgdp2=fgd.create_group('p_value_raw')
+                for indf,f in enumerate(features): fgdp2.create_dataset(f,data= pv2[indf])
+                
                 fgdb=fgd.create_group('beta') 
                 for indf,f in enumerate(features): fgdb.create_dataset(f,data=beta[indf])
                 fgdpo=fgd.create_group('position') 
