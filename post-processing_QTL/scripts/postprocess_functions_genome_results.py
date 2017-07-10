@@ -8,7 +8,7 @@ def local_adjustment(pv, N=1,  method=''):
     if method is None:
         return pv
     if method=='Bonferroni': 
-        N=pv.shape[0]
+        N=np.hstack(pv).shape[0]
         return pv*N
     else:
         print('Valid multiple testing correction  methods are: None;Bonferroni')
@@ -16,7 +16,7 @@ def local_adjustment(pv, N=1,  method=''):
 
     
 def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_metadata_', feature_metadata_file='feature_metadata_',output_file='qtl_results_genome',\
-                         feature_report='ensembl_gene_id',chr_list=[9],folder_data=None, \
+                         feature_report='ensembl_gene_id',chr_list=[9],folder_data=None,trait=None, \
                             p_value_field='p_value',p_value_raw_field='p_value',local_adjustment_method='Bonferroni'):
 
     _doc=" aggregates qtl results to feature_report level"
@@ -24,11 +24,14 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
     for ichr,chr in enumerate(chr_list):
         print ('chromosome: '+str(chr))
     
-        frez=h5py.File(folder_data+'/'+qtl_results_file+str(chr)+'.h5','r')
-        frezkeys= np.array([k.replace('_i_','') for k in list(frez.keys())])
-        ffea= pandas.read_table(folder_data+'/'+feature_metadata_file+ str(chr)+'.txt', sep='\t')
-        fsnp= pandas.read_table(folder_data+'/'+snp_metadata_file+ str(chr)+'.txt', sep='\t').set_index('snp_id',drop=False).transpose()
-        
+        try:
+            frez=h5py.File(folder_data+'/'+trait+'/'+qtl_results_file+str(chr)+'.h5','r')
+            frezkeys= np.array([k.replace('_i_','') for k in list(frez.keys())])
+            ffea= pandas.read_table(folder_data+'/'+trait+'/'+feature_metadata_file+ str(chr)+'.txt', sep='\t')
+            fsnp= pandas.read_table(folder_data+'/'+trait+'/'+snp_metadata_file+ str(chr)+'.txt', sep='\t').set_index('snp_id',drop=False).transpose()
+        except:
+            print('chromosome'+str(chr)+' missing')
+            continue
         indexnan=np.where((ffea[feature_report])!=(ffea[feature_report]))[0]
         for i in indexnan:
             ffea[feature_report][i]='gene_'+str(ffea['chromosome'][i])+'_'+str(ffea['start'][i])
@@ -37,9 +40,9 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
         
                              
         if ichr==0:
-            fOut=h5py.File(folder_data+'/'+feature_report+'_'+output_file+'.h5','w')
+            fOut=h5py.File(folder_data+'/'+trait+'_'+feature_report+'_'+output_file+'.h5','w')
         else:
-            fOut=h5py.File(folder_data+'/'+feature_report+'_'+output_file+'.h5','r+')
+            fOut=h5py.File(folder_data+'/'+trait+'_'+feature_report+'_'+output_file+'.h5','r+')
     
         # for each report_feature  create h5 groups
         count=0
@@ -49,7 +52,7 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
             #select features for which qtl was computed
             features=np.intersect1d(np.array( ffea_report_feature[report_feature].transpose()['feature_id']), frezkeys)
             if len(features) >=1:
-
+                
                 fg=fOut.create_group(report_feature)
                 
                 pv= np.array([frez[f][p_value_field] for f in  features ])
@@ -112,7 +115,7 @@ def replication_two_features(folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/', 
 
     if folder_data2 is None:
         folder_data2 =folder_data 
-    featureh5=[h5py.File(folder_data+traits[0]+'/'+feature_report+'_'+results_genome_file+'.h5','r'),h5py.File(folder_data2+traits[1]+'/'+feature_report+'_'+results_genome_file+'.h5','r')]
+    featureh5=[h5py.File(folder_data+'/'+traits[0]+'_'+feature_report+'_'+results_genome_file+'.h5','r'),h5py.File(folder_data2+'/'+traits[1]+'_'+feature_report+'_'+results_genome_file+'.h5','r')]
     
     feature_ids=np.intersect1d(list(featureh5[0].keys()),list(featureh5[1].keys()))
  
