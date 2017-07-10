@@ -203,6 +203,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             '''
             individual_ids = sample2individual_df.loc[phenotype_ds.index,'iid'].values
             sample2individual_feature= sample2individual_df.loc[phenotype_ds.index]
+
 #                individual_idxs = fam.loc[individual_ids,'i'].values
 #            return [individual_ids,sample2individual_df,phenotype_ds]
 
@@ -287,6 +288,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                      '''
                     kinship_mat = kinship_df.loc[individual_ids,individual_ids].values if kinship_df is not None else None
                     cov_matrix =  covariate_df.loc[sample2individual_feature['sample'],:].values if covariate_df is not None else None
+                    ### select discrete covariates with at least 5 lines:
+                    cov_matrix=cov_matrix[:,np.nansum(cov_matrix==1,0)>6] if covariate_df is not None else None
+
                     phenotype = force_normal_distribution(phenotype_ds.values,method=gaussianize_method) if gaussianize_method is not None else phenotype_ds.values
                 else:
                     print ('there is an issue in mapping phenotypes and genotypes')
@@ -298,6 +302,13 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 else :
                     LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
 
+                print ('>>>>\n');
+                print(feature_id )
+                print (np.nanmin(LMM.variant_pvalues));
+                #output_writer.close()
+                #return [phenotype,cov_matrix, phenotype_ds,snp_matrix_DF,kinship_df,covariate_df,sample2individual_feature]
+                print ('\n>>>>')
+    
                 if(n_perm!=0):
                     if(write_permutations):
                         perm_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['snp_id'] + ['permutation_'+str(x+1) for x in range(n_perm)])
