@@ -317,9 +317,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     else :
                         temp = get_shuffeld_genotypes(snp_matrix_DF,kinship_df, n_perm)
                         if(kinship_df is None):
-                            LMM_perm = limix.qtl.qtl_test_lm(snp_matrix_DF.values, phenotype,M=cov_matrix,verbose=False)
+                            LMM_perm = limix.qtl.qtl_test_lm(temp, phenotype,M=cov_matrix,verbose=False)
                         else :
-                            LMM_perm = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
+                            LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
                         perm = 0;
                         for relevantOutput in chunker(LMM_perm.variant_pvalues,snp_matrix_DF.shape[1]) :
                             if(write_permutations):
