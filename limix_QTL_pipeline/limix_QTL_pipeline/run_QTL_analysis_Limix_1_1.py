@@ -488,7 +488,7 @@ if __name__=='__main__':
     feature_filename = args.features
     relatedness_score = args.relatedness_score
     minimum_test_samples = args.minimum_test_samples
-    gaussianize = args.gaussianize
+    gaussianize = args.gaussianize_method
     cis = args.cis
     trans = args.trans
     write_permutations = args.write_permutations
