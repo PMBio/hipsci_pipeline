@@ -42,9 +42,9 @@ def get_args():
     parser.add_argument('-write_permutations','--write_permutations',action="store_true",required=False,default=False)
     parser.add_argument('-minimum_test_samples','--minimum_test_samples',
                     help="Force a minimal number of samples to test a phenotype, automaticaly adds number of covariates to this number.",required=False,default=10)
-    parser.add_argument("--gaussianize",
+    parser.add_argument("--gaussianize_method",
                     action="store_true",
-                    help="Force normal distribution on phenotypes.", default=False)
+                    help="Force normal distribution on phenotypes.", default=None)
     parser.add_argument("--cis",
                         action="store_true",
                         help="Run cis analysis.", default=False)
@@ -56,7 +56,7 @@ def get_args():
 
     return args
 def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, output_dir, window_size=250000, min_maf=0.05, min_hwe_P=0.001, min_call_rate=0.95, blocksize=1000,
-                     cis_mode=True, gaussianize=True, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, snps_filename=None, feature_filename=None, chromosome='all',
+                     cis_mode=True, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, snps_filename=None, feature_filename=None, chromosome='all',
                      covariates_filename=None, kinship_filename=None, sample_mapping_filename=None):
     '''Core function to take input and run QTL tests on a given chromosome.'''
     #Load input data files & filter for relevant data
@@ -203,6 +203,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             '''
             individual_ids = sample2individual_df.loc[phenotype_ds.index,'iid'].values
             sample2individual_feature= sample2individual_df.loc[phenotype_ds.index]
+
 #                individual_idxs = fam.loc[individual_ids,'i'].values
 #            return [individual_ids,sample2individual_df,phenotype_ds]
 
@@ -287,7 +288,12 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                      '''
                     kinship_mat = kinship_df.loc[individual_ids,individual_ids].values if kinship_df is not None else None
                     cov_matrix =  covariate_df.loc[sample2individual_feature['sample'],:].values if covariate_df is not None else None
-                    phenotype = force_normal_distribution(phenotype_ds.values) if gaussianize else phenotype_ds.values
+                    ### select discrete covariates with at least 6 lines:
+                    if covariate_df is not None :
+                        if np.unique(cov_matrix).shape[0]==2:
+                            cov_matrix=cov_matrix[:,np.nansum(cov_matrix==1,0)>6]
+
+                    phenotype = force_normal_distribution(phenotype_ds.values,method=gaussianize_method) if gaussianize_method is not None else phenotype_ds.values
                 else:
                     print ('there is an issue in mapping phenotypes and genotypes')
                     sys.exit()
@@ -394,9 +400,13 @@ def get_unique_genetic_samples(kinship_df, relatedness_score):
 def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
     _doc='rank transform x into ref/ gaussian;keep the range; keep ties'
 
+    if method=='log':
+        return np.log(1+phenotype)
+
     indextoupdate=np.isfinite(phenotype);
     y1=phenotype[indextoupdate]
     yuni,yindex=np.unique(y1, return_inverse=True)
+
     if method=='gaussnorm':
         std=np.nanstd(y1)
         mean=np.nanmedian(y1)
