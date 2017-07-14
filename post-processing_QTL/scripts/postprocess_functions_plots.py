@@ -38,13 +38,20 @@ def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=Non
     featureh5=[h5py.File(folder_name+'/'+trait+'_'+file_name_results_genome+'.h5','r') for trait in traits]
  
     if gene_list is None:
-        local_adjusted=np.array([np.array([fh5[gene]['summary_data/min_p_value_local_adjusted'][:][0] for gene in fh5.keys()])for indf,fh5 in enumerate(featureh5)])
+        local_adjusted=np.array([np.array([fh5[gene]['summary_data/min_p_value_local_adjusted'][:][0] for gene in fh5.keys()]) \
+                                 for indf,fh5 in enumerate(featureh5)])
+        gene_list_common=np.array([np.array(list(fh5.keys()))  for indf,fh5 in enumerate(featureh5)])
+        temp=np.unique(gene_list_common.flatten(),return_counts=1)
+        gene_list_common=temp[0][temp[1]==gene_list_common.shape[0]]
+        local_adjusted_common=np.array([np.array([fh5[gene]['summary_data/min_p_value_local_adjusted'][:][0] for gene in np.intersect1d(gene_list_common,np.array(list(fh5.keys())))])for indf,fh5 in enumerate(featureh5)])
+        
+ 
     else:
         local_adjusted=np.array([np.array([fh5[gene]['summary_data/min_p_value_local_adjusted'][:][0] for gene in np.intersect1d(gene_list,np.array(list(fh5.keys())))])for indf,fh5 in enumerate(featureh5)])
 
  
  
-    axes = fig.add_subplot(2, 2, 2, axisbg='white')
+    axes = fig.add_subplot(2, 2, 1, axisbg='white')
     axes.spines['top'].set_visible(False)
     axes.spines['right'].set_visible(False)
     axes.yaxis.set_ticks_position('left')
@@ -62,6 +69,30 @@ def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=Non
     plt.ylabel('#pGenes',fontsize=13)
     plt.xticks(fdr,fdr[::-1])
     if trait_labels is not None: plt.legend(loc=2,fontsize=9)
+    
+#==============================================================================
+#     power plot commmon
+#==============================================================================
+    axes = fig.add_subplot(2, 2, 2, axisbg='white')
+    axes.spines['top'].set_visible(False)
+    axes.spines['right'].set_visible(False)
+    axes.yaxis.set_ticks_position('left')
+    axes.xaxis.set_ticks_position('bottom')
+    fdr=np.array([5,4,3,2,1])[::-1]
+ 
+    for iy,yy in enumerate(local_adjusted_common):
+#        print(yy)
+ 
+#        plt.plot(fdr[::-1] ,[(-np.log10(FDR.qvalues1(yy))>thr).sum() for thr in fdr],color=colors[iy],markersize=3,label=trait_labels[iy])
+        plt.plot(fdr[::-1] ,[(-np.log10(scst2.fdrcorrection0(yy)[1])>thr).sum() for thr in fdr],color=colors[iy],label=trait_labels[iy],lw=3)
+    axes.plot((fdr[-1],fdr[-1]),(0,np.max([(a<10**-2).sum() for a in local_adjusted_common])) ,'--',color='k',lw=0.5)
+    axes.plot((fdr[0],fdr[-1]),(np.max([(a<10**-2).sum() for a in local_adjusted_common]),np.max([(a<10**-2).sum() for a in local_adjusted_common])) ,'--',color='k',lw=0.5)
+    plt.xlabel('-log10 FDR',fontsize=13);
+    plt.ylabel('#pGenes',fontsize=13)
+    plt.xticks(fdr,fdr[::-1])
+    plt.title('Common genes')
+    if trait_labels is not None: plt.legend(loc=2,fontsize=9)
+
 
     if plot_tss_distance_flag:
         axes = fig.add_subplot(2, 2, 3, axisbg='white')
