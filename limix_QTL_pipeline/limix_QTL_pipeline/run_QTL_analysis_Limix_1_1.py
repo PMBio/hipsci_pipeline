@@ -96,6 +96,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         print("Dropped: "+str(diff)+" samples becuase they are not present in the kinship file.")
     #Subset linking vs covariates.
     covariate_df = qtl_loader_utils.get_covariate_df(covariates_filename)
+    covariate_df=covariate_df.transpose().iloc[:np.sum(np.linalg.eigvals(np.dot(covariate_df.values.T,covariate_df.values))>0.01)].transpose()
+    print (covariate_df.shape)
 
     if covariate_df is not None:
         if np.nansum(covariate_df==1,0).max()<covariate_df.shape[0]: covariate_df.insert(0, 'ones',np.ones(covariate_df.shape[0]))
@@ -303,7 +305,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     LMM = limix.qtl.qtl_test_lm(snp_matrix_DF.values, phenotype,M=cov_matrix,verbose=False)
                 else :
                     LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
-
+                print (LMM.variant_pvalues.min())
+                print (cov_matrix.shape)
                 if(n_perm!=0):
                     if(write_permutations):
                         perm_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['snp_id'] + ['permutation_'+str(x+1) for x in range(n_perm)])
