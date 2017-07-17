@@ -17,6 +17,7 @@ def get_args():
     parser.add_argument('-trait_labels','--trait_labels',required=False,default=None)
     parser.add_argument('-chromosomes','--chromosomes',required=False,default=','.join(np.arange(1,23).astype('U')))
     parser.add_argument('-run_type',required=False,default='summary_plots_power_replication_manhattan')
+    parser.add_argument('-plot_name',required=False,default='summary_plots_power_replication_manhattan')
     args = parser.parse_args()
     
     return args
@@ -55,7 +56,7 @@ from matplotlib import colors as mcolors
 import matplotlib as mpl
 
 if 'power' in run_type:
-    plot_summary(folder_name=folder_data, folder_destination=folder_destination+'Images_pipeline/',plot_name='qtl_summary',\
+    a=plot_summary(folder_name=folder_data, folder_destination=folder_destination+'Images_pipeline/',plot_name='qtl_summary',\
                  traits=traits, trait_labels=trait_labels,
                  file_name_results_genome='ensembl_gene_id_qtl_results_genome',   qtl_results_file='qtl_results_', \
                  colors=np.array(['orange','darkblue','green','red']),cis=2.5*10**5,figsize=(8,8),gene_list=None,\
