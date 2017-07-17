@@ -19,14 +19,14 @@ sys.path.append('../')
 from scripts.postprocess_functions_genome_results import *
 
 
-
-
-
-folder_name='/Users/mirauta/Results/hipsci/QTL1/'
-file_name_qtl='qtl_results_'
-file_name_perm='perm_results_'
-traits=['param_protein_scaled_peer_gaussnorm_testcovar'];
-chromosome='21'
+#
+#
+#
+#folder_name='/Users/mirauta/Results/hipsci/QTL1/'
+#file_name_qtl='qtl_results_'
+#file_name_perm='perm_results_'
+#traits=['param_protein_scaled_peer_gaussnorm_testcovar'];
+#chromosome='21'
 def plot_summary_onechr_perm(plot_name='qtl_summary_onechr',folder_name=None,folder_destination=None,\
                  traits=[''],chromosome='21',
                  file_name_qtl='qtl_results_',file_name_perm='perm_results_', \
