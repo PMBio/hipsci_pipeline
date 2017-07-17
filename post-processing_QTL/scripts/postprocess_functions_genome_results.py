@@ -143,8 +143,9 @@ def replication_two_features(folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/', 
             
             rez['snp_id'][indf]=featureh5[0][feature]['summary_data/min_p_value_snp_id'][:][0]
             rez['position'][indf]=featureh5[0][feature]['summary_data/min_p_value_position'][:][0]
-            rez['replicated_p_value'][indf]=np.min( [featureh5[1][feature]['data/p_value'][f1][:][featureh5[1][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]] for f1 in featureh5[1][feature]['data/features']])     
-            
+            try:
+                rez['replicated_p_value'][indf]=np.min( [featureh5[1][feature]['data/p_value'][f1][:][featureh5[1][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]] for f1 in featureh5[1][feature]['data/features']])     
+            except:1
             try:
                 rez['replicated_self_p_value'][indf]=np.min([featureh5[0][feature]['data/p_value'][f1][:][featureh5[0][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]]\
                     for f1 in np.setdiff1d(featureh5[0][feature]['data/features'],featureh5[0][feature]['summary_data/min_p_value_feature_id'][0])]) 
