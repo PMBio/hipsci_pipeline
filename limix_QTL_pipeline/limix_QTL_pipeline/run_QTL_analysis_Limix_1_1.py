@@ -44,7 +44,6 @@ def get_args():
     parser.add_argument('-minimum_test_samples','--minimum_test_samples',
                     help="Force a minimal number of samples to test a phenotype, automaticaly adds number of covariates to this number.",required=False,default=10)
     parser.add_argument("--gaussianize_method",
-                    action="store_true",
                     help="Force normal distribution on phenotypes.", default=None)
     parser.add_argument("--cis",
                         action="store_true",
@@ -162,6 +161,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         feature_list = list(set(annotation_df.index)&set(phenotype_df.index))
     else:
         feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
+    if ((not cis_mode) and len(set(bim['chrom']))<22) :
+        print("Warning, running a trans-analysis on snp data from less than 22 chromosomes.\nTo merge data later the permutation P-values need to be written out.")
     print("Number of features to be tested: " + str(phenotype_df.shape[0]))
     #Arrays to store indices of snps tested and pass and fail QC SNPs for features without missingness.
     tested_snp_idxs = []
@@ -335,9 +336,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     else :
                         temp = get_shuffeld_genotypes(snp_matrix_DF,kinship_df, n_perm)
                         if(kinship_df is None):
-                            LMM_perm = limix.qtl.qtl_test_lm(snp_matrix_DF.values, phenotype,M=cov_matrix,verbose=False)
+                            LMM_perm = limix.qtl.qtl_test_lm(temp, phenotype,M=cov_matrix,verbose=False)
                         else :
-                            LMM_perm = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
+                            LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
                         perm = 0;
                         for relevantOutput in chunker(LMM_perm.variant_pvalues,snp_matrix_DF.shape[1]) :
                             if(write_permutations):
@@ -532,7 +533,7 @@ if __name__=='__main__':
     feature_filename = args.features
     relatedness_score = args.relatedness_score
     minimum_test_samples = args.minimum_test_samples
-    gaussianize = args.gaussianize
+    gaussianize = args.gaussianize_method
     cis = args.cis
     trans = args.trans
     write_permutations = args.write_permutations
@@ -562,6 +563,6 @@ if __name__=='__main__':
 
     run_QTL_analysis(pheno_file, anno_file,geno_prefix, plinkGenotype, output_dir, int(window_size),
                      min_maf=float(min_maf), min_hwe_P=float(min_hwe_P), min_call_rate=float(min_call_rate), blocksize=int(block_size),
-                     cis_mode=cis, gaussianize = gaussianize, minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), n_perm=int(n_perm), write_permutations = write_permutations, relatedness_score=float(relatedness_score),
+                     cis_mode=cis, gaussianize_method = gaussianize, minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), n_perm=int(n_perm), write_permutations = write_permutations, relatedness_score=float(relatedness_score),
                      snps_filename=snps_filename, feature_filename=feature_filename, chromosome=chromosome, covariates_filename=covariates_file,
                      kinship_filename=kinship_file, sample_mapping_filename=samplemap_file)
