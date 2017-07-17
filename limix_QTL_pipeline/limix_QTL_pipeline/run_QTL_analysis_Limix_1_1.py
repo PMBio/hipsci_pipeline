@@ -9,6 +9,7 @@ from sklearn.preprocessing import Imputer
 import argparse
 import scipy.stats as scst
 import sys
+import seaborn as sb
 
 #V0.1.1
 
@@ -57,7 +58,9 @@ def get_args():
     return args
 def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, output_dir, window_size=250000, min_maf=0.05, min_hwe_P=0.001, min_call_rate=0.95, blocksize=1000,
                      cis_mode=True, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, snps_filename=None, feature_filename=None, chromosome='all',
-                     covariates_filename=None, kinship_filename=None, sample_mapping_filename=None):
+                     covariates_filename=None, kinship_filename=None, sample_mapping_filename=None,filter_covariates_flag=False,boxplot_flag=False):
+ 
+        
     '''Core function to take input and run QTL tests on a given chromosome.'''
     #Load input data files & filter for relevant data
     #Load input data filesf
@@ -96,6 +99,10 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         print("Dropped: "+str(diff)+" samples becuase they are not present in the kinship file.")
     #Subset linking vs covariates.
     covariate_df = qtl_loader_utils.get_covariate_df(covariates_filename)
+    if filter_covariates_flag:
+        print ('filtering covariates. Initially there are'+str(covariate_df.shape))
+        covariate_df=covariate_df.transpose().iloc[:np.sum(np.linalg.eigvals(np.dot(covariate_df.values.T,covariate_df.values))>0.01)].transpose()
+        print ('After there are: '+str(covariate_df.shape))
 
     if covariate_df is not None:
         if np.nansum(covariate_df==1,0).max()<covariate_df.shape[0]: covariate_df.insert(0, 'ones',np.ones(covariate_df.shape[0]))
@@ -239,13 +246,14 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     #However, we do not use it when checking for missingness.
                     #That could be extended but gives alot of overhead.
                 if not contains_missing_samples:
+#                    print('DOES NOT contain missing')
                     #remove snps from snp_df if they fail QC
                     snp_df = snp_df.loc[:,snp_df.columns[~snp_df.columns.isin(fail_qc_snps_all)]]
                     snps_to_test_df = snp_df.loc[:,snp_df.columns[~snp_df.columns.isin(pass_qc_snps_all)]]
 
                     #Only do QC on relevant SNPs. join pre-QCed list and new QCed list.
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snps_to_test_df.shape[0]:
-                        passed_snp_names,failed_snp_names = do_snp_qc(snps_to_test_df.loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P)
+                        passed_snp_names,failed_snp_names = do_snp_qc(snps_to_test_df.iloc[np.unique(snps_to_test_df.index,return_index=1)[1]].loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P)
                     else:
                         passed_snp_names,failed_snp_names = do_snp_qc(snps_to_test_df, min_call_rate, min_maf, min_hwe_P)
                     snps_to_test_df = None
@@ -256,15 +264,18 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
 
                     snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(pass_qc_snps_all)]]
                 else:
+                    #print('contains missing')
                     tmp_unique_individuals = geneticaly_unique_individuals
                     geneticaly_unique_individuals = get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
                     #Do snp QC for relevant section.
                     #Get relevant slice from: phenotype_ds
                     if kinship_df is not None and len(geneticaly_unique_individuals)>1 and len(geneticaly_unique_individuals)<snp_df.shape[0]:
-                        passed_snp_names,failed_snp_names = do_snp_qc(snp_df.loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P)
+#                        passed_snp_names,failed_snp_names = do_snp_qc(snp_df.loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P)
+                        passed_snp_names,failed_snp_names = do_snp_qc(snp_df.iloc[np.unique(snp_df.index,return_index=1)[1]].loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P) 
                     else:
                         passed_snp_names,failed_snp_names = do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P)
                     snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(passed_snp_names)]]
+                    
 
                 if len(snp_df.columns) == 0:
                     #print("failed: "+''.join(failed_snp_names))
@@ -303,7 +314,10 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     LMM = limix.qtl.qtl_test_lm(snp_matrix_DF.values, phenotype,M=cov_matrix,verbose=False)
                 else :
                     LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
-
+                
+                '''here plot if boxplot_flag'''
+                if boxplot_flag: qtl_plot(snp_matrix_DF, phenotype,K=kinship_mat,M=cov_matrix,LMM=None,snp=None)
+                
                 if(n_perm!=0):
                     if(write_permutations):
                         perm_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['snp_id'] + ['permutation_'+str(x+1) for x in range(n_perm)])
@@ -464,6 +478,38 @@ def get_shuffeld_genotypes(snp_matrix_DF,kinship_df,n_perm):
         end+= snp_matrix_DF.shape[1]
     return(snp_matrix_copy)
 
+def qtl_plot(snp_matrix_DF, phenotype,K=None, M=None,LMM=None,snp=None,show_reg_cov=True):
+    if LMM is None:
+        LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=K,M=M,verbose=False)
+        
+    if snp is None:
+        snp=snp_matrix_DF.values[:,np.argmin(LMM.variant_effsizes)]           
+    
+    cov=LMM.null_covariate_effsizes;betacov=np.array([cov[key] for key in cov.keys()])
+
+
+    temp=pd.DataFrame(data=np.hstack([np.vstack([snp,phenotype,np.zeros(phenotype.shape[0]).astype(bool)]),\
+                                          np.vstack([snp,phenotype-np.dot(M,betacov[:,None])[:,0],np.ones(phenotype.shape[0]).astype(bool)])]).T,\
+                                            columns=['Variant','Phenotype donor','Covariates regressed'])
+    
+    temp['Covariates regressed']=temp['Covariates regressed'].astype(bool)
+ 
+    indexunique=np.unique(np.array([l.split('-')[1] for l in snp_matrix_DF.index]),return_index=1)[1]
+    ax = sb.boxplot(y=temp['Phenotype donor'],x=temp['Variant'])
+    for patch in ax.artists:
+        r, g, b, a = patch.get_facecolor()
+        patch.set_facecolor((r, g, b, .03))
+ 
+#    sb.swarmplot(y=temp['Phenotype donor'],x=temp['Variant'],color='grey')
+    if show_reg_cov:
+        index1=np.hstack([indexunique,indexunique+phenotype.shape[0]])
+        sb.swarmplot(y=temp['Phenotype donor'].iloc[index1],x=temp['Variant'].iloc[index1],  hue=temp['Covariates regressed'].iloc[index1], split=True)
+    else:
+        index1= indexunique 
+        sb.swarmplot(y=temp['Phenotype donor'].iloc[index1],x=temp['Variant'].iloc[index1])
+ 
+ 
+    
 if __name__=='__main__':
     args = get_args()
     plink  = args.plink
@@ -490,7 +536,7 @@ if __name__=='__main__':
     cis = args.cis
     trans = args.trans
     write_permutations = args.write_permutations
-
+ 
     if ((plink is None) and (bgen is None)):
         raise ValueError("No genotypes provided. Either specify a path to a binary plink genotype file or a bgen file.")
     if ((plink is not None) and (bgen is not None)):

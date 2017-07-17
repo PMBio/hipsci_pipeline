@@ -118,8 +118,7 @@ def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=Non
         local_adjusted=np.array([np.array([fh5[gene]['summary_data/min_p_value_local_adjusted'][:][0] for gene in fh5.keys()]) \
                                  for indf,fh5 in enumerate(featureh5)])
         gene_list_common=np.array([np.array(list(fh5.keys()))  for indf,fh5 in enumerate(featureh5)])
-#        return gene_list_common
-        temp=np.unique(np.hstack(gene_list_common),return_counts=1)
+        temp=np.unique(gene_list_common.flatten(),return_counts=1)
         gene_list_common=temp[0][temp[1]==gene_list_common.shape[0]]
         local_adjusted_common=np.array([np.array([fh5[gene]['summary_data/min_p_value_local_adjusted'][:][0] for gene in np.intersect1d(gene_list_common,np.array(list(fh5.keys())))])for indf,fh5 in enumerate(featureh5)])
         

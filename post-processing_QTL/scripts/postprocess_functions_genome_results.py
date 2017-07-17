@@ -20,7 +20,7 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
                             p_value_field='p_value',p_value_raw_field='p_value',local_adjustment_method='Bonferroni'):
 
     _doc=" aggregates qtl results to feature_report level"
-
+    iichr=0
     for ichr,chr in enumerate(chr_list):
         print ('chromosome: '+str(chr))
     
@@ -39,15 +39,16 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
         ffea_report_feature=ffea.set_index(feature_report, drop=False).transpose()
         
                              
-        if ichr==0:
+        if iichr==0:
             fOut=h5py.File(folder_data+'/'+trait+'_'+feature_report+'_'+output_file+'.h5','w')
+            iichr=1
         else:
             fOut=h5py.File(folder_data+'/'+trait+'_'+feature_report+'_'+output_file+'.h5','r+')
     
         # for each report_feature  create h5 groups
         count=0
         for ifea,report_feature in enumerate(np.unique(list(ffea_report_feature))):
-#            print (report_feature)
+            print (report_feature)
        
             #select features for which qtl was computed
             features=np.intersect1d(np.array( ffea_report_feature[report_feature].transpose()['feature_id']), frezkeys)
