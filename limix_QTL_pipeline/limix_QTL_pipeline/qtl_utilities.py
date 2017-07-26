@@ -63,6 +63,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinxhip_sample_mapping\
     phenotype_df = phenotype_df.loc[list(set(phenotype_df.index)&set(annotation_df.index)),sample2individual_df.index.values]
 
     #Filter kinship data based on the linking files.
+    geneticaly_unique_individuals = None
     if kinship_df is not None:
         kinship_df = kinship_df.loc[np.intersect1d(kinship_df.index,sample2individual_df['iid']),np.intersect1d(kinship_df.index,sample2individual_df['iid'])]
         geneticaly_unique_individuals = get_unique_genetic_samples(kinship_df, relatedness_score);
