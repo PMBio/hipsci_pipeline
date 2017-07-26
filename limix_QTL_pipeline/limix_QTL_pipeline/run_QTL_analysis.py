@@ -141,18 +141,19 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 if not contains_missing_samples:
                     #remove snps from snp_df if they fail QC
                     snp_df = snp_df.loc[:,snp_df.columns[~snp_df.columns.isin(fail_qc_snps_all)]]
+                    if snp_df.shape[1] == 0:
+                        continue
                     snps_to_test_df = snp_df.loc[:,snp_df.columns[~snp_df.columns.isin(pass_qc_snps_all)]]
-
-                    #Only do QC on relevant SNPs. join pre-QCed list and new QCed list.
-                    if kinship_df is not None and len(geneticaly_unique_individuals)<snps_to_test_df.shape[0]:
-                        passed_snp_names,failed_snp_names = do_snp_qc(snps_to_test_df.iloc[np.unique(snps_to_test_df.index,return_index=1)[1]].loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P)
-                    else:
-                        passed_snp_names,failed_snp_names = do_snp_qc(snps_to_test_df, min_call_rate, min_maf, min_hwe_P)
-                    snps_to_test_df = None
-
-                    #append snp_names and failed_snp_names
-                    pass_qc_snps_all.extend(passed_snp_names)
-                    fail_qc_snps_all.extend(failed_snp_names)
+                    if snps_to_test_df.shape[1] > 0:
+                        #Only do QC on relevant SNPs. join pre-QCed list and new QCed list.
+                        if kinship_df is not None and len(geneticaly_unique_individuals)<snps_to_test_df.shape[0]:
+                            passed_snp_names,failed_snp_names = do_snp_qc(snps_to_test_df.iloc[np.unique(snps_to_test_df.index,return_index=1)[1]].loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P)
+                        else:
+                            passed_snp_names,failed_snp_names = do_snp_qc(snps_to_test_df, min_call_rate, min_maf, min_hwe_P)
+                        snps_to_test_df = None
+                        #append snp_names and failed_snp_names
+                        pass_qc_snps_all.extend(passed_snp_names)
+                        fail_qc_snps_all.extend(failed_snp_names)
 
                     snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(pass_qc_snps_all)]]
                 else:
@@ -202,10 +203,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 #For limix 1.1 we need to switch to lm our selfs if there is no K.
 #                return[snp_matrix_DF,phenotype, kinship_mat,cov_matrix]
                 try: 
-                    if(kinship_df is None):
-                        LMM = limix.qtl.qtl_test_lm(snp_matrix_DF.values, phenotype,M=cov_matrix,verbose=False)
-                    else :
-                        LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
+                    LMM = limix.qtl.scan(snp_matrix_DF.values, phenotype, 'Normal',K=kinship_mat,M=cov_matrix,verbose=False)
                 except: 
                     print (feature_id)
                     print ('LMM failed')
@@ -216,7 +214,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         perm_df['snp_id'] = snp_matrix_DF.columns
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
                         temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
-                        LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
+                        LMM_perm = limix.qtl.scan(temp, phenotype, 'Normal',K=kinship_mat,M=cov_matrix,verbose=False)
                         perm = 0;
                         for relevantOutput in utils.chunker(LMM_perm.variant_pvalues,snp_matrix_DF.shape[1]) :
                             if(write_permutations):
@@ -226,10 +224,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                             perm+=1
                     else :
                         temp = utils.get_shuffeld_genotypes(snp_matrix_DF,kinship_df, n_perm)
-                        if(kinship_df is None):
-                            LMM_perm = limix.qtl.qtl_test_lm(temp, phenotype,M=cov_matrix,verbose=False)
-                        else :
-                            LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
+                        LMM_perm = limix.qtl.scan(temp, phenotype, 'Normal',K=kinship_mat,M=cov_matrix,verbose=False)
                         perm = 0;
                         for relevantOutput in utils.chunker(LMM_perm.variant_pvalues,snp_matrix_DF.shape[1]) :
                             if(write_permutations):
