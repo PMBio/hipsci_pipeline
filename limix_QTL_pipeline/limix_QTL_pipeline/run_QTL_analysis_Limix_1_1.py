@@ -9,7 +9,7 @@ from sklearn.preprocessing import Imputer
 import argparse
 import scipy.stats as scst
 import sys
-import seaborn as sb
+#import seaborn as sb
 
 #V0.1.1
 
@@ -55,123 +55,32 @@ def get_args():
     args = parser.parse_args()
 
     return args
+
 def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, output_dir, window_size=250000, min_maf=0.05, min_hwe_P=0.001, min_call_rate=0.95, blocksize=1000,
                      cis_mode=True, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, snps_filename=None, feature_filename=None, chromosome='all',
-                     covariates_filename=None, kinship_filename=None, sample_mapping_filename=None,filter_covariates_flag=False,boxplot_flag=False):
+                     covariates_filename=None, kinship_filename=None, sample_mapping_filename=None):
  
-        
-    '''Core function to take input and run QTL tests on a given chromosome.'''
-    #Load input data files & filter for relevant data
-    #Load input data filesf
-    if(plinkGenotype):
-        bim,fam,bed = qtl_loader_utils.get_genotype_data(geno_prefix)
-    else :
-        geno_prefix+='.bgen'
-        print(geno_prefix)
-    print("Intersecting data.")
-    phenotype_df = qtl_loader_utils.get_phenotype_df(pheno_filename)
-    annotation_df = qtl_loader_utils.get_annotation_df(anno_filename)
-
-    sample2individual_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'sample')
-    sample2individual_df['sample']=sample2individual_df.index
-
-    ##Filter first the linking files!
-    #Subset linking to relevant genotypes.
-    orgSize = sample2individual_df.shape[0]
-    sample2individual_df = sample2individual_df.loc[sample2individual_df['iid'].map(lambda x: x in list(map(str, fam.index))),:]
-    diff = orgSize- sample2individual_df.shape[0]
-    orgSize = sample2individual_df.shape[0]
-    print("Dropped: "+str(diff)+" samples becuase they are not present in the genotype file.")
     
-    #Subset linking to relevant phenotypes.
-    sample2individual_df = sample2individual_df.loc[np.intersect1d(sample2individual_df.index,phenotype_df.columns),:]
-    diff = orgSize- sample2individual_df.shape[0]
-    orgSize = sample2individual_df.shape[0]
-    print("Dropped: "+str(diff)+" samples becuase they are not present in the phenotype file.")
-    #Subset linking vs kinship.
-    kinship_df = qtl_loader_utils.get_kinship_df(kinship_filename)
-    if kinship_df is not None:
-        #Filter from individual2sample_df & sample2individual_df since we don't want to filter from the genotypes.
-        sample2individual_df = sample2individual_df[sample2individual_df['iid'].map(lambda x: x in list(map(str, kinship_df.index)))]
-        diff = orgSize- sample2individual_df.shape[0]
-        orgSize = sample2individual_df.shape[0]
-        print("Dropped: "+str(diff)+" samples becuase they are not present in the kinship file.")
-    #Subset linking vs covariates.
-    covariate_df = qtl_loader_utils.get_covariate_df(covariates_filename)
-    if filter_covariates_flag:
-        print ('filtering covariates. Initially there are'+str(covariate_df.shape))
-        covariate_df=covariate_df.transpose().iloc[:np.sum(np.linalg.eigvals(np.dot(covariate_df.values.T,covariate_df.values))>0.01)].transpose()
-        print ('After there are: '+str(covariate_df.shape))
-
-    if covariate_df is not None:
-        if np.nansum(covariate_df==1,0).max()<covariate_df.shape[0]: covariate_df.insert(0, 'ones',np.ones(covariate_df.shape[0]))
-        sample2individual_df = sample2individual_df.loc[list(set(sample2individual_df.index) & set(covariate_df.index)),:]
-        diff = orgSize- sample2individual_df.shape[0]
-        orgSize = sample2individual_df.shape[0]
-        print("Dropped: "+str(diff)+" samples becuase they are not present in the kinship file.")
-
-    ###
-    print("Number of samples with genotype & phenotype data: " + str(sample2individual_df.shape[0]))
-    if(sample2individual_df.shape[0]<minimum_test_samples):
-        print("Not enough samples with both genotype & phenotype data.")
-        sys.exit()
-
-    ##Filter now the actual data!
-    #Filter phenotype data based on the linking files.
-    phenotype_df = phenotype_df.loc[list(set(phenotype_df.index)&set(annotation_df.index)),sample2individual_df.index.values]
-
-    #Filter kinship data based on the linking files.
-    if kinship_df is not None:
-        kinship_df = kinship_df.loc[np.intersect1d(kinship_df.index,sample2individual_df['iid']),np.intersect1d(kinship_df.index,sample2individual_df['iid'])]
-        geneticaly_unique_individuals = get_unique_genetic_samples(kinship_df, relatedness_score);
-
-    #Filter covariate data based on the linking files.
-    if covariate_df is not None:
-        covariate_df = covariate_df.loc[sample2individual_df.index,:]
-        minimum_test_samples += covariate_df.shape[1]
-
-    ###
-    ##Filtering on features and SNPs to test.
-    #Do filtering on features.
-    try:
-        feature_filter_df = qtl_loader_utils.get_snp_df(feature_filename)
-    except:
-        if feature_filename  is not None:
-            feature_filter_df=pd.DataFrame(index=feature_filename)
-    if feature_filter_df is not None:
-        phenotype_df = phenotype_df.loc[feature_filter_df.index,:]
-    #Prepare to filter on snps.
-    snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
-
-    
+    [phenotype_df, kinship_df, covariate_df, sample2individual_df,annotation_df,snp_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed]=\
+    run_QTL_analysis_load_intersect_phenotype_covariates_kinxhip_sample_mapping(pheno_filename=pheno_filename, anno_filename=anno_filename, geno_prefix=geno_prefix, plinkGenotype=plinkGenotype, cis_mode=cis_mode,
+                      minimum_test_samples= minimum_test_samples,  relatedness_score=relatedness_score, snps_filename=snps_filename, feature_filename=feature_filename, chromosome=chromosome,
+                     covariates_filename=covariates_filename, kinship_filename=kinship_filename, sample_mapping_filename=sample_mapping_filename,filter_covariates_flag=filter_covariates_flag)
+        ###
+#    return([phenotype_df, kinship_df, covariate_df, sample2individual_df,annotation_df,snp_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed])
+#    print (minimum_test_samples)
     #Open output files
     qtl_loader_utils.ensure_dir(output_dir)
-    output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}.h5'.format(chromosome))
-    
+    output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}.h5'.format(chromosome))   
     if(write_permutations):
         permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'perm_results_{}.h5'.format(chromosome),n_perm)
 
-    #Remove features from the annotation that are on chromosomes which are not present anyway.
-    annotation_df = annotation_df = annotation_df[np.in1d(annotation_df['chromosome'],list(set(bim['chrom'])))]
-    #Filtering for sites on non allosomes.
-    annotation_df = annotation_df[annotation_df['chromosome'].map(lambda x: x in list(map(str, range(1, 23))))]
 
-    #Determine features to be tested
-    if chromosome=='all':
-        feature_list = list(set(annotation_df.index)&set(phenotype_df.index))
-    else:
-        feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
-    if ((not cis_mode) and len(set(bim['chrom']))<22) :
-        print("Warning, running a trans-analysis on snp data from less than 22 chromosomes.\nTo merge data later the permutation P-values need to be written out.")
-    print("Number of features to be tested: " + str(phenotype_df.shape[0]))
     #Arrays to store indices of snps tested and pass and fail QC SNPs for features without missingness.
     tested_snp_idxs = []
     pass_qc_snps_all = []
     fail_qc_snps_all = []
     fail_qc_features = []
-    if(phenotype_df.shape[1]<minimum_test_samples):
-        print("Not enough samples with both genotype & phenotype data, for current number of covariates.")
-        sys.exit()
+
     
     for feature_id in feature_list:
         if (len(phenotype_df.loc[feature_id,:]))<minimum_test_samples:
@@ -196,31 +105,21 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
 
         if len(snpQuery) != 0:
 
-#            sample_ids = individual2sample_df.loc[:,'sample'].values
-#            sample_ids = sample2individual_df.index
-#            phenotype_ds = phenotype_df.loc[feature_id,sample_ids]
             phenotype_ds = phenotype_df.loc[feature_id]
             contains_missing_samples = any(~np.isfinite(phenotype_ds))
             if(contains_missing_samples):
                 print ('Feature: ' + feature_id + ' contains missing data.')
             phenotype_ds.dropna(inplace=True)
-#            phenotype = phenotype_ds.loc[sample_ids].values
-
+#   
             '''select indices for relevant individuals in genotype matrix
             These are not unique. NOT to be used to access phenotype/covariates data
             '''
             individual_ids = sample2individual_df.loc[phenotype_ds.index,'iid'].values
             sample2individual_feature= sample2individual_df.loc[phenotype_ds.index]
 
-#                individual_idxs = fam.loc[individual_ids,'i'].values
-#            return [individual_ids,sample2individual_df,phenotype_ds]
 
+            '''fail if phenotype is empty or has less than minimum samples'''
 
-
-
-#==============================================================================
-#             fail if phenotype is empty or has less than minimum samples
-#==============================================================================
             if phenotype_ds.empty | len(phenotype_ds)<minimum_test_samples :
                 print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
                 fail_qc_features.append(feature_id)
@@ -265,7 +164,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
 
                     snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(pass_qc_snps_all)]]
                 else:
-                    #print('contains missing')
+
                     tmp_unique_individuals = geneticaly_unique_individuals
                     geneticaly_unique_individuals = get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
                     #Do snp QC for relevant section.
@@ -279,8 +178,6 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     
 
                 if len(snp_df.columns) == 0:
-                    #print("failed: "+''.join(failed_snp_names))
-                    #print("passed: "+''.join(passed_snp_names))
                     continue
                 #We could make use of relatedness when imputing.
                 fill_NaN = Imputer(missing_values=np.nan, strategy='mean', axis=0)
@@ -300,6 +197,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                      '''
                     kinship_mat = kinship_df.loc[individual_ids,individual_ids].values if kinship_df is not None else None
                     cov_matrix =  covariate_df.loc[sample2individual_feature['sample'],:].values if covariate_df is not None else None
+#                    cov_matrix =  covariate_df[covariate_df.columns.values[np.array([('peer' in c)|(c==feature_id) for c in  covariate_df.columns.values])]].loc[sample2individual_feature['sample'],:].values if covariate_df is not None else None
+                    
                     ### select discrete covariates with at least 6 lines:
                     if covariate_df is not None :
                         if np.unique(cov_matrix).shape[0]==2:
@@ -311,13 +210,15 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     sys.exit()
                 
                 #For limix 1.1 we need to switch to lm our selfs if there is no K.
-                if(kinship_df is None):
-                    LMM = limix.qtl.qtl_test_lm(snp_matrix_DF.values, phenotype,M=cov_matrix,verbose=False)
-                else :
-                    LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
-                
-                '''here plot if boxplot_flag'''
-                if boxplot_flag: qtl_plot(snp_matrix_DF, phenotype,K=kinship_mat,M=cov_matrix,LMM=None,snp=None)
+#                return[snp_matrix_DF,phenotype, kinship_mat,cov_matrix]
+                try: 
+                    if(kinship_df is None):
+                        LMM = limix.qtl.qtl_test_lm(snp_matrix_DF.values, phenotype,M=cov_matrix,verbose=False)
+                    else :
+                        LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
+                except: 
+                    print (feature_id)
+                    print ('LMM failed')
                 
                 if(n_perm!=0):
                     if(write_permutations):
@@ -346,7 +247,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                             if(bestPermutationPval[perm] > min(relevantOutput)):
                                 bestPermutationPval[perm] = min(relevantOutput)
                             perm+=1
-                #print('step 3')
+
                 #add these results to qtl_results
                 temp_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['feature_id','snp_id','p_value','beta','n_samples','corr_p_value'])
                 temp_df['snp_id'] = snp_matrix_DF.columns
@@ -364,14 +265,13 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         permutation_writer.add_permutation_results_df(perm_df,feature_id)
                 if contains_missing_samples:
                     geneticaly_unique_individuals = tmp_unique_individuals
-                #print('step 4')
+
             #This we need to change in the written file.
         if(n_perm!=0 and data_written):
             #updated_permuted_p_in_hdf5(bestPermutationPval, feature_id);
             output_writer.apply_pval_correction(feature_id,bestPermutationPval)
         else :
             fail_qc_features.append(feature_id)
-        #print('step 5')
     output_writer.close()
     if(write_permutations):
         permutation_writer.close()
@@ -388,6 +288,115 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     snp_df.ix[tested_snp_idxs,:].to_csv(output_dir+'/snp_metadata_{}.txt'.format(chromosome),sep='\t',index=False)
     feature_list = [x for x in feature_list if x not in fail_qc_features]
     annotation_df.loc[feature_list,:].to_csv(output_dir+'/feature_metadata_{}.txt'.format(chromosome),sep='\t')
+
+
+def run_QTL_analysis_load_intersect_phenotype_covariates_kinxhip_sample_mapping\
+        (pheno_filename, anno_filename, geno_prefix, plinkGenotype,minimum_test_samples= 10, relatedness_score=0.95,cis_mode=True, snps_filename=None,
+         feature_filename=None, chromosome='all',  covariates_filename=None, kinship_filename=None, sample_mapping_filename=None,filter_covariates_flag=False):
+ 
+        
+    ''' function to take input and intersect sample and genotype.'''
+    #Load input data files & filter for relevant data
+    #Load input data filesf
+    if(plinkGenotype):
+        bim,fam,bed = qtl_loader_utils.get_genotype_data(geno_prefix)
+
+    else :
+        geno_prefix+='.bgen'
+        print(geno_prefix)
+    print("Intersecting data.")
+    phenotype_df = qtl_loader_utils.get_phenotype_df(pheno_filename)
+    annotation_df = qtl_loader_utils.get_annotation_df(anno_filename)
+
+    sample2individual_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'sample')
+    sample2individual_df['sample']=sample2individual_df.index
+
+    ##Filter first the linking files!
+    #Subset linking to relevant genotypes.
+    orgSize = sample2individual_df.shape[0]
+    sample2individual_df = sample2individual_df.loc[sample2individual_df['iid'].map(lambda x: x in list(map(str, fam.index))),:]
+    diff = orgSize- sample2individual_df.shape[0]
+    orgSize = sample2individual_df.shape[0]
+    print("Dropped: "+str(diff)+" samples becuase they are not present in the genotype file.")
+    
+    #Subset linking to relevant phenotypes.
+    sample2individual_df = sample2individual_df.loc[np.intersect1d(sample2individual_df.index,phenotype_df.columns),:]
+    diff = orgSize- sample2individual_df.shape[0]
+    orgSize = sample2individual_df.shape[0]
+    print("Dropped: "+str(diff)+" samples becuase they are not present in the phenotype file.")
+    #Subset linking vs kinship.
+    kinship_df = qtl_loader_utils.get_kinship_df(kinship_filename)
+    if kinship_df is not None:
+        #Filter from individual2sample_df & sample2individual_df since we don't want to filter from the genotypes.
+        sample2individual_df = sample2individual_df[sample2individual_df['iid'].map(lambda x: x in list(map(str, kinship_df.index)))]
+        diff = orgSize- sample2individual_df.shape[0]
+        orgSize = sample2individual_df.shape[0]
+        print("Dropped: "+str(diff)+" samples becuase they are not present in the kinship file.")
+    #Subset linking vs covariates.
+    covariate_df = qtl_loader_utils.get_covariate_df(covariates_filename)
+    if covariate_df is not None:
+        if np.nansum(covariate_df==1,0).max()<covariate_df.shape[0]: covariate_df.insert(0, 'ones',np.ones(covariate_df.shape[0]))
+        sample2individual_df = sample2individual_df.loc[list(set(sample2individual_df.index) & set(covariate_df.index)),:]
+        diff = orgSize- sample2individual_df.shape[0]
+        orgSize = sample2individual_df.shape[0]
+        print("Dropped: "+str(diff)+" samples becuase they are not present in the kinship file.")
+
+    ###
+    print("Number of samples with genotype & phenotype data: " + str(sample2individual_df.shape[0]))
+    if(sample2individual_df.shape[0]<minimum_test_samples):
+        print("Not enough samples with both genotype & phenotype data.")
+        sys.exit()
+
+    ##Filter now the actual data!
+    #Filter phenotype data based on the linking files.
+    phenotype_df = phenotype_df.loc[list(set(phenotype_df.index)&set(annotation_df.index)),sample2individual_df.index.values]
+
+    #Filter kinship data based on the linking files.
+    if kinship_df is not None:
+        kinship_df = kinship_df.loc[np.intersect1d(kinship_df.index,sample2individual_df['iid']),np.intersect1d(kinship_df.index,sample2individual_df['iid'])]
+        geneticaly_unique_individuals = get_unique_genetic_samples(kinship_df, relatedness_score);
+
+    #Filter covariate data based on the linking files.
+    if covariate_df is not None:
+        covariate_df = covariate_df.loc[sample2individual_df.index,:]
+        # minimum_test_samples += covariate_df.shape[1]
+    try:
+        feature_filter_df = qtl_loader_utils.get_snp_df(feature_filename)
+    except:
+        if feature_filename  is not None:
+            feature_filter_df=pd.DataFrame(index=feature_filename)
+    #Do filtering on features.
+    if feature_filter_df is not None:
+        phenotype_df = phenotype_df.loc[feature_filter_df.index,:]
+        ##Filtering on features and SNPs to test.
+
+    #Prepare to filter on snps.
+    snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
+    if snps_filename is not None:
+        bim=bim[np.in1d(bim['snp'],snp_filter_df.index)]
+
+    #Remove features from the annotation that are on chromosomes which are not present anyway.
+    annotation_df = annotation_df = annotation_df[np.in1d(annotation_df['chromosome'],list(set(bim['chrom'])))]
+    #Filtering for sites on non allosomes.
+    annotation_df = annotation_df[annotation_df['chromosome'].map(lambda x: x in list(map(str, range(1, 23))))]
+    
+        #Determine features to be tested
+    if chromosome=='all':
+        feature_list = list(set(annotation_df.index)&set(phenotype_df.index))
+    else:
+        feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
+    if ((not cis_mode) and len(set(bim['chrom']))<22) :
+        print("Warning, running a trans-analysis on snp data from less than 22 chromosomes.\nTo merge data later the permutation P-values need to be written out.")
+    print("Number of features to be tested: " + str(phenotype_df.shape[0]))
+    
+    if(phenotype_df.shape[1]<minimum_test_samples):
+        print("Not enough samples with both genotype & phenotype data, for current number of covariates.")
+        sys.exit()
+    return [phenotype_df, kinship_df, covariate_df, sample2individual_df,annotation_df,snp_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed]
+
+
+
+
 
 def merge_QTL_results(results_dir):
     '''Merge QTL results for individual chromosomes into a combined, indexed
