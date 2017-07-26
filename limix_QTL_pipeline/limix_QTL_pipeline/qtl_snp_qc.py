@@ -51,8 +51,8 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
     
     #Determine HWE.
     hweP = np.zeros((len(snp_df_c.columns)), dtype=np.float)
-    print(len(snp_df_c.columns))
-    print(len(mac))
+    #print(len(snp_df_c.columns))
+    #print(len(mac))
     #This can also be multi-threaded if we place it in an separate function. (And multi-threading is as easy as it seems)
     for snp in range(0, len(snp_df_c.columns)):
         rare_copies = mac[snp]
