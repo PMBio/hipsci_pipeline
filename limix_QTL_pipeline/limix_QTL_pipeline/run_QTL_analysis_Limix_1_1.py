@@ -9,7 +9,7 @@ from sklearn.preprocessing import Imputer
 import argparse
 import scipy.stats as scst
 import sys
-import seaborn as sb
+#import seaborn as sb
 
 #V0.1.1
 
@@ -58,7 +58,7 @@ def get_args():
 
 def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, output_dir, window_size=250000, min_maf=0.05, min_hwe_P=0.001, min_call_rate=0.95, blocksize=1000,
                      cis_mode=True, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, snps_filename=None, feature_filename=None, chromosome='all',
-                     covariates_filename=None, kinship_filename=None, sample_mapping_filename=None,filter_covariates_flag=False,boxplot_flag=False):
+                     covariates_filename=None, kinship_filename=None, sample_mapping_filename=None):
  
     
     [phenotype_df, kinship_df, covariate_df, sample2individual_df,annotation_df,snp_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed]=\
@@ -66,7 +66,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                       minimum_test_samples= minimum_test_samples,  relatedness_score=relatedness_score, snps_filename=snps_filename, feature_filename=feature_filename, chromosome=chromosome,
                      covariates_filename=covariates_filename, kinship_filename=kinship_filename, sample_mapping_filename=sample_mapping_filename,filter_covariates_flag=filter_covariates_flag)
         ###
-
+#    return([phenotype_df, kinship_df, covariate_df, sample2individual_df,annotation_df,snp_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed])
+#    print (minimum_test_samples)
     #Open output files
     qtl_loader_utils.ensure_dir(output_dir)
     output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}.h5'.format(chromosome))   
@@ -196,6 +197,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                      '''
                     kinship_mat = kinship_df.loc[individual_ids,individual_ids].values if kinship_df is not None else None
                     cov_matrix =  covariate_df.loc[sample2individual_feature['sample'],:].values if covariate_df is not None else None
+#                    cov_matrix =  covariate_df[covariate_df.columns.values[np.array([('peer' in c)|(c==feature_id) for c in  covariate_df.columns.values])]].loc[sample2individual_feature['sample'],:].values if covariate_df is not None else None
+                    
                     ### select discrete covariates with at least 6 lines:
                     if covariate_df is not None :
                         if np.unique(cov_matrix).shape[0]==2:
@@ -207,13 +210,15 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     sys.exit()
                 
                 #For limix 1.1 we need to switch to lm our selfs if there is no K.
-                if(kinship_df is None):
-                    LMM = limix.qtl.qtl_test_lm(snp_matrix_DF.values, phenotype,M=cov_matrix,verbose=False)
-                else :
-                    LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
-                
-                '''here plot if boxplot_flag'''
-                if boxplot_flag: qtl_plot(snp_matrix_DF, phenotype,K=kinship_mat,M=cov_matrix,LMM=None,snp=None)
+#                return[snp_matrix_DF,phenotype, kinship_mat,cov_matrix]
+                try: 
+                    if(kinship_df is None):
+                        LMM = limix.qtl.qtl_test_lm(snp_matrix_DF.values, phenotype,M=cov_matrix,verbose=False)
+                    else :
+                        LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,M=cov_matrix,verbose=False)
+                except: 
+                    print (feature_id)
+                    print ('LMM failed')
                 
                 if(n_perm!=0):
                     if(write_permutations):
@@ -295,6 +300,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinxhip_sample_mapping\
     #Load input data filesf
     if(plinkGenotype):
         bim,fam,bed = qtl_loader_utils.get_genotype_data(geno_prefix)
+
     else :
         geno_prefix+='.bgen'
         print(geno_prefix)
@@ -328,11 +334,6 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinxhip_sample_mapping\
         print("Dropped: "+str(diff)+" samples becuase they are not present in the kinship file.")
     #Subset linking vs covariates.
     covariate_df = qtl_loader_utils.get_covariate_df(covariates_filename)
-    if filter_covariates_flag:
-        print ('filtering covariates. Initially there are'+str(covariate_df.shape))
-        covariate_df=covariate_df.transpose().iloc[:np.sum(np.linalg.eigvals(np.dot(covariate_df.values.T,covariate_df.values))>0.01)].transpose()
-        print ('After there are: '+str(covariate_df.shape))
-
     if covariate_df is not None:
         if np.nansum(covariate_df==1,0).max()<covariate_df.shape[0]: covariate_df.insert(0, 'ones',np.ones(covariate_df.shape[0]))
         sample2individual_df = sample2individual_df.loc[list(set(sample2individual_df.index) & set(covariate_df.index)),:]
@@ -358,7 +359,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinxhip_sample_mapping\
     #Filter covariate data based on the linking files.
     if covariate_df is not None:
         covariate_df = covariate_df.loc[sample2individual_df.index,:]
-        minimum_test_samples += covariate_df.shape[1]
+        # minimum_test_samples += covariate_df.shape[1]
     try:
         feature_filter_df = qtl_loader_utils.get_snp_df(feature_filename)
     except:
@@ -371,6 +372,8 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinxhip_sample_mapping\
 
     #Prepare to filter on snps.
     snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
+    if snps_filename is not None:
+        bim=bim[np.in1d(bim['snp'],snp_filter_df.index)]
 
     #Remove features from the annotation that are on chromosomes which are not present anyway.
     annotation_df = annotation_df = annotation_df[np.in1d(annotation_df['chromosome'],list(set(bim['chrom'])))]
