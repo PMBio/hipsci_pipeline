@@ -1,7 +1,9 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-from run_QTL_analysis import run_QTL_analysis,merge_QTL_results
+#from depricated_run_QTL_analysis_limix_1 import run_QTL_analysis
+from run_QTL_analysis import run_QTL_analysis
+from qtl_utilities import merge_QTL_results
 import subprocess
 import numpy as np
 import pandas as pd
