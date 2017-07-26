@@ -20,7 +20,7 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
                             p_value_field='p_value',p_value_raw_field='p_value',local_adjustment_method='Bonferroni'):
 
     _doc=" aggregates qtl results to feature_report level"
-
+    iichr=0
     for ichr,chr in enumerate(chr_list):
         print ('chromosome: '+str(chr))
     
@@ -39,15 +39,16 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
         ffea_report_feature=ffea.set_index(feature_report, drop=False).transpose()
         
                              
-        if ichr==0:
+        if iichr==0:
             fOut=h5py.File(folder_data+'/'+trait+'_'+feature_report+'_'+output_file+'.h5','w')
+            iichr=1
         else:
             fOut=h5py.File(folder_data+'/'+trait+'_'+feature_report+'_'+output_file+'.h5','r+')
     
         # for each report_feature  create h5 groups
         count=0
         for ifea,report_feature in enumerate(np.unique(list(ffea_report_feature))):
-#            print (report_feature)
+            print (report_feature)
        
             #select features for which qtl was computed
             features=np.intersect1d(np.array( ffea_report_feature[report_feature].transpose()['feature_id']), frezkeys)
@@ -91,11 +92,13 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
                                                  
                 fgs=fg.create_group('summary_data')
                 fgs.create_dataset('min_p_value',data= np.nanmin(np.hstack(pv)) [None])
+                fgs.create_dataset('min_p_value_beta',data=np.hstack(beta)[np.nanargmin(np.hstack(pv))][None])
+                
                 p_bonf=np.nanmin(local_adjustment(np.hstack(pv),method=local_adjustment_method));
                 if p_bonf>1:p_bonf=np.array(1)
                 fgs.create_dataset('min_p_value_local_adjusted',data=p_bonf[None])
-                minfeatureindex=np.argmin([np.nanmin(ppv) *len(ppv) for ppv in pv])
                 
+                minfeatureindex=np.argmin([np.nanmin(ppv) *len(ppv) for ppv in pv])
                 fgs.create_dataset('min_p_value_feature_id',data= np.array(fgm ['feature_id'][minfeatureindex].astype('S'))[None])
         
                 min_snp_id=frez[features[minfeatureindex]]['snp_id'][np.nanargmin(pv[minfeatureindex])].astype('U')
@@ -107,7 +110,7 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
         frez.close()
         fOut.close()
 
-def replication_two_features(folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/',  folder_data2=None,  traits=['peptide_test','protein_test'],
+def replication_two_features(folder_data =None,  folder_data2=None,  traits=None,
     qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',
     results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',p_value_field='p_value'):
     
@@ -121,8 +124,11 @@ def replication_two_features(folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/', 
  
     rez={}
     rez[p_value_field]=np.zeros(len(feature_ids))+np.nan
+    rez['beta']=np.zeros(len(feature_ids))+np.nan
     rez['replicated_p_value']=np.zeros(len(feature_ids))+np.nan
+    rez['replicated_beta']=np.zeros(len(feature_ids))+np.nan
     rez['replicated_self_p_value']=np.zeros(len(feature_ids))+np.nan
+    rez['replicated_self_beta']=np.zeros(len(feature_ids))+np.nan
     rez['feature_id']=np.zeros(len(feature_ids),dtype='|S32')
     rez['gene_name']=np.zeros(len(feature_ids),dtype='|S32')
     rez['snp_id']=np.zeros(len(feature_ids),dtype='|S32')
@@ -135,21 +141,33 @@ def replication_two_features(folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/', 
         temp=featureh5[0][feature]['summary_data/min_p_value'][0]
         if temp<0.001:
             rez[p_value_field][indf]=temp
+            rez['beta'][indf]=featureh5[0][feature]['summary_data/min_p_value_beta'][0]
             rez['feature_id'][indf]=featureh5[0][feature]['summary_data/min_p_value_feature_id'][:][0]
             rez['chromosome'][indf]=featureh5[0][feature]['metadata/chromosome'][:][0]
-            rez['strand'][indf]=featureh5[0][feature]['metadata/feature_strand'][:][0]
-            rez['gene_name'][indf]=featureh5[0][feature]['metadata/gene_name'][:][0]
+            try: rez['strand'][indf]=featureh5[0][feature]['metadata/feature_strand'][:][0]
+            except: 1
+            try:rez['gene_name'][indf]=featureh5[0][feature]['metadata/gene_name'][:][0]
+            except:1
             
             rez['snp_id'][indf]=featureh5[0][feature]['summary_data/min_p_value_snp_id'][:][0]
             rez['position'][indf]=featureh5[0][feature]['summary_data/min_p_value_position'][:][0]
-            rez['replicated_p_value'][indf]=np.min( [featureh5[1][feature]['data/p_value'][f1][:][featureh5[1][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]] for f1 in featureh5[1][feature]['data/features']])     
-            
+            try:
+                rez['replicated_p_value'][indf]=np.min( [featureh5[1][feature]['data/p_value'][f1][:][featureh5[1][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]] for f1 in featureh5[1][feature]['data/features']])     
+            except: 1
+            try:
+                temp=[featureh5[1][feature]['data/beta'][f1][:][featureh5[1][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]]     for f1 in featureh5[1][feature]['data/features']]
+                rez['replicated_beta'][indf]=np.nanmin(temp) if featureh5[0][feature]['summary_data/min_p_value_beta'][0]<0 else np.nanmax(temp)    
+            except: 1
             try:
                 rez['replicated_self_p_value'][indf]=np.min([featureh5[0][feature]['data/p_value'][f1][:][featureh5[0][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]]\
                     for f1 in np.setdiff1d(featureh5[0][feature]['data/features'],featureh5[0][feature]['summary_data/min_p_value_feature_id'][0])]) 
-            except:
-                print (feature)
-                1
+            except: 1
+            try:
+                temp=[featureh5[0][feature]['data/beta'][f1][:][featureh5[0][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]]\
+                    for f1 in np.setdiff1d(featureh5[0][feature]['data/features'],featureh5[0][feature]['summary_data/min_p_value_feature_id'][0])] 
+                rez['replicated_self_beta'][indf]=np.nanmin(temp) if featureh5[0][feature]['summary_data/min_p_value_beta'][0]<0 else np.nanmax(temp)    
+            except: 1
+            
     for f in featureh5: f.close()
     rez['ensembl_gene_id']=feature_ids.astype('U')
     for key in ['feature_id','chromosome','strand','snp_id','gene_name']:

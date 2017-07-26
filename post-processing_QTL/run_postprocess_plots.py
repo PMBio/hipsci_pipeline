@@ -17,6 +17,7 @@ def get_args():
     parser.add_argument('-trait_labels','--trait_labels',required=False,default=None)
     parser.add_argument('-chromosomes','--chromosomes',required=False,default=','.join(np.arange(1,23).astype('U')))
     parser.add_argument('-run_type',required=False,default='summary_plots_power_replication_manhattan')
+    parser.add_argument('-plot_name',required=False,default='summary_plots_power_replication_manhattan')
     args = parser.parse_args()
     
     return args
@@ -34,12 +35,19 @@ if __name__=='__main__':
     run_type= args.run_type  if args.run_type is not None else ''
     chromosomes = args.chromosomes.split(',')
     trait_labels =args.trait_labels.split(',') if args.trait_labels is not None else traits
+    print ('in main')
+#folder_data='/Users/mirauta/Results/hipsci/QTL1/'
+#traits=['param_protein_scaled_covar_gaussnorm_test','mrna']
+#run_type='plots_power_replication'
+#chromosomes=['21']
+#folder_destination =  folder_data
+#trait_labels =  traits
+#print(run_type)
 
-print(run_type)
 if 'summary' in run_type:
     for trait in traits:
         #summary_gene_feature(output_file='qtl_results_genome', feature_report='ensembl_gene_id', chr_list=chromosomes,p_value_field='corr_p_value',p_value_raw_field='p_value', folder_data=folder_data,trait=trait,local_adjustment_method='Bonferroni')
-        summary_gene_feature(output_file='qtl_results_genome', feature_report='ensembl_gene_id', chr_list=chromosomes,p_value_field='corr_p_value',p_value_raw_field='p_value', folder_data=folder_data,trait=trait,local_adjustment_method=None)
+        summary_gene_feature(output_file='qtl_results_genome', feature_report='ensembl_gene_id', chr_list=chromosomes,p_value_field='p_value',p_value_raw_field='p_value', folder_data=folder_data,trait=trait,local_adjustment_method='Bonferroni')
 
 
 elif 'plots' not in run_type:
@@ -55,14 +63,14 @@ from matplotlib import colors as mcolors
 import matplotlib as mpl
 
 if 'power' in run_type:
-    plot_summary(folder_name=folder_data, folder_destination=folder_destination+'Images_pipeline/',plot_name='qtl_summary',\
+    a=plot_summary(folder_name=folder_data, folder_destination=folder_destination+'Images_pipeline/',plot_name='qtl_summary',\
                  traits=traits, trait_labels=trait_labels,
                  file_name_results_genome='ensembl_gene_id_qtl_results_genome',   qtl_results_file='qtl_results_', \
                  colors=np.array(['orange','darkblue','green','red']),cis=2.5*10**5,figsize=(8,8),gene_list=None,\
                  plot_calibration_flag=True)
 
 if 'replication' in run_type:
-    rez_pro_pep=plot_replication(rez=None,folder_data =folder_data,\
+    rez_pro_pep=plot_replication_beta(rez=None,folder_data =folder_data,\
                                  traits=traits[::-1],trait_labels= trait_labels, qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',\
                                  results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',\
                                  folder_destination=folder_destination+'Images_pipeline/', figsize=7,red_dots_features=None, \

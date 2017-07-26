@@ -18,6 +18,92 @@ import statsmodels.sandbox.stats.multicomp as scst2
 sys.path.append('../')
 from scripts.postprocess_functions_genome_results import *
 
+
+#
+#
+#
+#folder_name='/Users/mirauta/Results/hipsci/QTL1/'
+#file_name_qtl='qtl_results_'
+#file_name_perm='perm_results_'
+#traits=['param_protein_scaled_peer_gaussnorm_test'];
+#chromosome='22'
+def plot_summary_onechr_perm(plot_name='qtl_summary_onechr',folder_name=None,folder_destination=None,\
+                 traits=[''],chromosome='21',
+                 file_name_qtl='qtl_results_',file_name_perm='perm_results_', \
+                 colors=np.array(['orange','darkblue','green','m']),cis=2.5*10**5, figsize=(8,5)):
+    
+    if folder_destination is None:
+        folder_destination =folder_name
+    if not os.path.exists(folder_destination):
+        os.makedirs(folder_destination)
+ 
+    featureh5=[h5py.File(folder_name+'/'+trait+'/'+file_name_qtl+chromosome+'.h5','r') for trait in traits]
+    featurepermh5=[h5py.File(folder_name+'/'+trait+'/'+file_name_perm+chromosome+'.h5','r') for trait in traits]
+    gene_list_common=np.array([np.array(list(fh5.keys()))  for indf,fh5 in enumerate(featureh5)])
+#        return gene_list_common
+    temp=np.unique(np.hstack(gene_list_common),return_counts=1)
+    gene_list_common=temp[0][temp[1]==gene_list_common.shape[0]]
+#    local_adjusted_common=np.array([np.array([fh5[gene]['summary_data/min_p_value_local_adjusted'][:][0] for gene in np.intersect1d(gene_list_common,np.array(list(fh5.keys())))])for indf,fh5 in enumerate(featureh5)])
+    fh5=featurepermh5[0]
+    perm_fields=np.array(fh5[list(fh5.keys())[0]].dtype.names)[['permutation' in field for field in np.array(fh5[list(fh5.keys())[0]].dtype.names)]]
+    
+    
+    rez={}
+    
+    rez['p_value']=np.array([np.hstack([fh5[gene]['p_value']for gene in gene_list_common])  for indf,fh5 in enumerate(featureh5)])
+    for field in perm_fields:
+        rez[field]=np.array([np.hstack([fh5[gene][field] for gene in gene_list_common])  for indf,fh5 in enumerate(featurepermh5)])
+    rez['p_value_min_bonferroni']=np.array([np.hstack([np.nanmin(fh5[gene]['p_value'])*fh5[gene]['p_value'].shape[0] for gene in gene_list_common])  for indf,fh5 in enumerate(featureh5)])[0]
+    for field in perm_fields:
+        rez[field+'_min_bonferroni']=np.array([np.hstack([np.nanmin(fh5[gene][field])*fh5[gene][field].shape[0] for gene in gene_list_common])  for indf,fh5 in enumerate(featurepermh5)])[0]
+#    else:
+#        local_adjusted=np.array([np.array([fh5[gene]['summary_data/min_p_value_local_adjusted'][:][0] for gene in np.intersect1d(gene_list,np.array(list(fh5.keys())))])for indf,fh5 in enumerate(featureh5)])
+
+ 
+    fig=plt.figure(figsize=figsize)
+    mpl.rcParams.update(mpl.rcParamsDefault)
+    fig.patch.set_facecolor('white')
+    axes = fig.add_subplot(1, 2, 1, axisbg='white')
+    axes.spines['top'].set_visible(False)
+    axes.spines['right'].set_visible(False)
+    axes.yaxis.set_ticks_position('left')
+    axes.xaxis.set_ticks_position('bottom')
+    fdr=np.array([5,4,3,2,1])[::-1]
+    trait_labels=['qval']+list(perm_fields)
+    local_adjusted=[rez['p_value_min_bonferroni']]+[rez[field+'_min_bonferroni'] for field in perm_fields]
+    for iy,yy in enumerate(local_adjusted):
+#        print(yy)
+ 
+#        plt.plot(fdr[::-1] ,[(-np.log10(FDR.qvalues1(yy))>thr).sum() for thr in fdr],color=colors[iy],markersize=3,label=trait_labels[iy])
+        plt.plot(fdr[::-1] ,[(-np.log10(scst2.fdrcorrection0(yy)[1])>thr).sum() for thr in fdr],color=colors[iy],label=trait_labels[iy],lw=3)
+    axes.plot((fdr[-1],fdr[-1]),(0,np.max([(a<10**-2).sum() for a in local_adjusted])) ,'--',color='k',lw=0.5)
+    axes.plot((fdr[0],fdr[-1]),(np.max([(a<10**-2).sum() for a in local_adjusted]),np.max([(a<10**-2).sum() for a in local_adjusted])) ,'--',color='k',lw=0.5)
+    plt.xlabel('-log10 FDR',fontsize=13);
+    plt.ylabel('#pGenes',fontsize=13)
+    plt.xticks(fdr,fdr[::-1])
+    if trait_labels is not None: plt.legend(loc=2,fontsize=9)
+    
+#==============================================================================
+#     power plot commmon
+#==============================================================================
+    plt.subplot(1,2,2)
+    
+    plt.title('Calibration',fontsize=10)
+    
+    for iy,yy in enumerate([rez['p_value']]+[rez[field] for field in perm_fields]):
+        yy=np.sort(yy[(yy==yy)&(yy!=1)])
+        plt.plot(-np.log10((0.5+np.arange(len(yy)))/len(yy))[::-1],-np.log10(yy)[::-1],'o',color=colors[iy],markersize=4,label=trait_labels[iy])
+                
+    plt.plot(-np.log10((0.5+np.arange(len(yy)))/len(yy))[::-1],-np.log10((0.5+np.arange(len(yy)))/len(yy))[::-1],'k',lw=1)
+    plt.xlabel('-log10 PV',fontsize=13);
+    plt.ylabel('-log10 random',fontsize=13)
+    plt.legend(loc=2,fontsize=8)
+    for f in featureh5: f.close()
+    plt.tight_layout()
+    plt.savefig(folder_destination+plot_name+'_'+'_'.join(trait_labels)+'.png',dpi=600)
+    return [gene_list_common,rez]
+
+
 def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=None,\
                  traits=[''],trait_labels=None,
                  file_name_results_genome='Feature_results_genome', qtl_results_file='QTL_results_',\
@@ -38,13 +124,20 @@ def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=Non
     featureh5=[h5py.File(folder_name+'/'+trait+'_'+file_name_results_genome+'.h5','r') for trait in traits]
  
     if gene_list is None:
-        local_adjusted=np.array([np.array([fh5[gene]['summary_data/min_p_value_local_adjusted'][:][0] for gene in fh5.keys()])for indf,fh5 in enumerate(featureh5)])
+        local_adjusted=np.array([np.array([fh5[gene]['summary_data/min_p_value_local_adjusted'][:][0] for gene in fh5.keys()]) \
+                                 for indf,fh5 in enumerate(featureh5)])
+        gene_list_common=np.array([np.array(list(fh5.keys()))  for indf,fh5 in enumerate(featureh5)])
+        temp=np.unique(np.hstack(gene_list_common),return_counts=1)
+        gene_list_common=temp[0][temp[1]==gene_list_common.shape[0]]
+        local_adjusted_common=np.array([np.array([fh5[gene]['summary_data/min_p_value_local_adjusted'][:][0] for gene in np.intersect1d(gene_list_common,np.array(list(fh5.keys())))])for indf,fh5 in enumerate(featureh5)])
+        
+ 
     else:
         local_adjusted=np.array([np.array([fh5[gene]['summary_data/min_p_value_local_adjusted'][:][0] for gene in np.intersect1d(gene_list,np.array(list(fh5.keys())))])for indf,fh5 in enumerate(featureh5)])
 
  
  
-    axes = fig.add_subplot(2, 2, 2, axisbg='white')
+    axes = fig.add_subplot(2, 2, 1, axisbg='white')
     axes.spines['top'].set_visible(False)
     axes.spines['right'].set_visible(False)
     axes.yaxis.set_ticks_position('left')
@@ -62,6 +155,30 @@ def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=Non
     plt.ylabel('#pGenes',fontsize=13)
     plt.xticks(fdr,fdr[::-1])
     if trait_labels is not None: plt.legend(loc=2,fontsize=9)
+    
+#==============================================================================
+#     power plot commmon
+#==============================================================================
+    axes = fig.add_subplot(2, 2, 2, axisbg='white')
+    axes.spines['top'].set_visible(False)
+    axes.spines['right'].set_visible(False)
+    axes.yaxis.set_ticks_position('left')
+    axes.xaxis.set_ticks_position('bottom')
+    fdr=np.array([5,4,3,2,1])[::-1]
+ 
+    for iy,yy in enumerate(local_adjusted_common):
+#        print(yy)
+ 
+#        plt.plot(fdr[::-1] ,[(-np.log10(FDR.qvalues1(yy))>thr).sum() for thr in fdr],color=colors[iy],markersize=3,label=trait_labels[iy])
+        plt.plot(fdr[::-1] ,[(-np.log10(scst2.fdrcorrection0(yy)[1])>thr).sum() for thr in fdr],color=colors[iy],label=trait_labels[iy],lw=3)
+    axes.plot((fdr[-1],fdr[-1]),(0,np.max([(a<10**-2).sum() for a in local_adjusted_common])) ,'--',color='k',lw=0.5)
+    axes.plot((fdr[0],fdr[-1]),(np.max([(a<10**-2).sum() for a in local_adjusted_common]),np.max([(a<10**-2).sum() for a in local_adjusted_common])) ,'--',color='k',lw=0.5)
+    plt.xlabel('-log10 FDR',fontsize=13);
+    plt.ylabel('#pGenes',fontsize=13)
+    plt.xticks(fdr,fdr[::-1])
+    plt.title('Common genes')
+    if trait_labels is not None: plt.legend(loc=2,fontsize=9)
+
 
     if plot_tss_distance_flag:
         axes = fig.add_subplot(2, 2, 3, axisbg='white')
@@ -106,7 +223,7 @@ def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=Non
 
     for f in featureh5: f.close()
     plt.tight_layout()
-    plt.savefig(folder_destination+plot_name+'.png',dpi=600)
+    plt.savefig(folder_destination+plot_name+'_'+'_'.join(trait_labels)+'.png',dpi=600)
     return local_adjusted
 
 
@@ -172,7 +289,38 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
 #==============================================================================
  
 
-def plot_replication(rez=None,folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/', folder_data2 =None,   traits=['protein_test','peptide_test'],trait_labels=['protein_test','peptide_test'],\
+def plot_replication_beta(rez=None,folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/', folder_data2 =None,   traits=['protein_test','peptide_test'],trait_labels=['protein_test','peptide_test'],\
+    qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',\
+    results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',folder_destination='/Users/mirauta/Results/hipsci/Images_pipeline',\
+    figsize=5, red_dots_features=None,red_dot='ro',plot_name=''):
+    if rez is None:
+        rez=replication_two_features(folder_data =folder_data, folder_data2 =folder_data2,    traits=np.array(traits), qtl_results_file=qtl_results_file,    snp_metadata_file=snp_metadata_file,    feature_metadata_file=feature_metadata_file, results_genome_file=results_genome_file,    feature_report= feature_report)
+   
+    fig=plt.figure(figsize=(figsize,figsize))
+    mpl.rcParams.update(mpl.rcParamsDefault)
+    axes = fig.add_subplot(1, 1, 1, axisbg='white')
+    axes.spines['top'].set_visible(False)
+    axes.spines['right'].set_visible(False)
+    axes.spines['top'].set_visible(False)
+    axes.spines['left'].set_visible(True)
+    axes.yaxis.set_ticks_position('left')
+    axes.xaxis.set_ticks_position('bottom')
+    fig.patch.set_facecolor('white')
+    plt.plot((rez['beta']),(rez['replicated_beta']),'o',color='grey',markersize=6,label=scst.spearmanr(rez['beta'][np.isfinite(rez['replicated_beta']+rez['beta'])],rez['replicated_beta'][np.isfinite(rez['replicated_beta']+rez['beta'])])[0])
+    thrs=0.001;
+    plt.plot((rez['beta'][rez['replicated_self_beta']<thrs]),(rez['replicated_beta'][rez['replicated_self_beta']<thrs]),'.',markersize=8,color='darkorange')
+    
+    if red_dots_features is not None:        
+        plt.plot((rez['beta'][np.in1d(rez['feature_id'],red_dots_features)]), (rez['replicated_beta'][np.in1d(rez['feature_id'],red_dots_features)]),red_dot,markersize=6)#, mfc='none')
+        
+    plt.plot((np.nanmin(rez['beta']),(np.nanmax(rez['beta']))),(np.nanmin(rez['beta']),(np.nanmax(rez['beta']))),'k--',lw=0.25)
+
+    plt.xlabel(trait_labels[0]+'\n - log10 PV');plt.ylabel(trait_labels[1]+'\n - log10 PV',rotation=90 )
+    plt.legend(loc=1)
+    plt.savefig(folder_destination+'replication_'+traits[0]+'_'+traits[1]+plot_name+'.png')
+    return rez
+
+def plot_replication_pv(rez=None,folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/', folder_data2 =None,   traits=['protein_test','peptide_test'],trait_labels=['protein_test','peptide_test'],\
     qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',\
     results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',folder_destination='/Users/mirauta/Results/hipsci/Images_pipeline',\
     figsize=5, red_dots_features=None,red_dot='ro',plot_name=''):
@@ -200,5 +348,5 @@ def plot_replication(rez=None,folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/',
 
     plt.xlabel(trait_labels[0]+'\n - log10 PV');plt.ylabel(trait_labels[1]+'\n - log10 PV',rotation=90 )
 
-    plt.savefig(folder_destination+'replication'+traits[0]+'_'+traits[1]+plot_name+'.png')
+    plt.savefig(folder_destination+'replication_'+traits[0]+'_'+traits[1]+plot_name+'.png')
     return rez
