@@ -18,7 +18,7 @@ To do so please start by making a conda enviroment, [conda](https://conda.io/doc
 
 To create a limix 1.1 enviroment
 
-`conda create -n limix_1_1_qtl python=2.7`
+`conda create -n limix_1_1_qtl python=3 anaconda`
 
 `source activate limix_1_1_qtl`
 
