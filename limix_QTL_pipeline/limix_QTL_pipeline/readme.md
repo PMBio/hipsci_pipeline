@@ -30,6 +30,7 @@ To create a limix 1.1 enviroment
 
 `conda install -c conda-forge liknorm`
 `conda install libffi`
+`conda install statsmodels`
 
 `pip install liknorm-py pandas-plink glimix-core limix-core limix-legacy optimix tables --upgrade --upgrade-strategy='only-if-needed'`
 
