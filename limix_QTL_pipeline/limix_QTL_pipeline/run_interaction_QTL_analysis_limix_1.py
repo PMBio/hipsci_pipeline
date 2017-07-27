@@ -207,7 +207,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                         perm_df['snp_id'] = snp_matrix_DF.columns
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
                         temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
-                        LMM_perm = limix.qtl.qtl_test_interaction_lmm(temp, phenotype, inter, K=kinship_mat,covs=cov_matrix)
+                        LMM_perm = limix.qtl.qtl_test_interaction_lmm(temp, phenotype, inter.values, K=kinship_mat,covs=cov_matrix)
                         perm = 0;
                         for relevantOutput in utils.chunker(LMM_perm.getPv()[0],snp_matrix_DF.shape[1]) :
                             if(write_permutations):
@@ -217,7 +217,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                             perm+=1
                     else :
                         temp = utils.get_shuffeld_genotypes(snp_matrix_DF,kinship_df, n_perm)
-                        LMM_perm = limix.qtl.qtl_test_interaction_lmm(temp, phenotype, inter, K=kinship_mat,covs=cov_matrix)
+                        LMM_perm = limix.qtl.qtl_test_interaction_lmm(temp, phenotype, inter.values, K=kinship_mat,covs=cov_matrix)
                         perm = 0;
                         for relevantOutput in utils.chunker(LMM_perm.getPv()[0],snp_matrix_DF.shape[1]) :
                             if(write_permutations):
@@ -236,7 +236,6 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 temp_df['beta_se'] = LMM.getBetaSNPste()[0]
                 #insert default dummy value
                 temp_df['corr_p_value'] = -1.0
-                print(temp_df)
                 if not temp_df.empty :
                     data_written = True
                     output_writer.add_result_df(temp_df)

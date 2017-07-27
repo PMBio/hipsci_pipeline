@@ -203,7 +203,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 #For limix 1.1 we need to switch to lm our selfs if there is no K.
 #                return[snp_matrix_DF,phenotype, kinship_mat,cov_matrix]
                 try: 
-                    LMM = limix.qtl.scan(snp_matrix_DF.values, phenotype, 'Normal',K=kinship_mat,M=cov_matrix,verbose=False)
+                    LMM = limix.qtl.scan(snp_matrix_DF.values, phenotype, 'Normal', K=kinship_mat,M=cov_matrix,verbose=False)
                 except: 
                     print (feature_id)
                     print ('LMM failed')
