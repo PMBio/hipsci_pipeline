@@ -1,17 +1,31 @@
 library(rhdf5)
 library(qvalue)
 library(dplyr)
-# baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/WithoutCorrection/Gene_Mapping/"
-# baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/WithCorrection/GeneLevel/"
-# subFolderBase <- "OutGeneMapping.chr."
 
-# baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/WithoutCorrection/Transcript_Mapping/"
-#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/WithCorrection/TranscriptLevel/"
+#HipSci genes
+#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithCorrection/GeneLevel/"
+#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithoutCorrection/Gene_Mapping/"
+#subFolderBase <- "OutGeneMapping.chr."
+
+#HipSci&iPSCORE genes
+#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/WithCorrection/GeneLevel/"
+#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/WithoutCorrection/GeneLevel/"
+subFolderBase <- "OutJointGeneMapping.chr."
+
+#HipSci apa
+#baseFolder <- "C:/OnlineFolders/BitSync/Cur\rent_Work/EBI_HipSci/QTL_Output/HipSci/WithCorrection/apa/"
+#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithoutCorrection/apa/"
+#subFolderBase <- "OutApaMapping.chr."
+
+#HipSci Transcript
+#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithCorrection/TranscriptLevel/"
+#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithoutCorrection/Transcript_Mapping/"
 #subFolderBase <- "OutTranscriptMapping.chr."
 
-# baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/WithoutCorrection/Exon_Mapping/"
-# baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/WithCorrection/ExonLevel/"
-# subFolderBase <- "OutExonMapping.chr."
+#HipSci Expression
+baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithCorrection/ExonLevel/"
+#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithoutCorrection/Exon_Mapping/"
+subFolderBase <- "OutExonMapping.chr."
 
 # baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/WithoutCorrection/Splicing_Mapping/"
 # baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/WithCorrection/Splicing/"
@@ -22,8 +36,8 @@ library(dplyr)
 # baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/GENES_IPS_QTL/GeneLevel_Effects_Corrected/"
 # subFolderBase <- ""
 
-baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/TRANS/"
-subFolderBase <- "OutGeneMapping.Trans.ExamplarGenes.GWAS.chr."
+#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/TRANS/"
+#subFolderBase <- "OutGeneMapping.Trans.ExamplarGenes.GWAS.chr."
 
 chrSpecific = T
 range <- 1:22
@@ -76,10 +90,9 @@ for(i in range){
   }
 }
 colnames(results)[which(colnames(results)=="corr_p_value")] <- "feature_corr_p_value"
-if(!length(is.na(results$feature_corr_p_value))==0){
+if(length(which(is.na(results$feature_corr_p_value)))!=0){
  results <- results[-which(is.na(results$feature_corr_p_value)),]
 }
-
 
 if(multipleTestingGlobal=="ST"){
   results["global_corr_p_value"] <- qvalue(results$feature_corr_p_value)$qvalues

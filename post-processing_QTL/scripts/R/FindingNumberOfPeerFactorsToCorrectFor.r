@@ -3,14 +3,16 @@ library(qvalue)
 library(dplyr)
 #################
 
-baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/Chr2_Test/"
+baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/Trans_iPSC/Expression/FeatureCounts_Genes/PEER/TestOptimal_N_Factors/"
 subFolderBase <- "OutMappingPeerFactors."
 chrSpecific = F
 range <- 2:101
 writeGlobalSig = T
 writeGeneSig = F
 threshold = 0.05
+multipleTestingGlobal = "BF"
 multipleTestingGlobal = "ST"
+topFeaturesOnly = TRUE
 
 
 ####
@@ -26,20 +28,25 @@ for(i in range){
   for (j in names(tmp)) tmp[[j]][["feature"]] <- j
   df <- bind_rows(tmp)
   colnames(df)[which(colnames(df)=="corr_p_value")] <- "feature_corr_p_value"
+  if(topFeaturesOnly){
+    df <- df[match(unique(df$feature), df$feature),]
+  }
   if(multipleTestingGlobal=="ST"){
     df["global_corr_p_value"] <- qvalue(df$feature_corr_p_value)$qvalues
   } else if (multipleTestingGlobal=="BF"){
-    df["global_corr_p_value"] <- df$feature_corr_p_value*length(unique(df$gene))
+    df["global_corr_p_value"] <- df$feature_corr_p_value*length(unique(df$feature))
     df$global_corr_p_value[df$global_corr_p_value>1]<-1
   }
   
   df <- df[order(df$global_corr_p_value,decreasing = F),]
   
   if(writeGlobalSig){
+    print(paste(length(which(df$global_corr_p_value<threshold))," SNPs have a genetic effect on Factor: ",i,sep=""))
     write.table(paste(baseFolder,"results_global_level_",i,"_",threshold,".txt",sep=""),x = df[df$global_corr_p_value<threshold,],sep="\t",row.names=F,quote=F)
   }
   
   if(writeGeneSig){
+    print(paste(length(which(df$gene_corr_p_value<threshold))," SNPs have a genetic effect on Factor: ",i," after correction",sep=""))
     write.table(paste(baseFolder,"results_gene_level_",i,"_",threshold,".txt",sep=""),x = df[df$gene_corr_p_value<threshold,],sep="\t",row.names=F,quote=F)
   } 
 
@@ -71,7 +78,9 @@ plot(affectedFeatures)
 #points(sharedEffectsVsMain)
 plot(sharedEffectsVsMain)
 plot(oppositeEffectsVsMain)
+plot(sharedEffectsVsMain,oppositeEffectsVsMain)
+plot(sharedEffectsVsMain,affectedFeatures)
 
-interestMax = which(affectedFeatures ==max(affectedFeatures))
-#Anser: 60
+interestMax = which(affectedFeatures == max(affectedFeatures))
+#Picked 40 PEER Factors, no factors skipped.
 
