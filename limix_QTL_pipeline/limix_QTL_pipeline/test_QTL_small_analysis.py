@@ -30,7 +30,7 @@ def test_QTL_analysis():
     covariates_filename = data_path+'Expression/Geuvadis_CEU_YRI_covariates.txt'
     geno_prefix = data_path+'Genotypes/Geuvadis'
     pheno_filename = data_path+'Expression/Geuvadis_CEU_YRI_Expr.txt.gz'
-    anno_filename = data_path+'Expression/Geuvadis_CEU_Annot.txt'
+    anno_filename = data_path+'Expression/Geuvadis_CEU_Annot_small.txt'
     kinship_filename= data_path+'Genotypes/Geuvadis_chr1_kinship.normalized.txt'
     individual2sample_filename = data_path + 'Geuvadis_CEU_gte.txt'
     min_maf = 0.05
