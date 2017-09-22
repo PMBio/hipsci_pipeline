@@ -33,6 +33,10 @@ To create a limix development enviroment
 `conda install libffi`
 `conda install statsmodels`
 `conda install -c conda-forge bgen`
+`conda install -c anaconda joblib`
+`conda install -c conda-forge asciitree`
+`conda install -c conda-forge humanfriendly`
+`conda install -c conda-forge tabulate`
 
 `pip install liknorm-py pandas-plink glimix-core limix-core limix-legacy optimix tables --upgrade --upgrade-strategy='only-if-needed'`
 
