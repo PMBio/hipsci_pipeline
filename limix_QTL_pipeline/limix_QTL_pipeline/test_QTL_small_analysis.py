@@ -1,7 +1,9 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-from run_QTL_analysis import run_QTL_analysis,merge_QTL_results
+#from depricated_run_QTL_analysis_limix_1 import run_QTL_analysis
+from run_QTL_analysis import run_QTL_analysis
+from qtl_utilities import merge_QTL_results
 import subprocess
 import numpy as np
 import pandas as pd
@@ -28,8 +30,8 @@ def test_QTL_analysis():
     covariates_filename = data_path+'Expression/Geuvadis_CEU_YRI_covariates.txt'
     geno_prefix = data_path+'Genotypes/Geuvadis'
     pheno_filename = data_path+'Expression/Geuvadis_CEU_YRI_Expr.txt.gz'
-    anno_filename = data_path+'Expression/Geuvadis_CEU_Annot.txt'
-    kinship_filename= data_path+'Genotypes/Geuvadis_chr1_kinship.txt'
+    anno_filename = data_path+'Expression/Geuvadis_CEU_Annot_small.txt'
+    kinship_filename= data_path+'Genotypes/Geuvadis_chr1_kinship.normalized.txt'
     individual2sample_filename = data_path + 'Geuvadis_CEU_gte.txt'
     min_maf = 0.05
     min_hwe_P=0.001

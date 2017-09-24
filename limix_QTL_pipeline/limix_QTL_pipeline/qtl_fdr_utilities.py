@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.stats
+from scipy.stats import beta
 #from joblib import Parallel
 
 #V0.1.1
@@ -12,7 +13,12 @@ def estimate_beta_function_paras(top_pvalues_perm):
     return alpha_para,beta_para
 
 def define_correction_function(top_pvalues_perm):
-    alpha_para,beta_para = estimate_beta_function_paras(top_pvalues_perm)
+    if (len(top_pvalues_perm)<5) :
+        #If only a small number of features don't use the MLE estimator
+        alpha_para,beta_para = estimate_beta_function_paras(top_pvalues_perm)
+    else :
+        #Use the MLE estimator
+        alpha_para,beta_para,loc,fscale =  beta.fit(top_pvalues_perm,floc=0,fscale=1)
     beta_dist = scipy.stats.beta(alpha_para,beta_para)
     correction_function = lambda x: beta_dist.cdf(x)
     return correction_function

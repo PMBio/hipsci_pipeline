@@ -1,8 +1,8 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-#from depricated_run_QTL_analysis_limix_1 import run_QTL_analysis
-from run_QTL_analysis import run_QTL_analysis
+from depricated_run_QTL_analysis_limix_1 import run_QTL_analysis
+#from run_QTL_analysis import run_QTL_analysis
 from qtl_utilities import merge_QTL_results
 import subprocess
 import numpy as np
@@ -53,7 +53,7 @@ def test_QTL_analysis():
     #results_checking(results_checking_dict)
     
     output_dir = data_path+'limix_QTL_results_kinship_covs_cmd_line/'
-    subprocess.call('python run_QTL_analysis.py '
+    subprocess.call('python depricated_run_QTL_analysis_limix_1.py '
                     '--plink {geno_prefix} '
                     '--anno_file {anno_file} '
                     '--pheno_file {pheno_file} '
@@ -81,7 +81,7 @@ def test_QTL_analysis():
     #results_checking(results_checking_dict)
 
     #run again, without specifying chromosome
-    subprocess.call('python run_QTL_analysis.py '
+    subprocess.call('python depricated_run_QTL_analysis_limix_1.py '
                     '--plink {geno_prefix} '
                     '--anno_file {anno_file} '
                     '--pheno_file {pheno_file} '
