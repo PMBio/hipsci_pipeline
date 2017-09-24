@@ -2,6 +2,10 @@ import pandas as pd
 
 def get_snps(feature_id, annotation_df, bim, cis_mode, window_size):
     annotation_sub_df = annotation_df.loc[[feature_id],:]
+    if len(annotation_sub_df['chromosome'].unique())>1:
+        print('Warning! Multiple regions specified across multiple chromosomes.\n'
+              'If running chromosome-by-chromosome, each feature will be tested \n'
+              ' against all relevant SNPs for each chromosome.'
     list_of_snp_dfs = []
     for annotation_ds in annotation_sub_df.itterrows():
         chrom = str(annotation_ds.loc['chromosome'])
