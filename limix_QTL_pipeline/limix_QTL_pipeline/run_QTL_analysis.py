@@ -4,6 +4,7 @@ import limix
 import qtl_output
 import qtl_loader_utils
 import qtl_utilities as utils
+import snp_selection_utilities
 from qtl_snp_qc import do_snp_qc
 import glob
 from sklearn.preprocessing import Imputer
@@ -83,18 +84,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
             continue
         data_written = False
-        chrom = str(annotation_df.loc[feature_id,'chromosome'])
-        start = annotation_df.loc[feature_id,'start']
-        end = annotation_df.loc[feature_id,'end']
-        #make robust to features specified back-to-front
-        lowest = min([start,end])
-        highest = max([start,end])
-        if (cis_mode) :
-            snpQuery = bim.query("chrom == '%s' & pos > %d & pos < %d" % (chrom, lowest-window_size, highest+window_size))
-        else :
-            snpQuery = bim.query("(chrom == '%s' & (pos < %d | pos > %d))|chrom != '%s'" % (chrom, lowest-window_size, highest+window_size,chrom))
-            #Filtering for sites on non allosomes.
-            snpQuery = snpQuery.loc[snpQuery['chrom'].map(lambda x: x in list(map(str, range(1, 23))))]
+
+        snpQuery = snp_selection_utilities.get_snps(feature_id, annotation_df, bim, cis_mode, window_size)
 
         if (len(snpQuery) != 0) and (snp_filter_df is not None):
             snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x in list(map(str, snp_filter_df.index)))]
