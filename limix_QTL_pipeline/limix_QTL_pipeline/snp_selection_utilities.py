@@ -7,7 +7,7 @@ def get_snps(feature_id, annotation_df, bim, cis_mode, window_size):
               'If running chromosome-by-chromosome, each feature will be tested \n'
               ' against all relevant SNPs for each chromosome.')
     list_of_snp_dfs = []
-    for annotation_ds in annotation_sub_df.itterrows():
+    for feature_id,annotation_ds in annotation_sub_df.iterrows():
         chrom = str(annotation_ds.loc['chromosome'])
         start = annotation_ds.loc['start']
         end = annotation_ds.loc['end']
