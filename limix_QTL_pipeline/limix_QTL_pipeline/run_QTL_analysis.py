@@ -40,6 +40,7 @@ def get_args():
     parser.add_argument('-snps','--snps',required=False,default=None)
     parser.add_argument('-features','--features',required=False,default=None)
     parser.add_argument('-seed','--seed',required=False)
+    parser.add_argument('-extended_anno_file','--extended_anno_file', required=False)
     parser.add_argument('-relatedness_score','--relatedness_score',required=False,default=0.95)
     parser.add_argument('-write_permutations','--write_permutations',action="store_true",required=False,default=False)
     parser.add_argument('-minimum_test_samples','--minimum_test_samples',
@@ -59,7 +60,7 @@ def get_args():
 
 def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, output_dir, window_size=250000, min_maf=0.05, min_hwe_P=0.001, min_call_rate=0.95, blocksize=1000,
                      cis_mode=True, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, snps_filename=None, feature_filename=None, chromosome='all',
-                     covariates_filename=None, kinship_filename=None, sample_mapping_filename=None):
+                     covariates_filename=None, kinship_filename=None, sample_mapping_filename=None, extended_anno_filename=None):
     '''Core function to take input and run QTL tests on a given chromosome.'''
     
     [phenotype_df, kinship_df, covariate_df, sample2individual_df,annotation_df,snp_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed]=\
@@ -67,6 +68,12 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                       minimum_test_samples= minimum_test_samples,  relatedness_score=relatedness_score, snps_filename=snps_filename, feature_filename=feature_filename, chromosome=chromosome,
                      covariates_filename=covariates_filename, kinship_filename=kinship_filename, sample_mapping_filename=sample_mapping_filename)
     
+    if extended_anno_filename is not None:
+        complete_annotation_df = pd.read_csv(extended_anno_filename,sep='\t',index_col=0)
+        complete_annotation_df = pd.concat([annotation_df,complete_annotation_df]).drop_duplicates()
+    else:
+        complete_annotation_df = annotation_df
+
     #Open output files
     qtl_loader_utils.ensure_dir(output_dir)
     output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}.h5'.format(chromosome))
@@ -85,7 +92,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             continue
         data_written = False
 
-        snpQuery = snp_selection_utilities.get_snps(feature_id, annotation_df, bim, cis_mode, window_size)
+        snpQuery = snp_selection_utilities.get_snps(feature_id, complete_annotation_df, bim, cis_mode, window_size)
 
         if (len(snpQuery) != 0) and (snp_filter_df is not None):
             snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x in list(map(str, snp_filter_df.index)))]
@@ -205,7 +212,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         perm_df['snp_id'] = snp_matrix_DF.columns
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
                         temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
-                        LMM_perm = limix.qtl.scan(temp, phenotype, 'Normal',K=kinship_mat,M=cov_matrix,verbose=False)
+                        LMM_perm = limix.qtl.scan(temp, phenotype, 'Normal',K=kinship.mat,M=cov_matrix,verbose=False)
                         perm = 0;
                         for relevantOutput in utils.chunker(LMM_perm.variant_pvalues,snp_matrix_DF.shape[1]) :
                             if(write_permutations):
@@ -270,6 +277,7 @@ if __name__=='__main__':
     plink  = args.plink
     bgen = args.bgen
     anno_file = args.anno_file
+    extended_anno_file = args.extended_anno_file
     pheno_file = args.pheno_file
     output_dir = args.output_dir
     window_size = args.window
@@ -319,4 +327,4 @@ if __name__=='__main__':
                      min_maf=float(min_maf), min_hwe_P=float(min_hwe_P), min_call_rate=float(min_call_rate), blocksize=int(block_size),
                      cis_mode=cis, gaussianize_method = gaussianize, minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), n_perm=int(n_perm), write_permutations = write_permutations, relatedness_score=float(relatedness_score),
                      snps_filename=snps_filename, feature_filename=feature_filename, chromosome=chromosome, covariates_filename=covariates_file,
-                     kinship_filename=kinship_file, sample_mapping_filename=samplemap_file)
+                     kinship_filename=kinship_file, sample_mapping_filename=samplemap_file, extended_anno_filename=extended_anno_file)
