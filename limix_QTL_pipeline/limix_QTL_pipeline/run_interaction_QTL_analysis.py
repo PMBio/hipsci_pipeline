@@ -69,9 +69,9 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                      covariates_filename=None, kinship_filename=None, sample_mapping_filename=None, extended_anno_filename=None):
     '''Core function to take input and run QTL tests on a given chromosome.'''
     
-    [phenotype_df, kinship_df, covariate_df, sample2individual_df,annotation_df,snp_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed, chromosome, selectionStart, selectionEnd]=\
+    [phenotype_df, kinship_df, covariate_df, sample2individual_df,complete_annotation_df, annotation_df, snp_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed, chromosome, selectionStart, selectionEnd]=\
     utils.run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(pheno_filename=pheno_filename, anno_filename=anno_filename, geno_prefix=geno_prefix, plinkGenotype=plinkGenotype, cis_mode=cis_mode,
-                      minimum_test_samples= minimum_test_samples,  relatedness_score=relatedness_score, snps_filename=snps_filename, feature_filename=feature_filename, chromosome=chromosome,
+                      minimum_test_samples= minimum_test_samples,  relatedness_score=relatedness_score, snps_filename=snps_filename, feature_filename=feature_filename, selection=chromosome,
                      covariates_filename=covariates_filename, kinship_filename=kinship_filename, sample_mapping_filename=sample_mapping_filename, extended_anno_filename=extended_anno_filename)
     #Open output files
     qtl_loader_utils.ensure_dir(output_dir)
@@ -281,9 +281,13 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
     snp_df['position'] = bim['pos']
     snp_df['assessed_allele'] = bim['a1']
 
-    snp_df.ix[tested_snp_idxs,:].to_csv(output_dir+'/snp_metadata_{}.txt'.format(chromosome),sep='\t',index=False)
     feature_list = [x for x in feature_list if x not in fail_qc_features]
-    annotation_df.loc[feature_list,:].to_csv(output_dir+'/feature_metadata_{}.txt'.format(chromosome),sep='\t')
+    if not selectionStart is None :
+        snp_df.ix[tested_snp_idxs,:].to_csv(output_dir+'/snp_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t',index=False)
+        annotation_df.loc[feature_list,:].to_csv(output_dir+'/feature_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd)),sep='\t')
+    else :
+        snp_df.ix[tested_snp_idxs,:].to_csv(output_dir+'/snp_metadata_{}_{}_{}.txt'.format(chromosome),sep='\t',index=False)
+        annotation_df.loc[feature_list,:].to_csv(output_dir+'/feature_metadata_{}_{}_{}.txt'.format(chromosome),sep='\t')
 
 if __name__=='__main__':
     args = get_args()

@@ -18,8 +18,8 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         chromosome = parts[0]
         if("-" in parts[1]):
             parts2 = parts[1].split("-") 
-            selectionStart = parts2[0]
-            selectionEnd = parts2[1]
+            selectionStart = int(parts2[0])
+            selectionEnd = int(parts2[1])
     else :
         chromosome=selection
 
@@ -123,7 +123,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         if not selectionStart is None :
             lowest = min([selectionStart,selectionEnd])
             highest = max([selectionStart,selectionEnd])
-            feature_list = annotation_df.iloc[(annotation_df['chromosome'].values==chromosome) & (annotation_df["start"].values>=lowest) & (annotation_df["end"].values<=highest)].index.values
+            feature_list = list(set(annotation_df.iloc[(annotation_df['chromosome'].values==chromosome) & (annotation_df["start"].values>=lowest) & (annotation_df["end"].values<=highest)].index.values)&set(phenotype_df.index))
     if ((not cis_mode) and len(set(bim['chrom']))<22) :
         print("Warning, running a trans-analysis on snp data from less than 22 chromosomes.\nTo merge data later the permutation P-values need to be written out.")
     print("Number of features to be tested: " + str(phenotype_df.shape[0]))
@@ -138,7 +138,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
     else:
         complete_annotation_df = annotation_df
 
-    return [phenotype_df, kinship_df, covariate_df, sample2individual_df,complete_annotation_df,snp_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed, chromosome, selectionStart, selectionEnd]
+    return [phenotype_df, kinship_df, covariate_df, sample2individual_df,complete_annotation_df,annotation_df,snp_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed, chromosome, selectionStart, selectionEnd]
 
 def merge_QTL_results(results_dir):
     '''Merge QTL results for individual chromosomes into a combined, indexed
