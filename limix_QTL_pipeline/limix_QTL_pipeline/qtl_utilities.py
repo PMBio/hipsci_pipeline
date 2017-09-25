@@ -126,7 +126,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
             feature_list = list(set(annotation_df.iloc[(annotation_df['chromosome'].values==chromosome) & (annotation_df["start"].values>=lowest) & (annotation_df["end"].values<=highest)].index.values)&set(phenotype_df.index))
     if ((not cis_mode) and len(set(bim['chrom']))<22) :
         print("Warning, running a trans-analysis on snp data from less than 22 chromosomes.\nTo merge data later the permutation P-values need to be written out.")
-    print("Number of features to be tested: " + str(phenotype_df.shape[0]))
+    print("Number of features to be tested: " + str(len(feature_list)))
     
     if(phenotype_df.shape[1]<minimum_test_samples):
         print("Not enough samples with both genotype & phenotype data, for current number of covariates.")
