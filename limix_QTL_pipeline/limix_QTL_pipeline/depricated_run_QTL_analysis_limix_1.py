@@ -42,7 +42,7 @@ def get_args():
     parser.add_argument('-snps','--snps',required=False,default=None)
     parser.add_argument('-features','--features',required=False,default=None)
     parser.add_argument('-seed','--seed',required=False)
-    parser.add_argument('-extended_anno_file','--extended_anno_file'
+    parser.add_argument('-extended_anno_file','--extended_anno_file',
                         help=
                         'Secondary annotation file, to add a multiple locations to one feature.'
                         'This can be used to either link multiple test regions to one feature or exclude multiple regions while testing a feature.', required=False)
