@@ -284,7 +284,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
     feature_list = [x for x in feature_list if x not in fail_qc_features]
     if not selectionStart is None :
         snp_df.ix[tested_snp_idxs,:].to_csv(output_dir+'/snp_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t',index=False)
-        annotation_df.loc[feature_list,:].to_csv(output_dir+'/feature_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd)),sep='\t')
+        annotation_df.loc[feature_list,:].to_csv(output_dir+'/feature_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t')
     else :
         snp_df.ix[tested_snp_idxs,:].to_csv(output_dir+'/snp_metadata_{}_{}_{}.txt'.format(chromosome),sep='\t',index=False)
         annotation_df.loc[feature_list,:].to_csv(output_dir+'/feature_metadata_{}_{}_{}.txt'.format(chromosome),sep='\t')
