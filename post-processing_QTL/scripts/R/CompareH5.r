@@ -71,33 +71,26 @@ colnames(results2)[which(colnames(results2)=="corr_p_value")] <- "feature_corr_p
 if(length(which(is.na(results1$feature_corr_p_value)))!=0){
  results <- results[-which(is.na(results1$feature_corr_p_value)),]
 }
-
 if(length(which(is.na(results2$feature_corr_p_value)))!=0){
   results <- results2[-which(is.na(results2$feature_corr_p_value)),]
 }
 
+results1["QTL_ID"] <-paste(results1$snp_id,results1$feature)
+results2["QTL_ID"] <-paste(results2$snp_id,results2$feature)
 
 
+## intersect.
 
-if(multipleTestingGlobal=="ST"){
-  results["global_corr_p_value"] <- qvalue(results$feature_corr_p_value)$qvalues
-} else if (multipleTestingGlobal=="BF"){
-  results["global_corr_p_value"] <- results$feature_corr_p_value*observedFeatures
-  results$global_corr_p_value[results$global_corr_p_value>1]<-1
-}
+results1 <- results1[which(results1$QTL_ID %in% results2$QTL_ID),]
+results2 <- results2[which(results2$QTL_ID %in% results1$QTL_ID),]
 
+results1 <- results1[order(results1$QTL_ID),]
+results2 <- results2[order(results2$QTL_ID),]
 
-results <- results[order(results$global_corr_p_value,decreasing = F),]
+head(results1)
+head(results2)
 
-if(writeGlobalSigTop){
-  write.table(paste(baseFolder,"top_results_global_level_",threshold,".txt",sep=""),x = results[intersect(which(results$global_corr_p_value<threshold),which(!duplicated(results$feature))),],sep="\t",row.names=F,quote=F)
-}
-
-if(writeGlobalSig){
-  write.table(paste(baseFolder,"results_global_level_",threshold,".txt",sep=""),x = results[results$global_corr_p_value<threshold,],sep="\t",row.names=F,quote=F)
-}
-
-if(writeFeatureSig){
-  write.table(paste(baseFolder,"results_gene_level_",threshold,".txt",sep=""),x = results[results$feature_corr_p_value<threshold,],sep="\t",row.names=F,quote=F)
-}
+#Compare Pvalues.
+tmp <- abs(results1$p_value-results2$p_value)
+which(tmp > 0.00001)
 

@@ -23,8 +23,8 @@ subFolderBase <- "OutJointGeneMapping.chr."
 #subFolderBase <- "OutTranscriptMapping.chr."
 
 #HipSci Expression
-baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithCorrection/ExonLevel/"
-#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithoutCorrection/Exon_Mapping/"
+#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithCorrection/ExonLevel/"
+baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithoutCorrection/Exon_Mapping//"
 subFolderBase <- "OutExonMapping.chr."
 
 # baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/WithoutCorrection/Splicing_Mapping/"
