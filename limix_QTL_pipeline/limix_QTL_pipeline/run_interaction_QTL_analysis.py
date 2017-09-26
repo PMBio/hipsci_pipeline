@@ -85,7 +85,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
         else :
             permutation_writer = qtl_output.hdf5_writer(output_dir+'perm_results_{}.h5'.format(chromosome))
     
-    if(not set(interaction_terms).issubset(set(covariate_df.columns))):
+    if(not all(interaction_terms in covariate_df.columns for item in interaction_terms)):
         print ('Interaction terms are not found in the covariates')
         sys.exit()
     
