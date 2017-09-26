@@ -27,7 +27,10 @@ def get_args():
                         '    (feature_start - (window))             '
                         ' and:                                               '
                         '    (feature_end + (window))               ',default=250000)
-    parser.add_argument('-chromosome','--chromosome',required=False,default='all')
+    parser.add_argument('-chromosome','--chromosome',required=False,
+                        help=
+                        'The chromosome or selection on a chromsome to make during analysis. Selection is based on features.'
+                        'Either a chromsome or chromosome:start-end is accepted.',default='all')
     parser.add_argument('-covariates_file','--covariates_file',required=False,default=None)
     parser.add_argument('-kinship_file','--kinship_file',required=False,default=None)
     parser.add_argument('-samplemap_file','--samplemap_file',required=False,default=None)
@@ -39,6 +42,10 @@ def get_args():
     parser.add_argument('-snps','--snps',required=False,default=None)
     parser.add_argument('-features','--features',required=False,default=None)
     parser.add_argument('-seed','--seed',required=False)
+    parser.add_argument('-extended_anno_file','--extended_anno_file',
+                        help=
+                        'Secondary annotation file, to add a multiple locations to one feature.'
+                        'This can be used to either link multiple test regions to one feature or exclude multiple regions while testing a feature.', required=False)
     parser.add_argument('-relatedness_score','--relatedness_score',required=False,default=0.95)
     parser.add_argument('-write_permutations','--write_permutations',action="store_true",required=False,default=False)
     parser.add_argument('-minimum_test_samples','--minimum_test_samples',
@@ -58,16 +65,24 @@ def get_args():
 
 def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, output_dir, window_size=250000, min_maf=0.05, min_hwe_P=0.001, min_call_rate=0.95, blocksize=1000,
                      cis_mode=True, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, snps_filename=None, feature_filename=None, chromosome='all',
-                     covariates_filename=None, kinship_filename=None, sample_mapping_filename=None):
+                     covariates_filename=None, kinship_filename=None, sample_mapping_filename=None, extended_anno_filename=None):
     '''Core function to take input and run QTL tests on a given chromosome.'''
     
-    [phenotype_df, kinship_df, covariate_df, sample2individual_df,annotation_df,snp_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed]=\
-    utils.run_QTL_analysis_load_intersect_phenotype_covariates_kinxhip_sample_mapping(pheno_filename=pheno_filename, anno_filename=anno_filename, geno_prefix=geno_prefix, plinkGenotype=plinkGenotype, cis_mode=cis_mode,
-                      minimum_test_samples= minimum_test_samples,  relatedness_score=relatedness_score, snps_filename=snps_filename, feature_filename=feature_filename, chromosome=chromosome,
-                     covariates_filename=covariates_filename, kinship_filename=kinship_filename, sample_mapping_filename=sample_mapping_filename)
+    [phenotype_df, kinship_df, covariate_df, sample2individual_df,complete_annotation_df, annotation_df, snp_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed, chromosome, selectionStart, selectionEnd]=\
+    utils.run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(pheno_filename=pheno_filename, anno_filename=anno_filename, geno_prefix=geno_prefix, plinkGenotype=plinkGenotype, cis_mode=cis_mode,
+                      minimum_test_samples= minimum_test_samples,  relatedness_score=relatedness_score, snps_filename=snps_filename, feature_filename=feature_filename, selection=chromosome,
+                     covariates_filename=covariates_filename, kinship_filename=kinship_filename, sample_mapping_filename=sample_mapping_filename, extended_anno_filename=extended_anno_filename)
     #Open output files
     qtl_loader_utils.ensure_dir(output_dir)
-    output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}.h5'.format(chromosome))
+    if not selectionStart is None :
+        output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
+    else :
+        output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}.h5'.format(chromosome))
+    if(write_permutations):
+        if not selectionStart is None :
+            permutation_writer = qtl_output.hdf5_writer(output_dir+'perm_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
+        else :
+            permutation_writer = qtl_output.hdf5_writer(output_dir+'perm_results_{}.h5'.format(chromosome))
     
     if(write_permutations):
         permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'perm_results_{}.h5'.format(chromosome),n_perm)
@@ -258,15 +273,20 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     snp_df['position'] = bim['pos']
     snp_df['assessed_allele'] = bim['a1']
 
-    snp_df.ix[tested_snp_idxs,:].to_csv(output_dir+'/snp_metadata_{}.txt'.format(chromosome),sep='\t',index=False)
     feature_list = [x for x in feature_list if x not in fail_qc_features]
-    annotation_df.loc[feature_list,:].to_csv(output_dir+'/feature_metadata_{}.txt'.format(chromosome),sep='\t')
+    if not selectionStart is None :
+        snp_df.ix[tested_snp_idxs,:].to_csv(output_dir+'/snp_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t',index=False)
+        annotation_df.loc[feature_list,:].to_csv(output_dir+'/feature_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t')
+    else :
+        snp_df.ix[tested_snp_idxs,:].to_csv(output_dir+'/snp_metadata_{}.txt'.format(chromosome),sep='\t',index=False)
+        annotation_df.loc[feature_list,:].to_csv(output_dir+'/feature_metadata_{}.txt'.format(chromosome),sep='\t')
 
 if __name__=='__main__':
     args = get_args()
     plink  = args.plink
     bgen = args.bgen
     anno_file = args.anno_file
+    extended_anno_file = args.extended_anno_file
     pheno_file = args.pheno_file
     output_dir = args.output_dir
     window_size = args.window
@@ -316,4 +336,4 @@ if __name__=='__main__':
                      min_maf=float(min_maf), min_hwe_P=float(min_hwe_P), min_call_rate=float(min_call_rate), blocksize=int(block_size),
                      cis_mode=cis, gaussianize_method = gaussianize, minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), n_perm=int(n_perm), write_permutations = write_permutations, relatedness_score=float(relatedness_score),
                      snps_filename=snps_filename, feature_filename=feature_filename, chromosome=chromosome, covariates_filename=covariates_file,
-                     kinship_filename=kinship_file, sample_mapping_filename=samplemap_file)
+                     kinship_filename=kinship_file, sample_mapping_filename=samplemap_file, extended_anno_filename=extended_anno_file)

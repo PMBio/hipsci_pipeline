@@ -1,11 +1,28 @@
 import numpy as np
+import pandas as pd
 import qtl_loader_utils
 
-def run_QTL_analysis_load_intersect_phenotype_covariates_kinxhip_sample_mapping\
+def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         (pheno_filename, anno_filename, geno_prefix, plinkGenotype,minimum_test_samples= 10, relatedness_score=0.95,cis_mode=True, snps_filename=None,
-         feature_filename=None, chromosome='all',  covariates_filename=None, kinship_filename=None, sample_mapping_filename=None):
- 
-        
+         feature_filename=None, selection='all',  covariates_filename=None, kinship_filename=None, sample_mapping_filename=None, extended_anno_filename=None):
+    
+    selectionStart = None
+    selectionEnd = None
+    if(":" in selection):
+        parts = selection.split(":")
+        if("-" not in parts[1]):
+            print("No correct sub selection.")
+            print("Given in: "+selection)
+            print("Expected format: (chr number):(start location)-(stop location)")
+            sys.exit()
+        chromosome = parts[0]
+        if("-" in parts[1]):
+            parts2 = parts[1].split("-") 
+            selectionStart = int(parts2[0])
+            selectionEnd = int(parts2[1])
+    else :
+        chromosome=selection
+
     ''' function to take input and intersect sample and genotype.'''
     #Load input data files & filter for relevant data
     #Load input data filesf
@@ -18,6 +35,12 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinxhip_sample_mapping\
     print("Intersecting data.")
     phenotype_df = qtl_loader_utils.get_phenotype_df(pheno_filename)
     annotation_df = qtl_loader_utils.get_annotation_df(anno_filename)
+
+    if(annotation_df.shape[0] != annotation_df.groupby(annotation_df.index).first().shape[0]): 
+        print("Only one location per feature supported. If multiple locations are needed please look at: --extended_anno_file")
+        sys.exit()
+
+    ##Make sure that there is only one entry per feature id!.
 
     sample2individual_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'sample')
     sample2individual_df['sample']=sample2individual_df.index
@@ -97,14 +120,25 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinxhip_sample_mapping\
         feature_list = list(set(annotation_df.index)&set(phenotype_df.index))
     else:
         feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
+        if not selectionStart is None :
+            lowest = min([selectionStart,selectionEnd])
+            highest = max([selectionStart,selectionEnd])
+            feature_list = list(set(annotation_df.iloc[(annotation_df['chromosome'].values==chromosome) & (annotation_df["start"].values>=lowest) & (annotation_df["end"].values<=highest)].index.values)&set(phenotype_df.index))
     if ((not cis_mode) and len(set(bim['chrom']))<22) :
         print("Warning, running a trans-analysis on snp data from less than 22 chromosomes.\nTo merge data later the permutation P-values need to be written out.")
-    print("Number of features to be tested: " + str(phenotype_df.shape[0]))
+    print("Number of features to be tested: " + str(len(feature_list)))
     
     if(phenotype_df.shape[1]<minimum_test_samples):
         print("Not enough samples with both genotype & phenotype data, for current number of covariates.")
         sys.exit()
-    return [phenotype_df, kinship_df, covariate_df, sample2individual_df,annotation_df,snp_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed]
+    
+    if extended_anno_filename is not None:
+        complete_annotation_df = pd.read_csv(extended_anno_filename,sep='\t',index_col=0)
+        complete_annotation_df = pd.concat([annotation_df,complete_annotation_df]).drop_duplicates()
+    else:
+        complete_annotation_df = annotation_df
+
+    return [phenotype_df, kinship_df, covariate_df, sample2individual_df,complete_annotation_df,annotation_df,snp_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed, chromosome, selectionStart, selectionEnd]
 
 def merge_QTL_results(results_dir):
     '''Merge QTL results for individual chromosomes into a combined, indexed
