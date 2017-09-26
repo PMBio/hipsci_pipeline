@@ -84,9 +84,9 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
         output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}.h5'.format(chromosome))
     if(write_permutations):
         if not selectionStart is None :
-            permutation_writer = qtl_output.hdf5_writer(output_dir+'perm_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
+            permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'perm_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
         else :
-            permutation_writer = qtl_output.hdf5_writer(output_dir+'perm_results_{}.h5'.format(chromosome))
+            permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'perm_results_{}.h5'.format(chromosome))
 
     if(',' in interaction_terms):
         interaction_terms = interaction_terms.split(',')
