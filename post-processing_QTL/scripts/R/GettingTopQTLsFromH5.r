@@ -46,7 +46,7 @@ writeGlobalSig = T
 writeGlobalSigTop = T
 writeFeatureSig = T
 threshold = 0.05
-peerCorrected = T
+peerCorrected = F
 multipleTestingGlobal = "ST"
 # multipleTestingGlobal = "BF"
 #################
