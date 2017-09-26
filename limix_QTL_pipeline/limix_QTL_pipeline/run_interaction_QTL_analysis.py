@@ -225,14 +225,14 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     print ('there is an issue in mapping phenotypes and genotypes')
                     sys.exit()
                 M = np.asarray(cov_matrix, float)
-                LMM = limix.qtl.iscan(snp_matrix_DF.values, phenotype, 'normal', inter.values, K=kinship_mat, M=M)
+                LMM = limix.qtl.iscan(snp_matrix_DF.values, phenotype, 'normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M)
                 if(n_perm!=0):
                     if(write_permutations):
                         perm_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['snp_id'] + ['permutation_'+str(x+1) for x in range(n_perm)])
                         perm_df['snp_id'] = snp_matrix_DF.columns
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
                         temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
-                        LMM_perm = limix.qtl.iscan(temp, phenotype, 'normal', inter.values, K=kinship_mat, M=M)
+                        LMM_perm = limix.qtl.iscan(temp, phenotype, 'normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M)
                         perm = 0;
                         for relevantOutput in utils.chunker(LMM_perm.variant_pvalues.values,snp_matrix_DF.shape[1]) :
                             if(write_permutations):
@@ -242,7 +242,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                             perm+=1
                     else :
                         temp = utils.get_shuffeld_genotypes(snp_matrix_DF,kinship_df, n_perm)
-                        LMM_perm = limix.qtl.iscan(temp, phenotype, 'normal', inter.values, K=kinship_mat, M=M)
+                        LMM_perm = limix.qtl.iscan(temp, phenotype, 'normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M)
                         perm = 0;
                         for relevantOutput in utils.chunker(LMM_perm.variant_pvalues.values,snp_matrix_DF.shape[1]) :
                             if(write_permutations):
