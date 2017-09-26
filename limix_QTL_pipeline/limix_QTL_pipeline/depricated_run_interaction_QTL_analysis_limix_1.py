@@ -89,8 +89,6 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
         print ('Interaction terms are not found in the covariates')
         sys.exit()
     
-    if(write_permutations):
-        permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'perm_results_{}.h5'.format(chromosome),n_perm)
     #Arrays to store indices of snps tested and pass and fail QC SNPs for features without missingness.
     tested_snp_idxs = []
     pass_qc_snps_all = []
