@@ -20,7 +20,10 @@ def get_args():
     parser.add_argument('-anno_file','--anno_file', required=True)
     parser.add_argument('-pheno_file','--pheno_file', required=True)
     parser.add_argument('-output_dir','--output_dir', required=True)
-    parser.add_argument('-interaction_terms','--interaction_terms',required=True,default=None)
+    parser.add_argument('-interaction_terms','--interaction_terms',
+                        help=
+                        'Terms to use for interaction analysis, values are extracted from the covariate matrix.'
+                        'The terms may be split by comma. Interaction are also taken along in the covariate matrix.',required=True,default=None)
     parser.add_argument('-window','--window', required=False,
                         help=
                         'The size of the cis window to take SNPs from.'
@@ -81,16 +84,24 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
         output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}.h5'.format(chromosome))
     if(write_permutations):
         if not selectionStart is None :
-            permutation_writer = qtl_output.hdf5_writer(output_dir+'perm_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
+            permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'perm_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd),n_perm)
         else :
-            permutation_writer = qtl_output.hdf5_writer(output_dir+'perm_results_{}.h5'.format(chromosome))
+            permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'perm_results_{}.h5'.format(chromosome),n_perm)
+
+    if(',' in interaction_terms):
+        interaction_terms = interaction_terms.split(',')
+        interaction_terms = tuple(interaction_terms)
+        if(not all(item in covariate_df.columns for item in interaction_terms)):
+            print ('Interaction terms are not found in the covariates')
+            print((interaction_terms))
+            sys.exit()
     
-    if(not set(interaction_terms).issubset(set(covariate_df.columns))):
-        print ('Interaction terms are not found in the covariates')
-        sys.exit()
+    else :
+        if(not (interaction_terms in covariate_df.columns)):
+            print ('Interaction term is not found in the covariates')
+            print((interaction_terms))
+            sys.exit()
     
-    if(write_permutations):
-        permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'perm_results_{}.h5'.format(chromosome),n_perm)
     #Arrays to store indices of snps tested and pass and fail QC SNPs for features without missingness.
     tested_snp_idxs = []
     pass_qc_snps_all = []
