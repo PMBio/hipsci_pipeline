@@ -105,17 +105,22 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         phenotype_df = phenotype_df.loc[feature_filter_df.index,:]
         ##Filtering on features and SNPs to test.
 
+    if ((not cis_mode) and len(set(bim['chrom']))<22) :
+        print("Warning, running a trans-analysis on snp data from less than 22 chromosomes.\nTo merge data later the permutation P-values need to be written out.")
+
+    if(cis_mode):
+        #Remove features from the annotation that are on chromosomes which are not present anyway.
+        annotation_df = annotation_df = annotation_df[np.in1d(annotation_df['chromosome'],list(set(bim['chrom'])))]
+
     #Prepare to filter on snps.
     snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
     if snps_filename is not None:
         bim=bim[np.in1d(bim['snp'],snp_filter_df.index)]
 
-    #Remove features from the annotation that are on chromosomes which are not present anyway.
-    annotation_df = annotation_df = annotation_df[np.in1d(annotation_df['chromosome'],list(set(bim['chrom'])))]
     #Filtering for sites on non allosomes.
     annotation_df = annotation_df[annotation_df['chromosome'].map(lambda x: x in list(map(str, range(1, 23))))]
     
-        #Determine features to be tested
+    #Determine features to be tested
     if chromosome=='all':
         feature_list = list(set(annotation_df.index)&set(phenotype_df.index))
     else:
@@ -124,8 +129,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
             lowest = min([selectionStart,selectionEnd])
             highest = max([selectionStart,selectionEnd])
             feature_list = list(set(annotation_df.iloc[(annotation_df['chromosome'].values==chromosome) & (annotation_df["start"].values>=lowest) & (annotation_df["end"].values<=highest)].index.values)&set(phenotype_df.index))
-    if ((not cis_mode) and len(set(bim['chrom']))<22) :
-        print("Warning, running a trans-analysis on snp data from less than 22 chromosomes.\nTo merge data later the permutation P-values need to be written out.")
+
     print("Number of features to be tested: " + str(len(feature_list)))
     
     if(phenotype_df.shape[1]<minimum_test_samples):
