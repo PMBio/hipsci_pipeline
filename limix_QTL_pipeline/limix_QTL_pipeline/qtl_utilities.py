@@ -178,8 +178,8 @@ def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
                         
     indextoupdate = np.isfinite(phenotype)
     y1 = phenotype[indextoupdate]
-#    yuni,yindex=np.unique(y1, return_inverse=True)
-#    phenotypenorm=phenotype.copy()
+    yuni,yindex=np.unique(y1, return_inverse=True)
+    phenotypenorm=phenotype.copy()
     
     if method =='gaussnorm':
 
