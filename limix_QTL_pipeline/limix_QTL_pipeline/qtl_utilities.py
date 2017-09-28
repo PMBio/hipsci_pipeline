@@ -165,28 +165,52 @@ def get_unique_genetic_samples(kinship_df, relatedness_score):
 
 def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
     _doc='rank transform x into ref/ gaussian;keep the range; keep ties'
-
+    
     if method=='log':
         return np.log(1+phenotype)
-
-    indextoupdate=np.isfinite(phenotype);
-    y1=phenotype[indextoupdate]
+    
+    if method=='log_standardize':
+        temp=np.log(1+phenotype)
+        return (temp-np.nanmean(temp))/np.nanstd(temp)
+                
+    if method=='standardize':
+        return (phenotype-np.nanmean(phenotype))/np.nanstd(phenotype)
+                        
+    indextoupdate = np.isfinite(phenotype)
+    y1 = phenotype[indextoupdate]
     yuni,yindex=np.unique(y1, return_inverse=True)
+    phenotypenorm=phenotype.copy()
+    
+    if method =='gaussnorm':
 
-    if method=='gaussnorm':
-        std=np.nanstd(y1)
-        mean=np.nanmedian(y1)
-#        sref = scst.norm.isf(np.linspace(max(0.0001,scst.norm.cdf((np.nanmin(y1)-mean)/std)), min(0.9999,scst.norm.cdf((np.nanmax(y1)-mean)/std)),num=yuni.shape[0])[::-1])
         sref = scst.norm.isf(np.linspace(0.001, 0.999,num=yuni.shape[0])[::-1])
-
+        phenotypenorm[indextoupdate]=sref[yindex]
+        return phenotypenorm
+    
     elif method=='ranknorm':
         try:
-            sref=np.sort(reference[np.isfinite(reference)])[np.linspace(0,reference.shape[0]-0.001, num=yuni.shape[0]).astype(int)]
-        except: print ('reference missing. provide reference to force_normal_distribution or choose gaussnorm')
-    phenotypenorm=phenotype.copy()
-    phenotypenorm[indextoupdate]=sref[yindex]
+            xref1=np.unique(reference[np.isfinite(reference)])
+            sref=np.sort(xref1)[np.linspace(0,xref1.shape[0]-0.001, num=y1.shape[0]).astype(int)]
+        except:
+            print ('reference missing. provide reference to force_normal_distribution or choose gaussnorm')
+            return 1
+        phenotypenorm[indextoupdate]=sref[np.argsort(np.argsort(y1))]
+        return phenotypenorm
+    
+    elif method=='ranknorm_duplicates':
+        try:
+            xref1=np.unique(reference[np.isfinite(reference)])### unique values from reference
+            sref=np.sort(xref1)[np.linspace(0,xref1.shape[0]-0.001, num=yuni.shape[0]).astype(int)]
+        except: 
+            print ('reference missing. provide reference to force_normal_distribution or choose gaussnorm')
+            return 1
+        phenotypenorm[indextoupdate]=sref[yindex]
+        return phenotypenorm  
+    
+    else:
+        print ('methods are: log, log_standardize, standardize, gaussnorm, ranknorm, ranknorm_duplicates')
+    
 
-    return phenotypenorm
 
 #get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
 def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df1,n_perm):
