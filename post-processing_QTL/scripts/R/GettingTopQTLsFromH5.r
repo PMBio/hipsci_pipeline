@@ -2,98 +2,49 @@ library(rhdf5)
 library(qvalue)
 library(dplyr)
 
-#HipSci genes
-#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithCorrection/GeneLevel/"
-#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithoutCorrection/Gene_Mapping/"
-#subFolderBase <- "OutGeneMapping.chr."
-
-#HipSci&iPSCORE genes
-#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/WithCorrection/GeneLevel/"
-#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/WithoutCorrection/GeneLevel/"
-subFolderBase <- "OutJointGeneMapping.chr."
-
-#HipSci apa
-#baseFolder <- "C:/OnlineFolders/BitSync/Cur\rent_Work/EBI_HipSci/QTL_Output/HipSci/WithCorrection/apa/"
-#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithoutCorrection/apa/"
-#subFolderBase <- "OutApaMapping.chr."
-
-#HipSci Transcript
-#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithCorrection/TranscriptLevel/"
-#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithoutCorrection/Transcript_Mapping/"
-#subFolderBase <- "OutTranscriptMapping.chr."
-
-#HipSci Expression
-#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithCorrection/ExonLevel/"
-baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithoutCorrection/Exon_Mapping//"
-subFolderBase <- "OutExonMapping.chr."
-
-# baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/WithoutCorrection/Splicing_Mapping/"
-# baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/WithCorrection/Splicing/"
-# subFolderBase <- "OutSplicingMapping.chr."
-# subFolderBase <- "OutSplicingMapping.LowCovBlanked.chr."
-# subFolderBase <- "OutSplicingMapping_qq.chr."
-
-# baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/GENES_IPS_QTL/GeneLevel_Effects_Corrected/"
-# subFolderBase <- ""
-
-#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/TRANS/"
-#subFolderBase <- "OutGeneMapping.Trans.ExamplarGenes.GWAS.chr."
-
-chrSpecific = T
-range <- 1:22
-#range <- c(1:17,19:22)
+##Settings
+baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithoutCorrection/Trans/OutTransGeneMapping/"
 writeGlobalSig = T
 writeGlobalSigTop = T
 writeFeatureSig = T
 threshold = 0.05
-peerCorrected = F
 multipleTestingGlobal = "ST"
 # multipleTestingGlobal = "BF"
 #################
-
-# baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Effects_On_PEER_Factors/On_PEER_Factors/"
-# subFolderBase <- "OutMappingPeerFactors."
-# chrSpecific = F
-# range <- 2:101
-# writeGlobalSig = T
-# writeGeneSig = F
-# threshold = 0.1
-# multipleTestingGlobal = "BF"
-
-
-####
+##Read files.
 setwd(baseFolder)
 observedFeatures <- 0
 results <- NULL
-for(i in range){
-  folderName = paste(subFolderBase,i,sep="")
-  if(peerCorrected){
-    folderName=paste(folderName,".PeerCorrected",sep="")
-  }
-  if(length(list.files(folderName))>2){
-    if(chrSpecific){
-      tmp <- h5dump(file = paste(folderName,"/qtl_results_",i,".h5",sep=""),)
+filesToRead <- list.files("./",pattern = ".h5",full.names = T)
+if(length(filesToRead)==1){
+  tmp <- h5dump(file = paste(folderName,"/qtl_results_all.h5",sep=""),)
+} else {
+  for(i in filesToRead){
+    baseName <- gsub(gsub(i,pattern = ".h5",replacement = ""),pattern = "./qtl_results",replacement = "")
+    if(length(list.files("./",pattern = baseName))==3 | length(list.files("./",pattern = baseName))==4){
+      tmp <- h5dump(file = i)
     } else {
-      tmp <- h5dump(file = paste(folderName,"/qtl_results_all.h5",sep=""),)
+      print(paste("Skipping",i,"because not necessary data is available or to many files with the same name."))
     }
-  }
-  if(length(tmp)>0){
-    for (j in names(tmp)) tmp[[j]][["feature"]] <- j
-    observedFeatures = observedFeatures+length(tmp)
-    df <- bind_rows(tmp)
-    if(multipleTestingGlobal=="BF"){
-      df <- df[df$corr_p_value<threshold,]
-    }
-    if(nrow(df)>0){
-      results = rbind(results,df)  
+    if(length(tmp)>0){
+      for (j in names(tmp)) tmp[[j]][["feature"]] <- j
+      observedFeatures = observedFeatures+length(tmp)
+      df <- bind_rows(tmp)
+      if(multipleTestingGlobal=="BF"){
+        df <- df[df$corr_p_value<threshold,]
+      }
+      if(nrow(df)>0){
+        results = rbind(results,df)  
+      }
     }
   }
 }
 colnames(results)[which(colnames(results)=="corr_p_value")] <- "feature_corr_p_value"
 if(length(which(is.na(results$feature_corr_p_value)))!=0){
- results <- results[-which(is.na(results$feature_corr_p_value)),]
+  results <- results[-which(is.na(results$feature_corr_p_value)),]
 }
 
+##Multiple testing
 if(multipleTestingGlobal=="ST"){
   results["global_corr_p_value"] <- qvalue(results$feature_corr_p_value)$qvalues
 } else if (multipleTestingGlobal=="BF"){
