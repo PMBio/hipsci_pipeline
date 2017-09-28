@@ -100,14 +100,15 @@ def plot_summary_onechr_perm(plot_name='qtl_summary_onechr',folder_name=None,fol
     plt.legend(loc=2,fontsize=8)
     for f in featureh5: f.close()
     plt.tight_layout()
-    plt.savefig(folder_destination+plot_name+'_'+'_'.join(trait_labels)+'.png',dpi=600)
+    plt.savefig(folder_destination+plot_name+'_'+'_'.join(trait_labels)+'.pdf',dpi=600)
     return [gene_list_common,rez]
 
 
 def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=None,\
                  traits=[''],trait_labels=None,
                  file_name_results_genome='Feature_results_genome', qtl_results_file='QTL_results_',\
-                 colors=np.array(['orange','darkblue','green','m']),cis=2.5*10**5, figsize=(12,12), gene_list=None,\
+                 colors=np.array(['orange','darkblue','green','m','k']),cis=2.5*10**5, figsize=(12,12),\
+                                gene_list=None,\
                  plot_tss_distance_flag=False,plot_calibration_flag=False):
     
     if folder_destination is None:
@@ -134,8 +135,12 @@ def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=Non
  
     else:
         local_adjusted=np.array([np.array([fh5[gene]['summary_data/min_p_value_local_adjusted'][:][0] for gene in np.intersect1d(gene_list,np.array(list(fh5.keys())))])for indf,fh5 in enumerate(featureh5)])
-
- 
+        gene_list_common=gene_list
+        temp=np.unique(np.hstack(gene_list_common),return_counts=1)
+        gene_list_common=temp[0][temp[1]==gene_list_common.shape[0]]
+        local_adjusted_common=np.array([np.array([fh5[gene]['summary_data/min_p_value_local_adjusted'][:][0] for gene in \
+                                                  np.intersect1d(gene_list_common,np.array(list(fh5.keys())))])for indf,fh5 in enumerate(featureh5)])
+        
  
     axes = fig.add_subplot(2, 2, 1, axisbg='white')
     axes.spines['top'].set_visible(False)
@@ -230,7 +235,7 @@ def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=Non
 
 def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_destination='/Users/mirauta/Data/MS/hipsci/TMT/Images',plot_name='manhattan',\
                         traits=None,trait_labels=None,file_name_results_genome='ensembl_gene_id_qtl_results_genome',   qtl_results_file='qtl_results_',colors=np.array(['b','k','g','m']), figsize=4, gene_ensembl_id= 'ENSG00000182154',\
-                        p_value_field='p_value'):
+                        p_value_field='p_value',log_flag=True,ylim=None):
     if folder_destination is None:
         folder_destination =folder_name+'/manhattan/'
     if not os.path.exists(folder_destination):
@@ -262,23 +267,26 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
     fig.set_facecolor('white')
     colors2=colors[1:]
     for indf, a in enumerate(ax):
+        if ylim is not None: a.set_ylim(ylim)
         a.spines['top'].set_visible(False);    a.spines['right'].set_visible(False);a.yaxis.set_ticks_position('left'); a.xaxis.set_ticks_position('bottom');a.set_axis_bgcolor('white');
-        a.add_patch(Rectangle((startstop[0], 0), startstop[1]-startstop[0], 5, facecolor="grey",    alpha=0.35))
+        a.add_patch(Rectangle((startstop[0], 0), startstop[1]-startstop[0], 1, facecolor="grey",    alpha=0.35))
         a.set_xticks( axxpos)
         a.set_xticklabels([str(np.around(i,1))+' Mb' for i in showxpos/10.0**6])
         for indt,t in  enumerate(rez[p_value_field][indf][np.argsort([tt.min() for tt in rez[p_value_field][indf]])[:4]]):
-            a.plot(xpos,-np.log10(t),'o',color=colors[indt],markersize=1.25)
+            if log_flag: a.plot(xpos,-np.log10(t),'o',color=colors[indt],markersize=1.25)
+            else: a.plot(xpos, t,'o',color=colors[indt],markersize=1.25)
         a.set_ylabel(trait_labels[indf]+"            \n QTL              \n -log10PV            ",fontsize=10,rotation=0,horizontalalignment= 'center' ,verticalalignment= 'center')
     
-        for indt,t in enumerate(rez['p_value'][indf][np.argsort([tt.min() for tt in rez['p_value'][indf]])[:4]]): 
+        for indt,t in enumerate(rez[p_value_field][indf][np.argsort([tt.min() for tt in rez[p_value_field][indf]])[:4]]): 
             a.plot(xpos[np.argsort(t)[:5]],-np.log10(t[np.argsort(t)[:5]]),'*',color=colors[indt],markersize=5)
             for indf2, a2 in enumerate(ax):
                 if indf!=indf2:
-                    for indt2,t2 in enumerate(rez[p_value_field][indf2][np.argsort([tt2.min() for tt2 in rez['p_value'][indf2]])[:4]]):
+                    for indt2,t2 in enumerate(rez[p_value_field][indf2][np.argsort([tt2.min() for tt2 in rez[p_value_field][indf2]])[:4]]):
                         a.plot(xpos[np.argsort(t2)[:3]],-np.log10(t[np.argsort(t2)[:3]],),'ro',markersize=2.5)
      
     print (str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0]))
-    ax[0].annotate(str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0]), xy=(startstop[1], 4),fontsize=11)
+    ax[0].annotate(str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0]), xy=(startstop[1], 1),fontsize=11)
+
  
     plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'.pdf',dpi=600)
 
@@ -292,9 +300,10 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
 def plot_replication_beta(rez=None,folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/', folder_data2 =None,   traits=['protein_test','peptide_test'],trait_labels=['protein_test','peptide_test'],\
     qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',\
     results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',folder_destination='/Users/mirauta/Results/hipsci/Images_pipeline',\
-    figsize=5, red_dots_features=None,red_dot='ro',plot_name=''):
+    figsize=5, red_dots_features=None,red_dot='ro',plot_name='',p_value_field='p_value',thr=0.01):
     if rez is None:
-        rez=replication_two_features(folder_data =folder_data, folder_data2 =folder_data2,    traits=np.array(traits), qtl_results_file=qtl_results_file,    snp_metadata_file=snp_metadata_file,    feature_metadata_file=feature_metadata_file, results_genome_file=results_genome_file,    feature_report= feature_report)
+        rez=replication_two_features(folder_data =folder_data, folder_data2 =folder_data2,    traits=np.array(traits), qtl_results_file=qtl_results_file,    snp_metadata_file=snp_metadata_file,   \
+                                     feature_metadata_file=feature_metadata_file, results_genome_file=results_genome_file,    feature_report= feature_report,p_value_field=p_value_field,thr=thr)
    
     fig=plt.figure(figsize=(figsize,figsize))
     mpl.rcParams.update(mpl.rcParamsDefault)
@@ -306,26 +315,30 @@ def plot_replication_beta(rez=None,folder_data ='/Users/mirauta/Data/MS/hipsci/T
     axes.yaxis.set_ticks_position('left')
     axes.xaxis.set_ticks_position('bottom')
     fig.patch.set_facecolor('white')
-    plt.plot((rez['beta']),(rez['replicated_beta']),'o',color='grey',markersize=6,label=scst.spearmanr(rez['beta'][np.isfinite(rez['replicated_beta']+rez['beta'])],rez['replicated_beta'][np.isfinite(rez['replicated_beta']+rez['beta'])])[0])
-    thrs=0.001;
-    plt.plot((rez['beta'][rez['replicated_self_beta']<thrs]),(rez['replicated_beta'][rez['replicated_self_beta']<thrs]),'.',markersize=8,color='darkorange')
+    plt.plot((rez['beta']),(rez['replicated_beta']),'o',color='grey',markersize=6,label='Spearman: '+\
+             str(np.around(scst.spearmanr(rez['beta'][np.isfinite(rez['replicated_beta']+rez['beta'])],rez['replicated_beta'][np.isfinite(rez['replicated_beta']+rez['beta'])])[0],2)))
+    plt.plot((rez['beta']),(rez['replicated_beta']),'o',color='grey',markersize=6,label='Pearson: '+\
+             str(np.around(np.corrcoef(rez['beta'][np.isfinite(rez['replicated_beta']+rez['beta'])],rez['replicated_beta'][np.isfinite(rez['replicated_beta']+rez['beta'])])[0,1],2)))
+#    thrs=0.001;
+#    plt.plot((rez['beta'][rez['replicated_self_beta']<thrs]),(rez['replicated_beta'][rez['replicated_self_beta']<thrs]),'.',markersize=8,color='darkorange')
     
     if red_dots_features is not None:        
         plt.plot((rez['beta'][np.in1d(rez['feature_id'],red_dots_features)]), (rez['replicated_beta'][np.in1d(rez['feature_id'],red_dots_features)]),red_dot,markersize=6)#, mfc='none')
         
     plt.plot((np.nanmin(rez['beta']),(np.nanmax(rez['beta']))),(np.nanmin(rez['beta']),(np.nanmax(rez['beta']))),'k--',lw=0.25)
 
-    plt.xlabel(trait_labels[0]+'\n - log10 PV');plt.ylabel(trait_labels[1]+'\n - log10 PV',rotation=90 )
+    plt.xlabel(trait_labels[0]+'\n beta ');plt.ylabel(trait_labels[1]+'\n beta',rotation=90 )
     plt.legend(loc=1)
-    plt.savefig(folder_destination+'replication_'+traits[0]+'_'+traits[1]+plot_name+'.png')
+    plt.savefig(folder_destination+'replication_beta_'+traits[0]+'_'+traits[1]+plot_name+'.png')
     return rez
 
 def plot_replication_pv(rez=None,folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/', folder_data2 =None,   traits=['protein_test','peptide_test'],trait_labels=['protein_test','peptide_test'],\
     qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',\
     results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',folder_destination='/Users/mirauta/Results/hipsci/Images_pipeline',\
-    figsize=5, red_dots_features=None,red_dot='ro',plot_name=''):
+    figsize=5, red_dots_features=None,red_dot='ro',plot_name='',p_value_field='p_value',thr=0.001):
     if rez is None:
-        rez=replication_two_features(folder_data =folder_data, folder_data2 =folder_data2,    traits=np.array(traits), qtl_results_file=qtl_results_file,    snp_metadata_file=snp_metadata_file,    feature_metadata_file=feature_metadata_file, results_genome_file=results_genome_file,    feature_report= feature_report)
+        rez=replication_two_features(folder_data =folder_data, folder_data2 =folder_data2,    traits=np.array(traits), qtl_results_file=qtl_results_file, snp_metadata_file=snp_metadata_file,\
+                                     feature_metadata_file=feature_metadata_file, results_genome_file=results_genome_file,  feature_report= feature_report,p_value_field=p_value_field,thr=thr)
    
     fig=plt.figure(figsize=(figsize,figsize))
     mpl.rcParams.update(mpl.rcParamsDefault)
@@ -337,16 +350,48 @@ def plot_replication_pv(rez=None,folder_data ='/Users/mirauta/Data/MS/hipsci/TMT
     axes.yaxis.set_ticks_position('left')
     axes.xaxis.set_ticks_position('bottom')
     fig.patch.set_facecolor('white')
-    plt.plot(-np.log10(rez['p_value']),-np.log10(rez['replicated_p_value']),'o',color='grey',markersize=6)
+    plt.plot(-np.log10(rez[p_value_field]),-np.log10(rez['replicated_p_value']),'o',color='grey',markersize=6,label='Spearman: '+\
+             str(np.around(scst.spearmanr(rez[p_value_field][np.isfinite(rez['replicated_p_value']+rez[p_value_field])],\
+                                          rez['replicated_p_value'][np.isfinite(rez['replicated_p_value']+rez[p_value_field])])[0],2)))
+    plt.plot(-np.log10(rez[p_value_field]),-np.log10(rez['replicated_p_value']),'o',color='grey',markersize=6,label='Pearson: '+\
+             str(np.around(np.corrcoef(np.log(rez[p_value_field][np.isfinite(rez['replicated_p_value']+rez[p_value_field])]),np.log(rez['replicated_p_value'][np.isfinite(rez['replicated_p_value']+rez[p_value_field])]))[0,1],2)))
+
+    plt.plot(-np.log10(rez[p_value_field]),-np.log10(rez['replicated_p_value']),'o',color='grey',markersize=6)
     thrs=0.001;
-    plt.plot(-np.log10(rez['p_value'][rez['replicated_self_p_value']<thrs]),-np.log10(rez['replicated_p_value'][rez['replicated_self_p_value']<thrs]),'.',markersize=8,color='darkorange')
+    plt.plot(-np.log10(rez[p_value_field][rez['replicated_self_p_value']<thrs]),-np.log10(rez['replicated_p_value'][rez['replicated_self_p_value']<thrs]),'.',markersize=8,color='darkorange')
     
     if red_dots_features is not None:        
-        plt.plot(-np.log10(rez['p_value'][np.in1d(rez['feature_id'],red_dots_features)]), -np.log10(rez['replicated_p_value'][np.in1d(rez['feature_id'],red_dots_features)]),red_dot,markersize=6)#, mfc='none')
+        plt.plot(-np.log10(rez[p_value_field][np.in1d(rez['feature_id'],red_dots_features)]), -np.log10(rez['replicated_p_value'][np.in1d(rez['feature_id'],red_dots_features)]),red_dot,markersize=6)#, mfc='none')
         
-    plt.plot((2,-np.log10(np.nanmin(rez['p_value']))),(2,-np.log10(np.nanmin(rez['p_value']))),'k--',lw=0.25)
+    plt.plot((2,-np.log10(np.nanmin(rez[p_value_field]))),(2,-np.log10(np.nanmin(rez[p_value_field]))),'k--',lw=0.25)
 
     plt.xlabel(trait_labels[0]+'\n - log10 PV');plt.ylabel(trait_labels[1]+'\n - log10 PV',rotation=90 )
-
-    plt.savefig(folder_destination+'replication_'+traits[0]+'_'+traits[1]+plot_name+'.png')
+    plt.legend(loc=1)
+    plt.savefig(folder_destination+'replication_pv_'+traits[0]+'_'+traits[1]+plot_name+'.png')
     return rez
+
+
+
+def render_mpl_table(data, col_width=3.0, row_height=0.625, font_size=14,
+                     header_color='#40466e', row_colors=['#f1f1f2', 'w'], edge_color='w',
+                     bbox=[0, 0, 1, 1], header_columns=0,
+                     ax=None, **kwargs):
+    import six
+    if ax is None:
+        size = (np.array(data.shape[::-1]) + np.array([0, 1])) * np.array([col_width, row_height])
+        fig, ax = plt.subplots(figsize=size)
+        ax.axis('off')
+
+    mpl_table = ax.table(cellText=data.values, bbox=bbox, colLabels=data.columns, **kwargs)
+
+    mpl_table.auto_set_font_size(False)
+    mpl_table.set_fontsize(font_size)
+
+    for k, cell in  six.iteritems(mpl_table._cells):
+        cell.set_edgecolor(edge_color)
+        if k[0] == 0 or k[1] < header_columns:
+            cell.set_text_props(weight='bold', color='w')
+            cell.set_facecolor(header_color)
+        else:
+            cell.set_facecolor(row_colors[k[0]%len(row_colors) ])
+    return ax

@@ -3,10 +3,12 @@ import h5py
 import numpy as np
 import limix.stats.fdr as FDR
 import pandas
+import pandas as pd
 
 def local_adjustment(pv, N=1,  method=''):
+
     if method is None:
-        return pv
+        return np.hstack(pv)*pv.shape[0]
     if method=='Bonferroni': 
         N=np.hstack(pv).shape[0]
         return pv*N
@@ -14,10 +16,56 @@ def local_adjustment(pv, N=1,  method=''):
         print('Valid multiple testing correction  methods are: None;Bonferroni')
 
 
+
     
+def summary_gene_feature_snp(qtl_results_file='qtl_results_',snp_metadata_file='snp_metadata_', feature_metadata_file='feature_metadata_',output_file='qtl_results_genome_feature_snp',\
+                         feature_report='ensembl_gene_id',chr_list=[9],folder_data=None,trait=None,thr=0.1):
+
+    _doc=" aggregates qtl results to feature_report level"
+    
+    for ichr,chr in enumerate(chr_list):
+        print ('chromosome: '+str(chr))
+    
+        try:
+            frez=h5py.File(folder_data+'/'+trait+'/'+qtl_results_file+str(chr)+'.h5','r')
+            frezkeys= np.array([k.replace('_i_','') for k in list(frez.keys())])
+            ffea= pandas.read_table(folder_data+'/'+trait+'/'+feature_metadata_file+ str(chr)+'.txt', sep='\t')
+            fsnp= pandas.read_table(folder_data+'/'+trait+'/'+snp_metadata_file+ str(chr)+'.txt', sep='\t').set_index('snp_id',drop=False).transpose()
+            print (ffea.columns.values)
+        except:
+            print('chromosome'+str(chr)+' missing')
+            continue
+        indexnan=np.where((ffea[feature_report])!=(ffea[feature_report]))[0]
+        for i in indexnan:
+            ffea[feature_report][i]='gene_'+str(ffea['chromosome'][i])+'_'+str(ffea['start'][i])
+        ffea_feature=ffea.set_index('feature_id', drop=False).transpose()
+        ffea_report_feature=ffea.set_index(feature_report, drop=False).transpose()
+        
+        count=0
+        data={}
+        for key in ['corr_p_value','p_value','beta','snp_id','feature_id',feature_report]:
+            data[key]=np.zeros(len(list(ffea_report_feature)),dtype='object')+np.nan
+            
+        for ifea,report_feature in enumerate(np.unique(list(ffea_report_feature))):
+
+            features=np.intersect1d(np.array( ffea_report_feature[report_feature].transpose()['feature_id']), frezkeys)
+            if len(features) >=1:
+                for key in ['corr_p_value','p_value','beta','snp_id']:
+                    temp = np.array([frez[f][key] for f in  features ])
+                    data[key][ifea]=np.hstack(temp).astype('U')
+            data['feature_id'][ifea]=np.hstack([np.repeat(f,len(frez[f][key])) for f in  features ])
+            data[feature_report][ifea]=np.hstack([np.repeat(report_feature,len(frez[f][key])) for f in  features ])
+            
+        for key in data.keys():
+            data[key]=np.hstack(data[key]) 
+            
+        pd.DataFrame(data).iloc[data['corr_p_value'].astype(float)<thr].to_csv(path_or_buf=folder_data+trait+'_qtl_results_feature_snp_'+str(thr)+'.txt',\
+                    mode='w'if ichr==0 else 'a', sep='\t', columns=None, header=ichr==0, index=True)
+
+        
 def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_metadata_', feature_metadata_file='feature_metadata_',output_file='qtl_results_genome',\
                          feature_report='ensembl_gene_id',chr_list=[9],folder_data=None,trait=None, \
-                            p_value_field='p_value',p_value_raw_field='p_value',local_adjustment_method='Bonferroni'):
+                         p_value_field='p_value',p_value_raw_field='p_value',local_adjustment_method='Bonferroni', exclude_snps=['']):
 
     _doc=" aggregates qtl results to feature_report level"
     iichr=0
@@ -29,9 +77,15 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
             frezkeys= np.array([k.replace('_i_','') for k in list(frez.keys())])
             ffea= pandas.read_table(folder_data+'/'+trait+'/'+feature_metadata_file+ str(chr)+'.txt', sep='\t')
             fsnp= pandas.read_table(folder_data+'/'+trait+'/'+snp_metadata_file+ str(chr)+'.txt', sep='\t').set_index('snp_id',drop=False).transpose()
+            print (ffea.columns.values)
         except:
             print('chromosome'+str(chr)+' missing')
             continue
+        
+        if ~np.in1d(feature_report,ffea.columns.values):
+            ffea[feature_report]=ffea['feature_id']
+            
+        
         indexnan=np.where((ffea[feature_report])!=(ffea[feature_report]))[0]
         for i in indexnan:
             ffea[feature_report][i]='gene_'+str(ffea['chromosome'][i])+'_'+str(ffea['start'][i])
@@ -48,7 +102,7 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
         # for each report_feature  create h5 groups
         count=0
         for ifea,report_feature in enumerate(np.unique(list(ffea_report_feature))):
-            print (report_feature)
+#            print (report_feature)
        
             #select features for which qtl was computed
             features=np.intersect1d(np.array( ffea_report_feature[report_feature].transpose()['feature_id']), frezkeys)
@@ -76,7 +130,7 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
                 
                 fgd=fg.create_group('data')
                 fgd.create_dataset('features',data= features.astype('S'))
-                fgdp=fgd.create_group('p_value') 
+                fgdp=fgd.create_group(p_value_field) 
                 for indf,f in enumerate(features): fgdp.create_dataset(f,data= pv[indf])
 
                 fgdp2=fgd.create_group('p_value_raw')
@@ -94,7 +148,7 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
                 fgs.create_dataset('min_p_value',data= np.nanmin(np.hstack(pv)) [None])
                 fgs.create_dataset('min_p_value_beta',data=np.hstack(beta)[np.nanargmin(np.hstack(pv))][None])
                 
-                p_bonf=np.nanmin(local_adjustment(np.hstack(pv),method=local_adjustment_method));
+                p_bonf=np.nanmin(local_adjustment((pv),method=local_adjustment_method));
                 if p_bonf>1:p_bonf=np.array(1)
                 fgs.create_dataset('min_p_value_local_adjusted',data=p_bonf[None])
                 
@@ -112,7 +166,7 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
 
 def replication_two_features(folder_data =None,  folder_data2=None,  traits=None,
     qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',
-    results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',p_value_field='p_value'):
+    results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',p_value_field='corr_p_value',thr=0.01):
     
     _doc=" aggregates qtl results from two traits at feature_report level; return replication of pvalues for trait1  signigicant snps in trait2 "
 
@@ -139,10 +193,11 @@ def replication_two_features(folder_data =None,  folder_data2=None,  traits=None
     for indf, feature in enumerate(feature_ids):
     
         temp=featureh5[0][feature]['summary_data/min_p_value'][0]
-        if temp<0.001:
+        if temp<thr:
             rez[p_value_field][indf]=temp
             rez['beta'][indf]=featureh5[0][feature]['summary_data/min_p_value_beta'][0]
             rez['feature_id'][indf]=featureh5[0][feature]['summary_data/min_p_value_feature_id'][:][0]
+#            print (rez['feature_id'][indf])
             rez['chromosome'][indf]=featureh5[0][feature]['metadata/chromosome'][:][0]
             try: rez['strand'][indf]=featureh5[0][feature]['metadata/feature_strand'][:][0]
             except: 1
@@ -152,14 +207,14 @@ def replication_two_features(folder_data =None,  folder_data2=None,  traits=None
             rez['snp_id'][indf]=featureh5[0][feature]['summary_data/min_p_value_snp_id'][:][0]
             rez['position'][indf]=featureh5[0][feature]['summary_data/min_p_value_position'][:][0]
             try:
-                rez['replicated_p_value'][indf]=np.min( [featureh5[1][feature]['data/p_value'][f1][:][featureh5[1][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]] for f1 in featureh5[1][feature]['data/features']])     
+                rez['replicated_p_value'][indf]=np.nanmin( [featureh5[1][feature]['data'][p_value_field][f1][:][featureh5[1][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]] for f1 in featureh5[1][feature]['data/features']])     
             except: 1
             try:
                 temp=[featureh5[1][feature]['data/beta'][f1][:][featureh5[1][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]]     for f1 in featureh5[1][feature]['data/features']]
                 rez['replicated_beta'][indf]=np.nanmin(temp) if featureh5[0][feature]['summary_data/min_p_value_beta'][0]<0 else np.nanmax(temp)    
             except: 1
             try:
-                rez['replicated_self_p_value'][indf]=np.min([featureh5[0][feature]['data/p_value'][f1][:][featureh5[0][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]]\
+                rez['replicated_self_p_value'][indf]=np.min([featureh5[0][feature]['data'][p_value_field][f1][:][featureh5[0][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]]\
                     for f1 in np.setdiff1d(featureh5[0][feature]['data/features'],featureh5[0][feature]['summary_data/min_p_value_feature_id'][0])]) 
             except: 1
             try:
@@ -174,4 +229,61 @@ def replication_two_features(folder_data =None,  folder_data2=None,  traits=None
         rez[key]=rez[key].astype('U')
     rez['traits']=traits
     return rez
+ 
+def replication_two_features_allsnps(folder_data =None,  folder_data2=None,  traits=None,trait_labels=None,
+    qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',
+    results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',p_value_field='corr_p_value',thr0=0.001,thr1=0.05):
+    
+    _doc=" aggregates qtl results from two traits at feature_report level; return replication of pvalues for trait1  signigicant snps in trait2 "
+
+    if folder_data2 is None:
+        folder_data2 =folder_data 
+    featureh5=[h5py.File(folder_data+'/'+traits[0]+'_'+feature_report+'_'+results_genome_file+'.h5','r'),h5py.File(folder_data2+'/'+traits[1]+'_'+feature_report+'_'+results_genome_file+'.h5','r')]
+    
+    feature_ids=np.intersect1d(list(featureh5[0].keys()),list(featureh5[1].keys()))
+    rez={}
+    for i in range(2):
+        rez[i]={}
+    
+        for key in ['snp_id','beta',p_value_field]:
+            rez[i][key]=[featureh5[i][feature]['data'][key][list(featureh5[i][feature]['data']['snp_id'].keys())[0]][:] for indf, feature in enumerate(feature_ids)]
+            
+    
+    key='snp_id'
+    snps=[np.intersect1d(rez[0][key][indf],rez[1][key][indf]) for indf, feature in enumerate(feature_ids)]
+    features=[np.repeat(feature,len(snps[indf])) for indf, feature in enumerate(feature_ids)]
+    gene=[np.repeat(featureh5[0][feature]['metadata/gene_name'][:].astype('U')[0],len(snps[indf])) for indf, feature in enumerate(feature_ids)]
+    
+    
+    df=pd.DataFrame(data=np.vstack([np.hstack(features).astype('U'),np.hstack(snps).astype('U'),np.hstack( gene).astype('U')]).T,columns=['feature_id','snps','gene_name'])
+    
+    for i in range(2):
+        for key in ['snp_id']:
+            df[key+'_'+trait_labels[i]]=np.hstack([rez[i][key][indf][np.in1d(rez[i]['snp_id'][indf],snps[indf])] for indf, feature in enumerate(feature_ids)]).astype('U')
+       
+    for i in range(2):
+        for key in ['beta',p_value_field]:
+            df[key+'_'+trait_labels[i]]=np.hstack([rez[i][key][indf][np.in1d(rez[i]['snp_id'][indf],snps[indf])] for indf, feature in enumerate(feature_ids)]).astype(float)
+        
+ 
+    only0=df.iloc[np.where((df[p_value_field+'_'+trait_labels[0]].values<thr0)&(df[p_value_field+'_'+trait_labels[1]].values>thr1))[0]].set_index('feature_id',drop=0)
+    only0=pd.concat([only0,only0])
+    
+    df.to_csv(path_or_buf=folder_data+traits[0]+'_'+traits[1]+'_qtl_results_allsnps.txt',mode='w', sep='\t', columns=None, header=True, index=True)
+    np.unique(only0['feature_id']).shape
+             
+    
+    df1= df.iloc[np.where((df[p_value_field+'_'+trait_labels[0]].values<thr0)|(df[p_value_field+'_'+trait_labels[1]].values<thr1))[0]]
+    df1.to_csv(path_or_buf=folder_data+traits[0]+'_'+traits[1]+'_qtl_results_relevantsnps.txt',mode='w', sep='\t', columns=None, header=True, index=True)
+    np.unique(only0['feature_id']).shape
+    
+    df2=[only0.loc[f].iloc[np.argmin(only0.loc[f][p_value_field+'_'+trait_labels[0]].values)] for f in np.unique(only0['feature_id'])]
+    df2=pd.concat(df2,1).transpose()
+    df2['number_snps']=np.array([only0.loc[f].shape[0] for f in np.unique(only0['feature_id'])])
+     
+    df2.to_csv(path_or_buf=folder_data+traits[0]+'_'+traits[1]+'_qtl_results_ONLYPROTEIN.txt',mode='w', sep='\t', columns=None, header=True, index=True)
+     
+          
+    return df
+
  
