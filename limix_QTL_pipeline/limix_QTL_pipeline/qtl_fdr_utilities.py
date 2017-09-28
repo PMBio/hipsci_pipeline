@@ -18,7 +18,10 @@ def define_correction_function(top_pvalues_perm):
         alpha_para,beta_para = estimate_beta_function_paras(top_pvalues_perm)
     else :
         #Use the MLE estimator
-        alpha_para,beta_para,loc,fscale =  beta.fit(top_pvalues_perm,floc=0,fscale=1)
+        try :
+            alpha_para,beta_para,loc,fscale =  beta.fit(top_pvalues_perm,floc=0,fscale=1)
+        except (scipy.stats._continuous_distns.FitSolverError):
+            alpha_para,beta_para = estimate_beta_function_paras(top_pvalues_perm)
     beta_dist = scipy.stats.beta(alpha_para,beta_para)
     correction_function = lambda x: beta_dist.cdf(x)
     return correction_function
