@@ -21,7 +21,7 @@ if(length(filesToRead)==1){
 } else {
   for(i in filesToRead){
     baseName <- gsub(gsub(i,pattern = ".h5",replacement = ""),pattern = "./qtl_results",replacement = "")
-    if(length(list.files("./",pattern = baseName))==3 | length(list.files("./",pattern = baseName))==4){
+    if(length(list.files("./",pattern = paste(baseName,"\\.",sep="")))==3 | length(list.files("./",pattern = paste(baseName,"\\.",sep="")))==4){
       tmp <- h5dump(file = i)
     } else {
       print(paste("Skipping",i,"because not necessary data is available or to many files with the same name."))
