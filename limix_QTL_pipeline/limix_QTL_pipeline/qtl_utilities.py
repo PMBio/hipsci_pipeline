@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import qtl_loader_utils
+import sys
 
 def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         (pheno_filename, anno_filename, geno_prefix, plinkGenotype,minimum_test_samples= 10, relatedness_score=0.95,cis_mode=True, snps_filename=None,
