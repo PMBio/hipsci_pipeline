@@ -5,12 +5,19 @@ We recommed you install the limix based QTL mapping pipeline in a seperate conda
 To do so please start by making a conda enviroment, [conda](https://conda.io/docs/index.html):.
 
 `conda create -n limix_qtl python=2.7`
+
 `source activate limix_qtl`
+
 `conda install -c conda-forge limix`
+
 `pip install tables`
+
 `conda install -c conda-forge bgen`
+
 `conda install -c conda-forge pandas-plink`
+
 `pip install limix --upgrade`
+
 
 
 //Doesn't work yet.
@@ -30,12 +37,19 @@ To create a limix development enviroment
 `git checkout develop`
 
 `conda install -c conda-forge liknorm`
+
 `conda install libffi`
+
 `conda install statsmodels`
+
 `conda install -c conda-forge bgen`
+
 `conda install -c anaconda joblib`
+
 `conda install -c conda-forge asciitree`
+
 `conda install -c conda-forge humanfriendly`
+
 `conda install -c conda-forge tabulate`
 
 `pip install liknorm-py pandas-plink glimix-core limix-core limix-legacy optimix tables --upgrade --upgrade-strategy='only-if-needed'`
