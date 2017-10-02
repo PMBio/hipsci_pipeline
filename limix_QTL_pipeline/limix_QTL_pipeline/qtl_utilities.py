@@ -139,7 +139,10 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
     
     if extended_anno_filename is not None:
         complete_annotation_df = pd.read_csv(extended_anno_filename,sep='\t',index_col=0)
+        annotation_df['index']=annotation_df.index
+        complete_annotation_df['index']=complete_annotation_df.index
         complete_annotation_df = pd.concat([annotation_df,complete_annotation_df]).drop_duplicates()
+        del complete_annotation_df['index']
     else:
         complete_annotation_df = annotation_df
 
