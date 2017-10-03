@@ -125,11 +125,14 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
     if chromosome=='all':
         feature_list = list(set(annotation_df.index)&set(phenotype_df.index))
     else:
-        feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
         if not selectionStart is None :
             lowest = min([selectionStart,selectionEnd])
             highest = max([selectionStart,selectionEnd])
-            feature_list = list(set(annotation_df.iloc[(annotation_df['chromosome'].values==chromosome) & (annotation_df["start"].values>=lowest) & (annotation_df["end"].values<=highest)].index.values)&set(phenotype_df.index))
+            annotation_df['mean'] = ((annotation_df["start"] + annotation_df["end"])/2)
+            feature_list = list(set(annotation_df.iloc[(annotation_df['chromosome'].values==chromosome) & (annotation_df['mean'].values>=lowest) & (annotation_df["mean"].values<highest)].index.values)&set(phenotype_df.index))
+            del annotation_df['mean']
+        else :
+            feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
 
     print("Number of features to be tested: " + str(len(feature_list)))
     
