@@ -74,7 +74,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         sample2individual_df = sample2individual_df.loc[list(set(sample2individual_df.index) & set(covariate_df.index)),:]
         diff = orgSize- sample2individual_df.shape[0]
         orgSize = sample2individual_df.shape[0]
-        print("Dropped: "+str(diff)+" samples becuase they are not present in the kinship file.")
+        print("Dropped: "+str(diff)+" samples becuase they are not present in the covariate file.")
 
     ###
     print("Number of samples with genotype & phenotype data: " + str(sample2individual_df.shape[0]))
