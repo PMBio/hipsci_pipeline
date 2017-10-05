@@ -8,13 +8,9 @@ To do so please start by making a conda enviroment, [conda](https://conda.io/doc
 
 `source activate limix_qtl`
 
-`conda install -c conda-forge limix`
+`conda install -c conda-forge limix bgen pandas-plink`
 
 `pip install tables`
-
-`conda install -c conda-forge bgen`
-
-`conda install -c conda-forge pandas-plink`
 
 `pip install limix --upgrade`
 
