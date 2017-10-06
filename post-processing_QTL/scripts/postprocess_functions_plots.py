@@ -383,31 +383,31 @@ def plot_manhatan_genes(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',\
 
     if savefig:
         plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'.pdf',dpi=600)
-colors=np.array(['b','k','g','m'])
-folder_data='/Users/mirauta/Results/hipsci/QTL_new/';folder_name=folder_data
-ensembl_genes_id=np.array(['ENSG00000010292','ENSG00000109805', 'ENSG00000113810', 'ENSG00000136824'])
-trait='param_protein_scaled_peer_log_trans001'
-genes_ensembl_id=np.intersect1d(ensembl_genes_id ,\
-                                list(h5py.File(folder_data+'/'+trait+'_ensembl_gene_id_qtl_results_genome.h5','r').keys()))
-trans_ensembl_id=genes_ensembl_id
-
-fig=plt.figure(figsize=(10,10))
-fig.set_facecolor('white')
-fplot = gridspec.GridSpec(3*6,10)
-fplot.update(hspace=10, wspace=10)
-cis_ensembl_gene_id=trans_ensembl_id[0]
-ax = [plt.subplot(fplot[:5,:3]) for i in np.arange(len([trait,trait]))]
-plot_manhatan_alone(folder_name=folder_data,folder_destination=folder_data+'Images_pipeline/'+'/Manhattan/',plot_name='complexes_manhattan',\
-                    traits=[trait,trait],trait_labels=[trait,trait], gene_ensembl_id= cis_ensembl_gene_id,\
-                    p_value_field='p_value_raw', savefig=0,fplot=fplot,ax=ax)
-ax = [plt.subplot(fplot[(i*3):(i*3+3),3:10]) for i in np.arange(len(trans_ensembl_id))]
-plot_manhatan_genes( genes_ensembl_id= trans_ensembl_id,folder_name=folder_data,\
-                    folder_destination=folder_data+'Images_pipeline/'+'/Manhattan/',\
-                    plot_name='complex_manhattan_'+trait,trait=trait,\
-                    p_value_field='p_value_raw', figsize=4,fplot=fplot,ax=ax)
-plt.savefig(folder_data+'Images_pipeline/'+'/Manhattan/summary_test.png')
-
-plt.show()
+#colors=np.array(['b','k','g','m'])
+#folder_data='/Users/mirauta/Results/hipsci/QTL_new/';folder_name=folder_data
+#ensembl_genes_id=np.array(['ENSG00000010292','ENSG00000109805', 'ENSG00000113810', 'ENSG00000136824'])
+#trait='param_protein_scaled_peer_log_trans001'
+#genes_ensembl_id=np.intersect1d(ensembl_genes_id ,\
+#                                list(h5py.File(folder_data+'/'+trait+'_ensembl_gene_id_qtl_results_genome.h5','r').keys()))
+#trans_ensembl_id=genes_ensembl_id
+#
+#fig=plt.figure(figsize=(10,10))
+#fig.set_facecolor('white')
+#fplot = gridspec.GridSpec(3*6,10)
+#fplot.update(hspace=10, wspace=10)
+#cis_ensembl_gene_id=trans_ensembl_id[0]
+#ax = [plt.subplot(fplot[:5,:3]) for i in np.arange(len([trait,trait]))]
+#plot_manhatan_alone(folder_name=folder_data,folder_destination=folder_data+'Images_pipeline/'+'/Manhattan/',plot_name='complexes_manhattan',\
+#                    traits=[trait,trait],trait_labels=[trait,trait], gene_ensembl_id= cis_ensembl_gene_id,\
+#                    p_value_field='p_value_raw', savefig=0,fplot=fplot,ax=ax)
+#ax = [plt.subplot(fplot[(i*3):(i*3+3),3:10]) for i in np.arange(len(trans_ensembl_id))]
+#plot_manhatan_genes( genes_ensembl_id= trans_ensembl_id,folder_name=folder_data,\
+#                    folder_destination=folder_data+'Images_pipeline/'+'/Manhattan/',\
+#                    plot_name='complex_manhattan_'+trait,trait=trait,\
+#                    p_value_field='p_value_raw', figsize=4,fplot=fplot,ax=ax)
+#plt.savefig(folder_data+'Images_pipeline/'+'/Manhattan/summary_test.png')
+#
+#plt.show()
 #==============================================================================
 #==============================================================================
 # # 
