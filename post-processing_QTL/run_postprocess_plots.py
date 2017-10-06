@@ -11,7 +11,7 @@ from scripts.postprocess_functions_plots import *
 
 def get_args():
     parser = argparse.ArgumentParser(description='Run QTL analysis given genotype, phenotype, and annotation.')
-    parser.add_argument('-folder_data','--folder_data',required=True)
+    parser.add_argument('-path_data','--path_data',required=True)
     parser.add_argument('-folder_destination','--folder_destination',required=False,default=None)
     parser.add_argument('-traits','--traits',required=True)
     parser.add_argument('-trait_labels','--trait_labels',required=False,default=None)
@@ -30,8 +30,8 @@ if __name__=='__main__':
     args = get_args()
     print(args)
 
-    folder_data =args.folder_data
-    folder_destination = args.folder_destination if args.folder_destination is not None else folder_data
+    path_data =args.path_data
+    folder_destination = args.folder_destination if args.folder_destination is not None else path_data
     traits =args.traits.split(',')
     
     run_type= args.run_type  if args.run_type is not None else ''
@@ -41,11 +41,11 @@ if __name__=='__main__':
     local_adjustment_method=args.local_adjustment_method
     print ('in main')
     print (p_value_field)
-#folder_data='/Users/mirauta/Results/hipsci/QTL1/'
+#path_data='/Users/mirauta/Results/hipsci/QTL1/'
 #traits=['param_protein_scaled_covar_gaussnorm_test','mrna']
 #run_type='plots_power_replication'
 #chromosomes=['21']
-#folder_destination =  folder_data
+#folder_destination =  path_data
 #trait_labels =  traits
 #print(run_type)
 
@@ -53,12 +53,12 @@ if 'summary' in run_type:
     print('create summary')
     for trait in traits:
         summary_gene_feature(output_file='qtl_results_genome', feature_report='ensembl_gene_id', chr_list=chromosomes,\
-                             p_value_field=p_value_field,p_value_raw_field='p_value', folder_data=folder_data,trait=trait,local_adjustment_method=local_adjustment_method)
+                             p_value_field=p_value_field,p_value_raw_field='p_value', path_data=path_data,trait=trait,local_adjustment_method=local_adjustment_method)
 
 elif 'feature_snp'in run_type:
     print('create summary')
     for trait in traits:
-        summary_gene_feature_snp(output_file='qtl_results_genome_feature_snp', feature_report='ensembl_gene_id',chr_list=chromosomes,folder_data=folder_data,trait=trait,thr=0.5)
+        summary_gene_feature_snp(output_file='qtl_results_genome_feature_snp', feature_report='ensembl_gene_id',chr_list=chromosomes,path_data=path_data,trait=trait,thr=0.5)
     
 elif 'plots' not in run_type:
     print ('run only summary')
@@ -73,7 +73,7 @@ from matplotlib import colors as mcolors
 import matplotlib as mpl
 
 if 'power' in run_type:
-    a=plot_summary(folder_name=folder_data, folder_destination=folder_destination+'Images_pipeline/',plot_name='qtl_summary',\
+    a=plot_summary(folder_name=path_data, folder_destination=folder_destination+'Images_pipeline/',plot_name='qtl_summary',\
                  traits=traits, trait_labels=trait_labels,
                  file_name_results_genome='ensembl_gene_id_qtl_results_genome',   qtl_results_file='qtl_results_', \
                  colors=np.array(['orange','darkblue','green','red','k']),cis=2.5*10**5,figsize=(8,8),gene_list=None,\
@@ -81,14 +81,14 @@ if 'power' in run_type:
 
 if 'replication_beta' in run_type:
     print("replication_beta")
-    rez_pro_pep=plot_replication_beta(rez=None,folder_data =folder_data,\
+    rez_pro_pep=plot_replication_beta(rez=None,path_data =path_data,\
                                  traits=traits,trait_labels= trait_labels, qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',\
                                  results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',\
                                  folder_destination=folder_destination+'Images_pipeline/', figsize=6,red_dots_features=None, \
                                  p_value_field=p_value_field,thr=0.1)
 
 if 'replication_pv' in run_type:
-    rez_pro_pep=plot_replication_pv(rez=None,folder_data =folder_data,\
+    rez_pro_pep=plot_replication_pv(rez=None,path_data =path_data,\
                 traits=traits,trait_labels= trait_labels, qtl_results_file='qtl_results_',\
                 snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',\
                 results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',\
@@ -97,18 +97,18 @@ if 'replication_pv' in run_type:
     
     names=['corr_p_value', 'replicated_p_value', 'replicated_self_p_value','beta', 'replicated_beta', 'feature_id', 'gene_name', 'snp_id', 'chromosome', 'strand', 'position', 'ensembl_gene_id']
     df= pandas.DataFrame(data=np.array([rez_pro_pep[key] for key in names ]).T, index=rez_pro_pep['ensembl_gene_id'],columns=names)
-    df.to_csv(path_or_buf=folder_data+traits[0]+'_'+traits[1]+'_qtl_results.txt',mode='w', sep='\t', columns=None, header=True, index=True)
-    pandas.DataFrame(df['snp_id'][df['corr_p_value'].values.astype(float)<0.01]).to_csv(path_or_buf=folder_data+traits[0]+'_qtl_results_significant_snps.txt',mode='w', sep='\t', columns=None, header=False, index=False)
+    df.to_csv(path_or_buf=path_data+traits[0]+'_'+traits[1]+'_qtl_results.txt',mode='w', sep='\t', columns=None, header=True, index=True)
+    pandas.DataFrame(df['snp_id'][df['corr_p_value'].values.astype(float)<0.01]).to_csv(path_or_buf=path_data+traits[0]+'_qtl_results_significant_snps.txt',mode='w', sep='\t', columns=None, header=False, index=False)
      
 #    genes1=df.index[(df['p_value'].values.astype(float)<10**-4)&(df['replicated_p_value'].values.astype(float)<10**-4)]
 #print (genes1.shape)
 
 if 'manhattan' in run_type:
-    df=pandas.read_table(folder_data+traits[0]+'_'+traits[1]+'_qtl_results.txt', sep='\t',index_col=0)
+    df=pandas.read_table(path_data+traits[0]+'_'+traits[1]+'_qtl_results.txt', sep='\t',index_col=0)
 #    genes1=df.index[(df['p_value'].values.astype(float)<10**-4)&(df['replicated_p_value'].values.astype(float)<10**-4)]
     genes1=df.index[(df[p_value_field].values.astype(float)<10**-7)]
     for i, g in enumerate(genes1):
-        plot_manhatan_alone( gene_ensembl_id= genes1[i],folder_name=folder_data,\
+        plot_manhatan_alone( gene_ensembl_id= genes1[i],folder_name=path_data,\
                  folder_destination=folder_destination+'Images_pipeline/'+'/Manhattan/',\
                  plot_name='manhattan_'+traits[0]+traits[1]+'_',traits=traits,trait_labels=trait_labels,file_name_results_genome='ensembl_gene_id_qtl_results_genome',\
                  qtl_results_file='qtl_results_',colors=np.array(['black','green','orange','blue']),p_value_field=p_value_field, figsize=4)
