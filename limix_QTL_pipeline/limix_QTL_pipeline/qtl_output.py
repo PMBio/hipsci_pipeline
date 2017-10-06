@@ -1,5 +1,6 @@
 import tables
 import qtl_fdr_utilities
+import numpy as np
 
 #V0.1.1
 
@@ -32,11 +33,16 @@ class hdf5_writer:
     def apply_pval_correction(self,feature_id,top_pvalues_perm):
         '''Function to correct p values based on nominal p values and the top
         hits from permutation runs for the given feature.'''
-        correction_function = qtl_fdr_utilities.define_correction_function(top_pvalues_perm)
         table = self.h5file.get_node('/'+feature_id)
-        for row in table:
-            row['corr_p_value'] = correction_function(row['p_value'])
-            row.update()
+        if(np.mean(top_pvalues_perm)==1 and np.var(top_pvalues_perm)==0):
+            for row in table:
+                row['corr_p_value'] = row['p_value']
+                row.update()
+        else:
+            correction_function = qtl_fdr_utilities.define_correction_function(top_pvalues_perm)
+            for row in table:
+                row['corr_p_value'] = correction_function(row['p_value'])
+                row.update()
         table.flush()
         
  
