@@ -384,11 +384,11 @@ def plot_manhatan_genes(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',\
     if savefig:
         plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'.pdf',dpi=600)
 #colors=np.array(['b','k','g','m'])
-#folder_data='/Users/mirauta/Results/hipsci/QTL_new/';folder_name=folder_data
+#path_data='/Users/mirauta/Results/hipsci/QTL_new/';folder_name=path_data
 #ensembl_genes_id=np.array(['ENSG00000010292','ENSG00000109805', 'ENSG00000113810', 'ENSG00000136824'])
 #trait='param_protein_scaled_peer_log_trans001'
 #genes_ensembl_id=np.intersect1d(ensembl_genes_id ,\
-#                                list(h5py.File(folder_data+'/'+trait+'_ensembl_gene_id_qtl_results_genome.h5','r').keys()))
+#                                list(h5py.File(path_data+'/'+trait+'_ensembl_gene_id_qtl_results_genome.h5','r').keys()))
 #trans_ensembl_id=genes_ensembl_id
 #
 #fig=plt.figure(figsize=(10,10))
@@ -397,15 +397,15 @@ def plot_manhatan_genes(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',\
 #fplot.update(hspace=10, wspace=10)
 #cis_ensembl_gene_id=trans_ensembl_id[0]
 #ax = [plt.subplot(fplot[:5,:3]) for i in np.arange(len([trait,trait]))]
-#plot_manhatan_alone(folder_name=folder_data,folder_destination=folder_data+'Images_pipeline/'+'/Manhattan/',plot_name='complexes_manhattan',\
+#plot_manhatan_alone(folder_name=path_data,folder_destination=path_data+'Images_pipeline/'+'/Manhattan/',plot_name='complexes_manhattan',\
 #                    traits=[trait,trait],trait_labels=[trait,trait], gene_ensembl_id= cis_ensembl_gene_id,\
 #                    p_value_field='p_value_raw', savefig=0,fplot=fplot,ax=ax)
 #ax = [plt.subplot(fplot[(i*3):(i*3+3),3:10]) for i in np.arange(len(trans_ensembl_id))]
-#plot_manhatan_genes( genes_ensembl_id= trans_ensembl_id,folder_name=folder_data,\
-#                    folder_destination=folder_data+'Images_pipeline/'+'/Manhattan/',\
+#plot_manhatan_genes( genes_ensembl_id= trans_ensembl_id,folder_name=path_data,\
+#                    folder_destination=path_data+'Images_pipeline/'+'/Manhattan/',\
 #                    plot_name='complex_manhattan_'+trait,trait=trait,\
 #                    p_value_field='p_value_raw', figsize=4,fplot=fplot,ax=ax)
-#plt.savefig(folder_data+'Images_pipeline/'+'/Manhattan/summary_test.png')
+#plt.savefig(path_data+'Images_pipeline/'+'/Manhattan/summary_test.png')
 #
 #plt.show()
 #==============================================================================
@@ -415,12 +415,12 @@ def plot_manhatan_genes(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',\
 #==============================================================================
  
 
-def plot_replication_beta(rez=None,folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/', folder_data2 =None,   traits=['protein_test','peptide_test'],trait_labels=['protein_test','peptide_test'],\
+def plot_replication_beta(rez=None,path_data ='/Users/mirauta/Data/MS/hipsci/TMT/', path_data2 =None,   traits=['protein_test','peptide_test'],trait_labels=['protein_test','peptide_test'],\
     qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',\
     results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',folder_destination='/Users/mirauta/Results/hipsci/Images_pipeline',\
     figsize=5, red_dots_features=None,red_dot='ro',plot_name='',p_value_field='p_value',thr=0.01):
     if rez is None:
-        rez=replication_two_features(folder_data =folder_data, folder_data2 =folder_data2,    traits=np.array(traits), qtl_results_file=qtl_results_file,    snp_metadata_file=snp_metadata_file,   \
+        rez=replication_two_features(path_data =path_data, path_data2 =path_data2,    traits=np.array(traits), qtl_results_file=qtl_results_file,    snp_metadata_file=snp_metadata_file,   \
                                      feature_metadata_file=feature_metadata_file, results_genome_file=results_genome_file,    feature_report= feature_report,p_value_field=p_value_field,thr=thr)
    
     fig=plt.figure(figsize=(figsize,figsize))
@@ -450,12 +450,12 @@ def plot_replication_beta(rez=None,folder_data ='/Users/mirauta/Data/MS/hipsci/T
     plt.savefig(folder_destination+'replication_beta_'+traits[0]+'_'+traits[1]+plot_name+'.png')
     return rez
 
-def plot_replication_pv(rez=None,folder_data ='/Users/mirauta/Data/MS/hipsci/TMT/', folder_data2 =None,   traits=['protein_test','peptide_test'],trait_labels=['protein_test','peptide_test'],\
+def plot_replication_pv(rez=None,path_data ='/Users/mirauta/Data/MS/hipsci/TMT/', path_data2 =None,   traits=['protein_test','peptide_test'],trait_labels=['protein_test','peptide_test'],\
     qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',\
     results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',folder_destination='/Users/mirauta/Results/hipsci/Images_pipeline',\
     figsize=5, red_dots_features=None,red_dot='ro',plot_name='',p_value_field='p_value',thr=0.001):
     if rez is None:
-        rez=replication_two_features(folder_data =folder_data, folder_data2 =folder_data2,    traits=np.array(traits), qtl_results_file=qtl_results_file, snp_metadata_file=snp_metadata_file,\
+        rez=replication_two_features(path_data =path_data, path_data2 =path_data2,    traits=np.array(traits), qtl_results_file=qtl_results_file, snp_metadata_file=snp_metadata_file,\
                                      feature_metadata_file=feature_metadata_file, results_genome_file=results_genome_file,  feature_report= feature_report,p_value_field=p_value_field,thr=thr)
    
     fig=plt.figure(figsize=(figsize,figsize))
@@ -513,4 +513,4 @@ def render_mpl_table(data, col_width=3.0, row_height=0.625, font_size=14,
         else:
             cell.set_facecolor(row_colors[k[0]%len(row_colors) ])
     return ax
-a
+ 
