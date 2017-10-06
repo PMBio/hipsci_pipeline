@@ -17,7 +17,7 @@ import scipy.stats as scst
 import statsmodels.sandbox.stats.multicomp as scst2
 sys.path.append('../')
 from scripts.postprocess_functions_genome_results import *
-
+import copy
 
 #
 #
@@ -235,14 +235,16 @@ def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=Non
 
 def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_destination='/Users/mirauta/Data/MS/hipsci/TMT/Images',plot_name='manhattan',\
                         traits=None,trait_labels=None,file_name_results_genome='ensembl_gene_id_qtl_results_genome',   qtl_results_file='qtl_results_',colors=np.array(['b','k','g','m']), figsize=4, gene_ensembl_id= 'ENSG00000182154',\
-                        p_value_field='p_value',log_flag=True,ylim=None):
+                        p_value_field='p_value',log_flag=True,ylim=None,savefig=True,fplot=None,ax=None):
     if folder_destination is None:
         folder_destination =folder_name+'/manhattan/'
     if not os.path.exists(folder_destination):
         os.makedirs(folder_destination)
 
+
+    print(traits)
     featureh5=[h5py.File(folder_name+'/'+trait+'_'+file_name_results_genome+'.h5','r')[gene_ensembl_id] for trait in traits]
-    
+    print ('featureh5')   
     rez={}
     temppos=[np.hstack([fh5['data']['position'][f][:] for f in fh5['data']['position'].keys()]) for fh5 in featureh5]
     temp=np.unique(np.hstack(temppos).flatten(),return_counts=1); 
@@ -259,12 +261,18 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
     showxpos=np.array([int(i) for i in np.linspace(min(commonpos),max(commonpos),5)])
     startstop=np.array([featureh5[0]['metadata']['start'][:][0],featureh5[0]['metadata']['end'][:][0]]);
     startstop=(startstop-commonpos.min())/10.0**6
+    print ('test21')
+
+    if fplot is None:
+        fig=plt.figure(figsize=(figsize*2,figsize*len(featureh5)))
+        fig.set_facecolor('white')
+        fplot = gridspec.GridSpec(len(featureh5)*6,8)
+        fplot.update(hspace=10, wspace=10)    
+        ax = [plt.subplot(fplot[(i*3):(i*3+3),:10]) for i in np.arange(len(featureh5))]
     
-    fig=plt.figure(figsize=(figsize*2,figsize*len(featureh5)))
-    f = gridspec.GridSpec(len(featureh5)*6,8)
-    f.update(hspace=10, wspace=10)
-    ax = [plt.subplot(f[(i*3):(i*3+3),:6]) for i in np.arange(len(featureh5))]
-    fig.set_facecolor('white')
+    gene_name=str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])
+    
+    feature_name=str(featureh5[0]['metadata']['feature_id'][:].astype('U')[0])
     colors2=colors[1:]
     for indf, a in enumerate(ax):
         if ylim is not None: a.set_ylim(ylim)
@@ -275,7 +283,7 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
         for indt,t in  enumerate(rez[p_value_field][indf][np.argsort([tt.min() for tt in rez[p_value_field][indf]])[:4]]):
             if log_flag: a.plot(xpos,-np.log10(t),'o',color=colors[indt],markersize=1.25)
             else: a.plot(xpos, t,'o',color=colors[indt],markersize=1.25)
-        a.set_ylabel(trait_labels[indf]+"            \n QTL              \n -log10PV            ",fontsize=10,rotation=0,horizontalalignment= 'center' ,verticalalignment= 'center')
+        a.set_ylabel(trait_labels[indf]+'\n'+gene_name+"\n -log10PV            ",fontsize=10,rotation=0,horizontalalignment= 'center' ,verticalalignment= 'center')
     
         for indt,t in enumerate(rez[p_value_field][indf][np.argsort([tt.min() for tt in rez[p_value_field][indf]])[:4]]): 
             a.plot(xpos[np.argsort(t)[:5]],-np.log10(t[np.argsort(t)[:5]]),'*',color=colors[indt],markersize=5)
@@ -285,11 +293,121 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
                         a.plot(xpos[np.argsort(t2)[:3]],-np.log10(t[np.argsort(t2)[:3]],),'ro',markersize=2.5)
      
     print (str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0]))
-    ax[0].annotate(str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0]), xy=(startstop[1], 1),fontsize=11)
+    ax[0].annotate(gene_name, xy=(startstop[1], 1),fontsize=11)
 
  
-    plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'.pdf',dpi=600)
+    if savefig:
+        plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'.pdf',dpi=600)
 
+
+def plot_manhatan_genes(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',\
+                     folder_destination='/Users/mirauta/Data/MS/hipsci/TMT/Images',plot_name='manhattan',\
+                      trait=None,trait_labels=None,file_name_results_genome='ensembl_gene_id_qtl_results_genome',\
+                      qtl_results_file='qtl_results_',colors=np.array(['b','k','g','m']), figsize=4, genes_ensembl_id= [],\
+                      p_value_field='p_value_raw',log_flag=True,ylim=None,savefig=False,fplot=None,ax=None):
+    
+    if folder_destination is None:
+        folder_destination =folder_name+'/manhattan/'
+    if not os.path.exists(folder_destination):
+        os.makedirs(folder_destination)
+
+    featureh5=[h5py.File(folder_name+'/'+trait+'_'+file_name_results_genome+'.h5','r')[gene] for gene in genes_ensembl_id]
+
+    genes_names=[fh5['metadata/gene_name'][:][0].astype('U') for fh5 in featureh5]  
+
+    rez={}
+    for fh5 in featureh5:
+        rez[fh5]={}
+        for subf in fh5['data']['position'].keys():
+            rez[fh5][subf] =pd.DataFrame(data=np.array([fh5['data'][dat][subf][:].astype('U') for dat in [p_value_field,'position','snp_id']]).T,\
+               columns=[p_value_field,'position','snp_id'])
+        
+   
+    
+    for fh5 in featureh5:
+        for subf in fh5['data']['position'].keys():
+#            rez[fh5][subf]['position']=rez[fh5][subf]['position'].astype(int)
+            rez[fh5][subf]=rez[fh5][subf].set_index('snp_id',drop=0)
+            
+    
+    
+    snps=np.unique(np.hstack([np.hstack([rez[fh5][subf].index   for subf in fh5['data']['position'].keys()]) for fh5 in featureh5]))
+    for fh5 in featureh5:
+        for subf in fh5['data']['position'].keys():            
+            rez[fh5][subf]=rez[fh5][subf].loc[snps]
+            rez[fh5][subf]['position']=np.array([s.split('_')[1] for s in  rez[fh5][subf].index]).astype(int)
+            rez[fh5][subf][p_value_field][rez[fh5][subf][p_value_field]!=rez[fh5][subf][p_value_field]]=1
+            rez[fh5][subf]['chromosome']=np.array([s.split('_')[0] for s in rez[fh5][subf].index]).astype(int)
+            rez[fh5][subf]['position2']=copy.deepcopy(rez[fh5][subf]['position'])
+            lengths={};curr=0;lengths[1]=0
+            for chr in np.unique(rez[fh5][subf]['chromosome']): 
+                
+                lengths[chr+1]= curr+np.max(rez[fh5][subf]['position'] [rez[fh5][subf]['chromosome'] ==chr])
+                curr=int(lengths[chr+1])
+  
+
+            for ichr, chr in enumerate(np.unique(rez[fh5][subf]['chromosome'])):
+                rez[fh5][subf]['position2'][rez[fh5][subf]['chromosome']==chr]=rez[fh5][subf]['position'][rez[fh5][subf]['chromosome']==chr].values.astype(int)+lengths[chr]
+        rez[fh5]['gene']= fh5['metadata']['start'][:][0]+lengths[fh5['metadata']['chromosome'][:][0]]
+
+    if fplot is None:
+        fig=plt.figure(figsize=(figsize*2,figsize*len(featureh5)))
+        fig.set_facecolor('white')
+        fplot = gridspec.GridSpec(len(featureh5)*6,8)
+        fplot.update(hspace=10, wspace=10)    
+        ax = [plt.subplot(fplot[(i*3):(i*3+3),:10]) for i in np.arange(len(featureh5))]
+    
+    
+    colors2=colors[1:]
+    
+    for indf, a in enumerate(ax):
+        fh5=featureh5[indf]
+        subf=list(fh5['data']['position'].keys())[0] 
+        if ylim is not None: a.set_ylim(ylim)
+        a.spines['top'].set_visible(False);    a.spines['right'].set_visible(False);a.yaxis.set_ticks_position('left'); a.xaxis.set_ticks_position('bottom');a.set_axis_bgcolor('white');
+        a.add_patch(Rectangle((rez[fh5]['gene']-10**7, 0), 2*10**7, 4, facecolor="grey",    alpha=0.99935))
+        a.set_xticks(np.hstack([(np.array(list(lengths.values()))[:-1]+np.array(list(lengths.values()))[1:])/2,lengths[22]]))
+#        order=np.argsort(rez['position2'][indf][0])
+        a.set_xticklabels(np.array(list(lengths.keys())))
+        for subf in fh5['data']['position'].keys():    
+            y=-np.log10(rez[fh5][subf][p_value_field].values.astype(float))
+            for thr in [0,1,2,3,4,6]:
+                a.plot(rez[fh5][subf]['position2'][y>=thr],y[y>=thr],'o',color=colors[indf],markersize=min(thr/1.5+1,4))
+            print(rez[fh5][subf]['snp_id'][np.argmax(y)])
+            print(np.nanmax(y))
+            a.annotate(rez[fh5][subf]['snp_id'][np.argmax(y)], xy=(rez[fh5][subf]['position2'][np.argmax(y)], np.nanmax(y)),fontsize=9)
+            
+        a.set_ylabel(genes_names[indf]+"         \n -log10PV            ",fontsize=10,rotation=0,horizontalalignment= 'center' ,verticalalignment= 'center')
+       
+        
+
+    if savefig:
+        plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'.pdf',dpi=600)
+#colors=np.array(['b','k','g','m'])
+#folder_data='/Users/mirauta/Results/hipsci/QTL_new/';folder_name=folder_data
+#ensembl_genes_id=np.array(['ENSG00000010292','ENSG00000109805', 'ENSG00000113810', 'ENSG00000136824'])
+#trait='param_protein_scaled_peer_log_trans001'
+#genes_ensembl_id=np.intersect1d(ensembl_genes_id ,\
+#                                list(h5py.File(folder_data+'/'+trait+'_ensembl_gene_id_qtl_results_genome.h5','r').keys()))
+#trans_ensembl_id=genes_ensembl_id
+#
+#fig=plt.figure(figsize=(10,10))
+#fig.set_facecolor('white')
+#fplot = gridspec.GridSpec(3*6,10)
+#fplot.update(hspace=10, wspace=10)
+#cis_ensembl_gene_id=trans_ensembl_id[0]
+#ax = [plt.subplot(fplot[:5,:3]) for i in np.arange(len([trait,trait]))]
+#plot_manhatan_alone(folder_name=folder_data,folder_destination=folder_data+'Images_pipeline/'+'/Manhattan/',plot_name='complexes_manhattan',\
+#                    traits=[trait,trait],trait_labels=[trait,trait], gene_ensembl_id= cis_ensembl_gene_id,\
+#                    p_value_field='p_value_raw', savefig=0,fplot=fplot,ax=ax)
+#ax = [plt.subplot(fplot[(i*3):(i*3+3),3:10]) for i in np.arange(len(trans_ensembl_id))]
+#plot_manhatan_genes( genes_ensembl_id= trans_ensembl_id,folder_name=folder_data,\
+#                    folder_destination=folder_data+'Images_pipeline/'+'/Manhattan/',\
+#                    plot_name='complex_manhattan_'+trait,trait=trait,\
+#                    p_value_field='p_value_raw', figsize=4,fplot=fplot,ax=ax)
+#plt.savefig(folder_data+'Images_pipeline/'+'/Manhattan/summary_test.png')
+#
+#plt.show()
 #==============================================================================
 #==============================================================================
 # # 
@@ -359,7 +477,7 @@ def plot_replication_pv(rez=None,folder_data ='/Users/mirauta/Data/MS/hipsci/TMT
     plt.plot(-np.log10(rez[p_value_field]),-np.log10(rez['replicated_p_value']),'o',color='grey',markersize=6)
     thrs=0.001;
     plt.plot(-np.log10(rez[p_value_field][rez['replicated_self_p_value']<thrs]),-np.log10(rez['replicated_p_value'][rez['replicated_self_p_value']<thrs]),'.',markersize=8,color='darkorange')
-    
+    plt.ylim(0,np.nanmax(-np.log10(rez['replicated_p_value'])))
     if red_dots_features is not None:        
         plt.plot(-np.log10(rez[p_value_field][np.in1d(rez['feature_id'],red_dots_features)]), -np.log10(rez['replicated_p_value'][np.in1d(rez['feature_id'],red_dots_features)]),red_dot,markersize=6)#, mfc='none')
         
@@ -395,3 +513,4 @@ def render_mpl_table(data, col_width=3.0, row_height=0.625, font_size=14,
         else:
             cell.set_facecolor(row_colors[k[0]%len(row_colors) ])
     return ax
+a
