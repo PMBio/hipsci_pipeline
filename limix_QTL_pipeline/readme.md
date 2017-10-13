@@ -26,18 +26,7 @@ To create a limix development enviroment
 
 `source activate limix_qtl_develop`
 
-`git clone https://github.com/limix/limix`
+`bash <(curl -fsSL https://raw.githubusercontent.com/limix/limix/develop/install)`
 
-`cd limix`
 
-`git checkout develop`
-
-`conda install -c conda-forge liknorm bgen asciitree hcephes humanfriendly tabulate`
-
-`conda install libffi statsmodels`
-
-`conda install -c anaconda joblib`
-
-`pip install liknorm-py pandas-plink glimix-core limix-core limix-legacy optimix tables --upgrade --upgrade-strategy='only-if-needed'`
-
-`python setup.py develop`
+NB. be sure to be in a folder where you can download files to and there is no folder called limix.
