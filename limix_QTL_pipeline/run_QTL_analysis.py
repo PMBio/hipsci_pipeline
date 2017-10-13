@@ -128,13 +128,17 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 continue
             else :
                 print ('For, feature: ' + feature_id + ' ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
-
+            #If no missing samples we can use the previous SNP Qc information before actually loading data.
+            #This allowes for more efficient blocking and retreaving of data
+            if not contains_missing_samples:
+                snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x not in list(map(str, fail_qc_snps_all)))]
+            
             if(n_perm!=0):
                 bestPermutationPval = np.ones((n_perm), dtype=np.float)
             for snpGroup in utils.chunker(snpQuery, blocksize):
                 snp_idxs = snpGroup['i'].values
                 snp_names = snpGroup['snp'].values
-
+                
                 tested_snp_idxs.extend(snp_idxs)
                 #subset genotype matrix, we cannot subselect at the same time, do in two steps.
                 snp_df = pd.DataFrame(data=bed[snp_idxs,:].compute().transpose(),index=fam.index,columns=snp_names)

@@ -152,6 +152,12 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
             else :
                 print ('For, feature: ' + feature_id + ' ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
 
+            #If no missing samples we can use the previous SNP Qc information before actually loading data.
+            #This allowes for more efficient blocking and retreaving of data
+            if not contains_missing_samples:
+                snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x not in list(map(str, fail_qc_snps_all)))]
+            
+
             if(n_perm!=0):
                 bestPermutationPval = np.ones((n_perm), dtype=np.float)
             for snpGroup in utils.chunker(snpQuery, blocksize):
