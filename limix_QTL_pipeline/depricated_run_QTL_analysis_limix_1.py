@@ -20,10 +20,6 @@ def get_args():
     parser.add_argument('-anno_file','--anno_file', required=True)
     parser.add_argument('-pheno_file','--pheno_file', required=True)
     parser.add_argument('-output_dir','--output_dir', required=True)
-    parser.add_argument('-interaction_terms','--interaction_terms',
-                        help=
-                        'Terms to use for interaction analysis, values are extracted from the covariate matrix.'
-                        'The terms may be split by comma. Interaction are also taken along in the covariate matrix.',required=True,default=None)
     parser.add_argument('-window','--window', required=False,
                         help=
                         'The size of the cis window to take SNPs from.'
@@ -67,7 +63,7 @@ def get_args():
 
     return args
 
-def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, output_dir, interaction_terms, window_size=250000, min_maf=0.05, min_hwe_P=0.001, min_call_rate=0.95, blocksize=1000,
+def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, output_dir, window_size=250000, min_maf=0.05, min_hwe_P=0.001, min_call_rate=0.95, blocksize=1000,
                      cis_mode=True, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, snps_filename=None, feature_filename=None, chromosome='all',
                      covariates_filename=None, kinship_filename=None, sample_mapping_filename=None, extended_anno_filename=None):
     '''Core function to take input and run QTL tests on a given chromosome.'''
@@ -87,20 +83,6 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
             permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'perm_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd),n_perm)
         else :
             permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'perm_results_{}.h5'.format(chromosome),n_perm)
-
-    if(',' in interaction_terms):
-        interaction_terms = interaction_terms.split(',')
-        interaction_terms = tuple(interaction_terms)
-        if(not all(item in covariate_df.columns for item in interaction_terms)):
-            print ('Interaction terms are not found in the covariates')
-            print((interaction_terms))
-            sys.exit()
-    
-    else :
-        if(not (interaction_terms in covariate_df.columns)):
-            print ('Interaction term is not found in the covariates')
-            print((interaction_terms))
-            sys.exit()
     
     #Arrays to store indices of snps tested and pass and fail QC SNPs for features without missingness.
     tested_snp_idxs = []
@@ -151,6 +133,12 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 continue
             else :
                 print ('For, feature: ' + feature_id + ' ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
+
+            #If no missing samples we can use the previous SNP Qc information before actually loading data.
+            #This allowes for more efficient blocking and retreaving of data
+            if not contains_missing_samples:
+                snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x not in list(map(str, fail_qc_snps_all)))]
+            
 
             if(n_perm!=0):
                 bestPermutationPval = np.ones((n_perm), dtype=np.float)
@@ -205,7 +193,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 snp_matrix_DF.index = snp_df.index
                 snp_df = None
 
-                inter = covariate_df.loc[:,interaction_terms]
+
 #                test if the covariates, kinship, snp and phenotype are in the same order
                 if ((all(snp_matrix_DF.index==kinship_df.loc[individual_ids,individual_ids].index) if kinship_df is not None else True) &\
                      (all(phenotype_ds.index==covariate_df.loc[sample2individual_feature['sample'],:].index)if covariate_df is not None else True)&\
@@ -224,17 +212,17 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 else:
                     print ('there is an issue in mapping phenotypes and genotypes')
                     sys.exit()
-                M = np.asarray(cov_matrix, float)
-                LMM = limix.qtl.iscan(snp_matrix_DF.values, phenotype, 'normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M)
+                LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,covs=cov_matrix)
+
                 if(n_perm!=0):
                     if(write_permutations):
                         perm_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['snp_id'] + ['permutation_'+str(x+1) for x in range(n_perm)])
                         perm_df['snp_id'] = snp_matrix_DF.columns
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
                         temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
-                        LMM_perm = limix.qtl.iscan(temp, phenotype, 'normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M)
+                        LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,covs=cov_matrix)
                         perm = 0;
-                        for relevantOutput in utils.chunker(LMM_perm.variant_pvalues.values,snp_matrix_DF.shape[1]) :
+                        for relevantOutput in utils.chunker(LMM_perm.getPv()[0],snp_matrix_DF.shape[1]) :
                             if(write_permutations):
                                 perm_df['permutation_'+str(perm)] = relevantOutput
                             if(bestPermutationPval[perm] > min(relevantOutput)):
@@ -242,9 +230,9 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                             perm+=1
                     else :
                         temp = utils.get_shuffeld_genotypes(snp_matrix_DF,kinship_df, n_perm)
-                        LMM_perm = limix.qtl.iscan(temp, phenotype, 'normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M)
+                        LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,covs=cov_matrix)
                         perm = 0;
-                        for relevantOutput in utils.chunker(LMM_perm.variant_pvalues.values,snp_matrix_DF.shape[1]) :
+                        for relevantOutput in utils.chunker(LMM_perm.getPv()[0],snp_matrix_DF.shape[1]) :
                             if(write_permutations):
                                 perm_df['permutation_'+str(perm)] = relevantOutput
                             if(bestPermutationPval[perm] > min(relevantOutput)):
@@ -255,13 +243,10 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 temp_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['feature_id','snp_id','p_value','beta','n_samples','corr_p_value'])
                 temp_df['snp_id'] = snp_matrix_DF.columns
                 temp_df['feature_id'] = feature_id
-                #temp_df['beta'] = LMM.getBetaSNP()[0]
-                temp_df['beta'] = LMM.variant_effsizes.values
-                #temp_df['p_value'] = LMM.getPv()[0]
-                temp_df['p_value'] = LMM.variant_pvalues.values
+                temp_df['beta'] = LMM.getBetaSNP()[0]
+                temp_df['p_value'] = LMM.getPv()[0]
                 temp_df['n_samples'] = sum(~np.isnan(phenotype))
-                #temp_df['beta_se'] = LMM.getBetaSNPste()[0]
-                temp_df['beta_se'] = LMM.variant_effsizes_se.values
+                temp_df['beta_se'] = LMM.getBetaSNPste()[0]
                 #insert default dummy value
                 temp_df['corr_p_value'] = -1.0
                 if not temp_df.empty :
@@ -326,7 +311,6 @@ if __name__=='__main__':
     gaussianize = args.gaussianize_method
     cis = args.cis
     trans = args.trans
-    interaction_terms = args.interaction_terms
     write_permutations = args.write_permutations
 
     if ((plink is None) and (bgen is None)):
@@ -352,7 +336,7 @@ if __name__=='__main__':
     if(n_perm==0 and write_permutations):
         write_permutations=False
 
-    run_interaction_QTL_analysis(pheno_file, anno_file,geno_prefix, plinkGenotype, output_dir, interaction_terms, int(window_size),
+    run_QTL_analysis(pheno_file, anno_file,geno_prefix, plinkGenotype, output_dir, int(window_size),
                      min_maf=float(min_maf), min_hwe_P=float(min_hwe_P), min_call_rate=float(min_call_rate), blocksize=int(block_size),
                      cis_mode=cis, gaussianize_method = gaussianize, minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), n_perm=int(n_perm), write_permutations = write_permutations, relatedness_score=float(relatedness_score),
                      snps_filename=snps_filename, feature_filename=feature_filename, chromosome=chromosome, covariates_filename=covariates_file,

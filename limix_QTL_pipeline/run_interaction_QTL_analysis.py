@@ -152,6 +152,12 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
             else :
                 print ('For, feature: ' + feature_id + ' ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
 
+            #If no missing samples we can use the previous SNP Qc information before actually loading data.
+            #This allowes for more efficient blocking and retreaving of data
+            if not contains_missing_samples:
+                snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x not in list(map(str, fail_qc_snps_all)))]
+            
+
             if(n_perm!=0):
                 bestPermutationPval = np.ones((n_perm), dtype=np.float)
             for snpGroup in utils.chunker(snpQuery, blocksize):
@@ -224,16 +230,17 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 else:
                     print ('there is an issue in mapping phenotypes and genotypes')
                     sys.exit()
-                LMM = limix.qtl.qtl_test_interaction_lmm(snp_matrix_DF.values, phenotype, inter.values, K=kinship_mat,covs=cov_matrix)
+                M = np.asarray(cov_matrix, float)
+                LMM = limix.qtl.iscan(snp_matrix_DF.values, phenotype, 'normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M)
                 if(n_perm!=0):
                     if(write_permutations):
                         perm_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['snp_id'] + ['permutation_'+str(x+1) for x in range(n_perm)])
                         perm_df['snp_id'] = snp_matrix_DF.columns
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
                         temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
-                        LMM_perm = limix.qtl.qtl_test_interaction_lmm(temp, phenotype, inter.values, K=kinship_mat,covs=cov_matrix)
+                        LMM_perm = limix.qtl.iscan(temp, phenotype, 'normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M)
                         perm = 0;
-                        for relevantOutput in utils.chunker(LMM_perm.getPv()[0],snp_matrix_DF.shape[1]) :
+                        for relevantOutput in utils.chunker(LMM_perm.variant_pvalues.values,snp_matrix_DF.shape[1]) :
                             if(write_permutations):
                                 perm_df['permutation_'+str(perm)] = relevantOutput
                             if(bestPermutationPval[perm] > min(relevantOutput)):
@@ -241,9 +248,9 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                             perm+=1
                     else :
                         temp = utils.get_shuffeld_genotypes(snp_matrix_DF,kinship_df, n_perm)
-                        LMM_perm = limix.qtl.qtl_test_interaction_lmm(temp, phenotype, inter.values, K=kinship_mat,covs=cov_matrix)
+                        LMM_perm = limix.qtl.iscan(temp, phenotype, 'normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M)
                         perm = 0;
-                        for relevantOutput in utils.chunker(LMM_perm.getPv()[0],snp_matrix_DF.shape[1]) :
+                        for relevantOutput in utils.chunker(LMM_perm.variant_pvalues.values,snp_matrix_DF.shape[1]) :
                             if(write_permutations):
                                 perm_df['permutation_'+str(perm)] = relevantOutput
                             if(bestPermutationPval[perm] > min(relevantOutput)):
@@ -254,10 +261,13 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 temp_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['feature_id','snp_id','p_value','beta','n_samples','corr_p_value'])
                 temp_df['snp_id'] = snp_matrix_DF.columns
                 temp_df['feature_id'] = feature_id
-                temp_df['beta'] = LMM.getBetaSNP()[0]
-                temp_df['p_value'] = LMM.getPv()[0]
+                #temp_df['beta'] = LMM.getBetaSNP()[0]
+                temp_df['beta'] = LMM.variant_effsizes.values
+                #temp_df['p_value'] = LMM.getPv()[0]
+                temp_df['p_value'] = LMM.variant_pvalues.values
                 temp_df['n_samples'] = sum(~np.isnan(phenotype))
-                temp_df['beta_se'] = LMM.getBetaSNPste()[0]
+                #temp_df['beta_se'] = LMM.getBetaSNPste()[0]
+                temp_df['beta_se'] = LMM.variant_effsizes_se.values
                 #insert default dummy value
                 temp_df['corr_p_value'] = -1.0
                 if not temp_df.empty :

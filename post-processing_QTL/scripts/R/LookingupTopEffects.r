@@ -4,13 +4,10 @@ library(dplyr)
 
 ##Settings
 baseFolder <- "./"
-writeGlobalSig = T
-writeGlobalSigTop = T
-writeFeatureSig = T
-writeNominalSig = T
-threshold = 0.25
-threshold2 = 0.05
-multipleTestingGlobal = "ST"
+
+snpName = "12_28156081_C_G"
+featureName = ""
+
 # multipleTestingGlobal = "BF"
 #################
 ##Read files.
@@ -43,8 +40,19 @@ if(length(filesToRead)==1){
       for (j in names(tmp)) tmp[[j]][["feature"]] <- j
       observedFeatures = observedFeatures+length(tmp)
       df <- bind_rows(tmp)
-      if(multipleTestingGlobal=="BF"){
-        df <- df[df$corr_p_value<threshold,]
+      if(length(snpName)>0){
+        if(length(which(df$snp_id==snpName))>0){
+          df = df[which(df$snp_id==snpName),]
+        } else {
+          next
+        }
+      }
+      if(featureName!=""){
+        if(length(which(df$feature==featureName))>0){
+          df = df[which(df$feature==featureName),]
+        } else {
+          next
+        }
       }
       if(nrow(df)>0){
         results = rbind(results,df)  
