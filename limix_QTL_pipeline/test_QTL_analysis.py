@@ -39,14 +39,14 @@ def test_QTL_analysis():
     blocksize = 1000
     output_dir = data_path+'limix_QTL_results_kinship_covs/'
     randomSeed = 73
-    chromosome = '1'
+    genetic_range = '1'
     
     ws = 2500000
     
     run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, True, output_dir, ws,
                      min_maf, min_hwe_P, min_call_rate, blocksize, cis_mode=True,
                      seed=randomSeed, n_perm=100, snps_filename=None, feature_filename = None,
-                     chromosome=chromosome, covariates_filename=covariates_filename,
+                     genetic_range=genetic_range, covariates_filename=covariates_filename,
                      kinship_filename=kinship_filename, sample_mapping_filename=individual2sample_filename)
 
     #results_checking_dict = {output_dir+'qtl_results_1.h5':-0.015720008359251764}
@@ -55,22 +55,22 @@ def test_QTL_analysis():
     output_dir = data_path+'limix_QTL_results_kinship_covs_cmd_line/'
     subprocess.call('python run_QTL_analysis.py '
                     '--plink {geno_prefix} '
-                    '--anno_file {anno_file} '
-                    '--pheno_file {pheno_file} '
-                    '--output_dir {output_dir} '
+                    '-af {anno_file} '
+                    '-pf {pheno_file} '
+                    '-od {output_dir} '
                     '--window {ws} '
-                    '--chromosome {chromosome} '
+                    '-gr {genetic_range} '
                     '--covariates_file {covariates_file} '
                     '--kinship_file {kinship_file} '
-                    '--samplemap_file {samplemap_file} '
-                    '--cis'
+                    '-smf {samplemap_file} '
+                    '-c'
                     .format(geno_prefix=geno_prefix,
                             anno_file=anno_filename,
                             pheno_file=pheno_filename,
                             ws=ws,
                             plinkGenotype = True,
                             output_dir=output_dir,
-                            chromosome=chromosome,
+                            genetic_range=genetic_range,
                             covariates_file=covariates_filename,
                             kinship_file=kinship_filename,
                             samplemap_file=individual2sample_filename
@@ -83,14 +83,14 @@ def test_QTL_analysis():
     #run again, without specifying chromosome
     subprocess.call('python run_QTL_analysis.py '
                     '--plink {geno_prefix} '
-                    '--anno_file {anno_file} '
-                    '--pheno_file {pheno_file} '
-                    '--output_dir {output_dir} '
+                    '-af {anno_file} '
+                    '-pf {pheno_file} '
+                    '-od {output_dir} '
                     '--window {ws} '
-                    '--covariates_file {covariates_file} '
-                    '--kinship_file {kinship_file} '
-                    '--samplemap_file {samplemap_file} '
-                    '--cis'
+                    '-cf {covariates_file} '
+                    '-kf {kinship_file} '
+                    '-smf {samplemap_file} '
+                    '-c'
                     .format(geno_prefix=geno_prefix,
                             anno_file=anno_filename,
                             pheno_file=pheno_filename,
