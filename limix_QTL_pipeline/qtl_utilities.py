@@ -5,7 +5,8 @@ import sys
 
 def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         (pheno_filename, anno_filename, geno_prefix, plinkGenotype,minimum_test_samples= 10, relatedness_score=0.95,cis_mode=True, snps_filename=None,
-         feature_filename=None, selection='all',  covariates_filename=None, kinship_filename=None, sample_mapping_filename=None, extended_anno_filename=None):
+         feature_filename=None, snp_feature_filename=None, selection='all', covariates_filename=None, kinship_filename=None, sample_mapping_filename=None,
+         extended_anno_filename=None, feature_variant_covariate_filename=None):
     
     selectionStart = None
     selectionEnd = None
@@ -52,13 +53,13 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
     sample2individual_df = sample2individual_df.loc[sample2individual_df['iid'].map(lambda x: x in list(map(str, fam.index))),:]
     diff = orgSize- sample2individual_df.shape[0]
     orgSize = sample2individual_df.shape[0]
-    print("Dropped: "+str(diff)+" samples becuase they are not present in the genotype file.")
+    print("Dropped: "+str(diff)+" samples because they are not present in the genotype file.")
     
     #Subset linking to relevant phenotypes.
     sample2individual_df = sample2individual_df.loc[np.intersect1d(sample2individual_df.index,phenotype_df.columns),:]
     diff = orgSize- sample2individual_df.shape[0]
     orgSize = sample2individual_df.shape[0]
-    print("Dropped: "+str(diff)+" samples becuase they are not present in the phenotype file.")
+    print("Dropped: "+str(diff)+" samples because they are not present in the phenotype file.")
     #Subset linking vs kinship.
     kinship_df = qtl_loader_utils.get_kinship_df(kinship_filename)
     if kinship_df is not None:
@@ -66,7 +67,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         sample2individual_df = sample2individual_df[sample2individual_df['iid'].map(lambda x: x in list(map(str, kinship_df.index)))]
         diff = orgSize- sample2individual_df.shape[0]
         orgSize = sample2individual_df.shape[0]
-        print("Dropped: "+str(diff)+" samples becuase they are not present in the kinship file.")
+        print("Dropped: "+str(diff)+" samples because they are not present in the kinship file.")
     #Subset linking vs covariates.
     covariate_df = qtl_loader_utils.get_covariate_df(covariates_filename)
     if covariate_df is not None:
@@ -74,7 +75,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         sample2individual_df = sample2individual_df.loc[list(set(sample2individual_df.index) & set(covariate_df.index)),:]
         diff = orgSize- sample2individual_df.shape[0]
         orgSize = sample2individual_df.shape[0]
-        print("Dropped: "+str(diff)+" samples becuase they are not present in the covariate file.")
+        print("Dropped: "+str(diff)+" samples because they are not present in the covariate file.")
 
     ###
     print("Number of samples with genotype & phenotype data: " + str(sample2individual_df.shape[0]))
@@ -93,9 +94,8 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         geneticaly_unique_individuals = get_unique_genetic_samples(kinship_df, relatedness_score);
 
     #Filter covariate data based on the linking files.
-    if covariate_df is not None:
-        covariate_df = covariate_df.loc[sample2individual_df.index,:]
-        minimum_test_samples += covariate_df.shape[1]
+    
+    snp_feature_filter_df= qtl_loader_utils.get_snp_feature_df(snp_feature_filename)
     try:
         feature_filter_df = qtl_loader_utils.get_snp_df(feature_filename)
     except:
@@ -104,7 +104,10 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
     #Do filtering on features.
     if feature_filter_df is not None:
         phenotype_df = phenotype_df.loc[feature_filter_df.index,:]
-        ##Filtering on features and SNPs to test.
+        ##Filtering on features to test.
+    if snp_feature_filter_df is not None:
+        phenotype_df = phenotype_df.loc[np.unique(snp_feature_filter_df['Feature_IDs']),:]
+        ##Filtering on features  to test from the combined feature snp filter.
 
     if ((not cis_mode) and len(set(bim['chrom']))<22) :
         print("Warning, running a trans-analysis on snp data from less than 22 chromosomes.\nTo merge data later the permutation P-values need to be written out.")
@@ -117,7 +120,12 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
     snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
     if snps_filename is not None:
         bim=bim[np.in1d(bim['snp'],snp_filter_df.index)]
+        ##Filtering on SNPs to test from the snp filter.
 
+    if snp_feature_filter_df is not None:
+        bim=bim[np.in1d(bim['snp'],np.unique(snp_feature_filter_df['SNP_IDs']))]
+        ##Filtering on features  to test from the combined feature snp filter.
+    
     #Filtering for sites on non allosomes.
     annotation_df = annotation_df[annotation_df['chromosome'].map(lambda x: x in list(map(str, range(1, 23))))]
     
@@ -135,6 +143,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
             feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
 
     print("Number of features to be tested: " + str(len(feature_list)))
+    print("Total number of variants to be considered: " + str(bim.shape[0]))
     
     if(phenotype_df.shape[1]<minimum_test_samples):
         print("Not enough samples with both genotype & phenotype data, for current number of covariates.")
@@ -149,7 +158,9 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
     else:
         complete_annotation_df = annotation_df
 
-    return [phenotype_df, kinship_df, covariate_df, sample2individual_df,complete_annotation_df,annotation_df,snp_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed, chromosome, selectionStart, selectionEnd]
+    feature_variant_covariate_df = qtl_loader_utils.get_snp_feature_df(feature_variant_covariate_filename) 
+
+    return [phenotype_df, kinship_df, covariate_df, sample2individual_df, complete_annotation_df, annotation_df, snp_filter_df, snp_feature_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed, chromosome, selectionStart, selectionEnd, feature_variant_covariate_df]
 
 def merge_QTL_results(results_dir):
     '''Merge QTL results for individual chromosomes into a combined, indexed
@@ -294,3 +305,36 @@ def qtl_plot(snp_matrix_DF, phenotype,K=None, M=None,LMM=None,snp=None,show_reg_
     else:
         index1= indexunique 
         sb.swarmplot(y=temp['Phenotype donor'].iloc[index1],x=temp['Variant'].iloc[index1])
+
+def do_snp_selection(feature_id, annotation_df, bim, cis_mode, window_size):
+    annotation_sub_df = annotation_df.loc[[feature_id],:]
+    list_of_snp_dfs = []
+    snpQuery = None
+    for feature_id,annotation_ds in annotation_sub_df.iterrows():
+        chrom = str(annotation_ds.loc['chromosome'])
+        start = annotation_ds.loc['start']
+        end = annotation_ds.loc['end']
+        # make robust to features selfpecified back-to-front
+        lowest = min([start,end])
+        highest = max([start,end])
+        if (cis_mode) :
+            # for cis, we sequentially add snps that fall within each region
+            snpQuery = bim.query("chrom == '%s' & pos > %d & pos < %d" % (chrom, lowest-window_size, highest+window_size))
+            list_of_snp_dfs.append(snpQuery)
+        else :
+            # for trans, we sequentially exclude snps that fall within each region
+            if snpQuery is None :
+                #Initial search for trans window.
+                snpQuery = bim.query("(chrom == '%s' & (pos < %d | pos > %d))|chrom != '%s'" % (chrom, lowest-window_size, highest+window_size,chrom))
+            else :
+                #Here we start intersecting regions we want to exclude.
+                snpQuery = snpQuery.query("(chrom == '%s' & (pos < %d | pos > %d))|chrom != '%s'" % (chrom, lowest-window_size, highest+window_size,chrom))
+    
+    if (cis_mode):
+        selected_snp_df = pd.concat(list_of_snp_dfs).drop_duplicates()
+    else:
+        selected_snp_df = snpQuery
+    # filtering for sites on non allosomes.
+    selected_snp_df = selected_snp_df.loc[selected_snp_df['chrom'].map(lambda x: x in list(map(str, range(1, 23))))]
+    
+    return selected_snp_df
