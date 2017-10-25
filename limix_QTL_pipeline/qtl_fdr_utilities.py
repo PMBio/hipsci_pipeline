@@ -13,22 +13,19 @@ def estimate_beta_function_paras(top_pvalues_perm):
     return alpha_para,beta_para
 
 def define_correction_function(top_pvalues_perm):
-    if (len(top_pvalues_perm)<5) :
-        #If only a small number of features don't use the MLE estimator
+    #Always try to use the MLE estimator, new default to 10 permutations.
+    #If the MLE estimator fails we go back to the cruder estimation of the beta distribution.
+    offset = (np.finfo(np.double).tiny*100)
+    ##Replace lowest value with smallest number not 0.
+    top_pvalues_perm[top_pvalues_perm <= 0] = offset
+    ##Replace highest value with highest number not 1.
+    top_pvalues_perm[top_pvalues_perm >= 1] = 1-offset
+    try :
+        alpha_para,beta_para,loc,fscale =  beta.fit(top_pvalues_perm,floc=0,fscale=1)
+    except (scipy.stats._continuous_distns.FitSolverError):
         alpha_para,beta_para = estimate_beta_function_paras(top_pvalues_perm)
-    else :
-        #Use the MLE estimator
-        offset = (np.finfo(np.double).tiny*100)
-        ##Replace lowest value with smallest number not 0.
-        top_pvalues_perm[top_pvalues_perm <= 0] = offset
-        ##Replace highest value with highest number not 1.
-        top_pvalues_perm[top_pvalues_perm >= 1] = 1-offset
-        try :
-            alpha_para,beta_para,loc,fscale =  beta.fit(top_pvalues_perm,floc=0,fscale=1)
-        except (scipy.stats._continuous_distns.FitSolverError):
-            alpha_para,beta_para = estimate_beta_function_paras(top_pvalues_perm)
-        except (scipy.stats._continuous_distns.FitDataError):
-            alpha_para,beta_para = estimate_beta_function_paras(top_pvalues_perm)
+    except (scipy.stats._continuous_distns.FitDataError):
+        alpha_para,beta_para = estimate_beta_function_paras(top_pvalues_perm)
     beta_dist = scipy.stats.beta(alpha_para,beta_para)
     correction_function = lambda x: beta_dist.cdf(x)
     return correction_function
