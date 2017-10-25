@@ -106,7 +106,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 covariateSnp = feature_variant_covariate_df['SNP_IDs'].values[feature_variant_covariate_df['Feature_IDs']==feature_id]
                 if(any(i in  bim['snp'].values for i in covariateSnp)):
                     snpQuery_cov = bim.loc[bim['snp'].map(lambda x: x in list(covariateSnp)),:]
-                    snp_cov_df_t = pd.DataFrame(data=bed[snpQuery_cov['i'],:].compute().transpose(),index=fam.index,columns=snpQuery_cov['snp'],)
+                    snp_cov_df_t = pd.DataFrame(data=bed[snpQuery_cov['i'].values,:].compute().transpose(),index=fam.index,columns=snpQuery_cov['snp'],)
                     snp_cov_df = pd.DataFrame(fill_NaN.fit_transform(snp_cov_df_t))
                     snp_cov_df.index=snp_cov_df_t.index
                     snp_cov_df.columns=snp_cov_df_t.columns
@@ -219,7 +219,6 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                             tmpCovs = tmpCovs.join(snp_cov_df_tmp)
                             #print(tmpCovs)
                             cov_matrix = tmpCovs.values
-                            print(type(cov_matrix))
                         else :
                             snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
                             cov_matrix= np.concatenate((np.ones(snp_cov_df_tmp.shape[0]).reshape(np.ones(snp_cov_df_tmp.shape[0]).shape[0],1),snp_cov_df_tmp.values),1)
@@ -330,7 +329,7 @@ if __name__=='__main__':
     min_hwe_P = args.hardy_weinberg_equilibrium
     min_call_rate = args.call_rate
     block_size = args.block_size
-    n_perm = args.number_of_permutations
+    n_perm = int(args.number_of_permutations)
     snps_filename = args.variant_filter
     snp_feature_filename = args.feature_variant_filter
     feature_variant_covariate_filename = args.feature_variant_covariate
@@ -366,7 +365,7 @@ if __name__=='__main__':
     if(n_perm==0 and write_permutations):
         write_permutations=False
 
-    if(n_perm!=1 and n_perm<10):
+    if(n_perm>1 and n_perm<10):
         n_perm=10
         print("Defaults to 10 permutations, if permutations are only used for calibration please give in 1.")
 
