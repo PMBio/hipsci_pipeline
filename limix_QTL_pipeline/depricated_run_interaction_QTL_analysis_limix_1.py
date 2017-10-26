@@ -20,7 +20,7 @@ def get_args():
     parser.add_argument('--annotation_file','-af', required=True)
     parser.add_argument('--phenotype_file','-pf', required=True)
     parser.add_argument('--output_directory','-od', required=True)
-    parser.add_argument('-interaction_terms','-it',
+    parser.add_argument('--interaction_terms','-it',
                         help=
                         'Terms to use for interaction analysis, values are extracted from the covariate matrix.'
                         'The terms may be split by comma. Interaction are also taken along in the covariate matrix.',required=True,default=None)
