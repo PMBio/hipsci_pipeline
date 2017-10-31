@@ -106,7 +106,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         phenotype_df = phenotype_df.loc[feature_filter_df.index,:]
         ##Filtering on features to test.
     if snp_feature_filter_df is not None:
-        phenotype_df = phenotype_df.loc[np.unique(snp_feature_filter_df['Feature_IDs']),:]
+        phenotype_df = phenotype_df.loc[np.unique(snp_feature_filter_df['feature']),:]
         ##Filtering on features  to test from the combined feature snp filter.
 
     if ((not cis_mode) and len(set(bim['chrom']))<22) :
@@ -123,7 +123,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         ##Filtering on SNPs to test from the snp filter.
 
     if snp_feature_filter_df is not None:
-        bim=bim[np.in1d(bim['snp'],np.unique(snp_feature_filter_df['SNP_IDs']))]
+        bim=bim[np.in1d(bim['snp'],np.unique(snp_feature_filter_df['snp_id']))]
         ##Filtering on features  to test from the combined feature snp filter.
     
     #Filtering for sites on non allosomes.

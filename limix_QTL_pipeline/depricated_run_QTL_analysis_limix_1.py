@@ -50,8 +50,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         snpQuery = utils.do_snp_selection(feature_id, complete_annotation_df, bim, cis_mode, window_size)
         snp_cov_df = None
         if(feature_variant_covariate_df is not None):
-            if(feature_id in feature_variant_covariate_df['Feature_IDs'].values):
-                covariateSnp = feature_variant_covariate_df['SNP_IDs'].values[feature_variant_covariate_df['Feature_IDs']==feature_id]
+            if(feature_id in feature_variant_covariate_df['feature'].values):
+                covariateSnp = feature_variant_covariate_df['snp_id'].values[feature_variant_covariate_df['feature']==feature_id]
                 if(any(i in  bim['snp'].values for i in covariateSnp)):
                     snpQuery_cov = bim.loc[bim['snp'].map(lambda x: x in list(covariateSnp)),:]
                     snp_cov_df_t = pd.DataFrame(data=bed[snpQuery_cov['i'].values,:].compute().transpose(),index=fam.index,columns=snpQuery_cov['snp'],)
@@ -63,7 +63,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         if (len(snpQuery) != 0) and (snp_filter_df is not None):
             snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x in list(map(str, snp_filter_df.index)))]
         if (len(snpQuery) != 0) and (snp_feature_filter_df is not None):
-            snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x in list(snp_feature_filter_df['SNP_IDs'].loc[snp_feature_filter_df['Feature_IDs']==feature_id]))]
+            snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x in list(snp_feature_filter_df['snp_id'].loc[snp_feature_filter_df['feature']==feature_id]))]
         
         if len(snpQuery) != 0:
             phenotype_ds = phenotype_df.loc[feature_id]
