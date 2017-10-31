@@ -143,7 +143,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
             feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
 
     print("Number of features to be tested: " + str(len(feature_list)))
-    print("Total number of variants to be considered: " + str(bim.shape[0]))
+    print("Total number of variants to be considered, before variante QC and feature intersection: " + str(bim.shape[0]))
     
     if(phenotype_df.shape[1]<minimum_test_samples):
         print("Not enough samples with both genotype & phenotype data, for current number of covariates.")
