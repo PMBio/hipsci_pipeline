@@ -3,78 +3,28 @@ import numpy as np
 import limix
 import qtl_output
 import qtl_loader_utils
+import qtl_parse_args
 import qtl_utilities as utils
-import qtl_snp_selection
 from qtl_snp_qc import do_snp_qc
 import glob
 from sklearn.preprocessing import Imputer
-import argparse
 import scipy.stats as scst
 import sys
 
 #V0.1.1
 
-def get_args():
-    parser = argparse.ArgumentParser(description='Run QTL analysis given genotype, phenotype, and annotation.')
-    parser.add_argument('-bgen','--bgen',required=False)
-    parser.add_argument('-plink','--plink',required=False)
-    parser.add_argument('-anno_file','--anno_file', required=True)
-    parser.add_argument('-pheno_file','--pheno_file', required=True)
-    parser.add_argument('-output_dir','--output_dir', required=True)
-    parser.add_argument('-window','--window', required=False,
-                        help=
-                        'The size of the cis window to take SNPs from.'
-                        'The window will extend between:                     '
-                        '    (feature_start - (window))             '
-                        ' and:                                               '
-                        '    (feature_end + (window))               ',default=250000)
-    parser.add_argument('-chromosome','--chromosome',required=False,
-                        help=
-                        'The chromosome or selection on a chromsome to make during analysis. Selection is based on features.'
-                        'Either a chromsome or chromosome:start-end is accepted.',default='all')
-    parser.add_argument('-covariates_file','--covariates_file',required=False,default=None)
-    parser.add_argument('-kinship_file','--kinship_file',required=False,default=None)
-    parser.add_argument('-samplemap_file','--samplemap_file',required=False,default=None)
-    parser.add_argument('-maf','--maf',required=False,default=0.05)
-    parser.add_argument('-hwe','--hwe',required=False,default=0.0001)
-    parser.add_argument('-cr','--cr',required=False,default=0.95)
-    parser.add_argument('-block_size','--block_size',required=False,default=500)
-    parser.add_argument('-n_perm','--n_perm',required=False,default=0)
-    parser.add_argument('-snps','--snps',required=False,default=None)
-    parser.add_argument('-features','--features',required=False,default=None)
-    parser.add_argument('-seed','--seed',required=False)
-    parser.add_argument('-extended_anno_file','--extended_anno_file',
-                        help=
-                        'Secondary annotation file, to add a multiple locations to one feature.'
-                        'This can be used to either link multiple test regions to one feature or exclude multiple regions while testing a feature.', required=False)
-    parser.add_argument('-relatedness_score','--relatedness_score',required=False,default=0.95)
-    parser.add_argument('-write_permutations','--write_permutations',action="store_true",required=False,default=False)
-    parser.add_argument('-minimum_test_samples','--minimum_test_samples',
-                    help="Force a minimal number of samples to test a phenotype, automaticaly adds number of covariates to this number.",required=False,default=10)
-    parser.add_argument("--gaussianize_method",
-                    help="Force normal distribution on phenotypes.", default=None)
-    parser.add_argument("--cis",
-                        action="store_true",
-                        help="Run cis analysis.", default=False)
-    parser.add_argument("--trans",
-                        action="store_true",
-                        help="Run trans analysis.", default=False)
-
-    args = parser.parse_args()
-
-    return args
-
 def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, output_dir, window_size=250000, min_maf=0.05, min_hwe_P=0.001, min_call_rate=0.95, blocksize=1000,
-                     cis_mode=True, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, snps_filename=None, feature_filename=None, chromosome='all',
+                     cis_mode=True, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, feature_variant_covariate_filename = None, snps_filename=None, feature_filename=None, snp_feature_filename=None, genetic_range='all',
                      covariates_filename=None, kinship_filename=None, sample_mapping_filename=None, extended_anno_filename=None):
-    
+    fill_NaN = Imputer(missing_values=np.nan, strategy='mean', axis=0)
+
     '''Core function to take input and run QTL tests on a given chromosome.'''
-    
-    [phenotype_df, kinship_df, covariate_df, sample2individual_df,complete_annotation_df, annotation_df, snp_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed, chromosome, selectionStart, selectionEnd]=\
+
+    [phenotype_df, kinship_df, covariate_df, sample2individual_df,complete_annotation_df, annotation_df, snp_filter_df, snp_feature_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed, chromosome, selectionStart, selectionEnd, feature_variant_covariate_df]=\
     utils.run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(pheno_filename=pheno_filename, anno_filename=anno_filename, geno_prefix=geno_prefix, plinkGenotype=plinkGenotype, cis_mode=cis_mode,
-                      minimum_test_samples= minimum_test_samples,  relatedness_score=relatedness_score, snps_filename=snps_filename, feature_filename=feature_filename, selection=chromosome,
-                     covariates_filename=covariates_filename, kinship_filename=kinship_filename, sample_mapping_filename=sample_mapping_filename, extended_anno_filename=extended_anno_filename)
-    
+                      minimum_test_samples= minimum_test_samples,  relatedness_score=relatedness_score, snps_filename=snps_filename, feature_filename=feature_filename, snp_feature_filename=snp_feature_filename, selection=genetic_range,
+                     covariates_filename=covariates_filename, kinship_filename=kinship_filename, sample_mapping_filename=sample_mapping_filename, extended_anno_filename=extended_anno_filename, feature_variant_covariate_filename=feature_variant_covariate_filename)
+    #
     #Open output files
     qtl_loader_utils.ensure_dir(output_dir)
     if not selectionStart is None :
@@ -99,11 +49,24 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             continue
         data_written = False
 
-        snpQuery = qtl_snp_selection.get_snps(feature_id, complete_annotation_df, bim, cis_mode, window_size)
+        snpQuery = utils.do_snp_selection(feature_id, complete_annotation_df, bim, cis_mode, window_size)
+        snp_cov_df = None
+        if(feature_variant_covariate_df is not None):
+            if(feature_id in feature_variant_covariate_df['feature'].values):
+                covariateSnp = feature_variant_covariate_df['snp_id'].values[feature_variant_covariate_df['feature']==feature_id]
+                if(any(i in  bim['snp'].values for i in covariateSnp)):
+                    snpQuery_cov = bim.loc[bim['snp'].map(lambda x: x in list(covariateSnp)),:]
+                    snp_cov_df_t = pd.DataFrame(data=bed[snpQuery_cov['i'].values,:].compute().transpose(),index=fam.index,columns=snpQuery_cov['snp'],)
+                    snp_cov_df = pd.DataFrame(fill_NaN.fit_transform(snp_cov_df_t))
+                    snp_cov_df.index=snp_cov_df_t.index
+                    snp_cov_df.columns=snp_cov_df_t.columns
+                    snp_cov_df_t = None
 
         if (len(snpQuery) != 0) and (snp_filter_df is not None):
             snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x in list(map(str, snp_filter_df.index)))]
 
+        if (len(snpQuery) != 0) and (snp_feature_filter_df is not None):
+            snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x in list(snp_feature_filter_df['snp_id'].loc[snp_feature_filter_df['feature']==feature_id]))]
         if len(snpQuery) != 0:
 
             phenotype_ds = phenotype_df.loc[feature_id]
@@ -126,12 +89,12 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 print("Feature: "+feature_id+" has no variance in selected individuals.")
                 fail_qc_features.append(feature_id)
                 continue
-            else :
-                print ('For, feature: ' + feature_id + ' ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
             #If no missing samples we can use the previous SNP Qc information before actually loading data.
             #This allowes for more efficient blocking and retreaving of data
             if not contains_missing_samples:
                 snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x not in list(map(str, fail_qc_snps_all)))]
+            
+            print ('For, feature: ' + feature_id + ' ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
             
             if(n_perm!=0):
                 bestPermutationPval = np.ones((n_perm), dtype=np.float)
@@ -175,12 +138,11 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     else:
                         passed_snp_names,failed_snp_names = do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P)
                     snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(passed_snp_names)]]
-                    
+                #print('step 0')
 
                 if len(snp_df.columns) == 0:
                     continue
                 #We could make use of relatedness when imputing.
-                fill_NaN = Imputer(missing_values=np.nan, strategy='mean', axis=0)
                 snp_matrix_DF = pd.DataFrame(fill_NaN.fit_transform(snp_df))
                 snp_matrix_DF.columns = snp_df.columns
                 snp_matrix_DF.index = snp_df.index
@@ -199,6 +161,18 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     cov_matrix =  covariate_df.loc[sample2individual_feature['sample'],:].values if covariate_df is not None else None
 #                    cov_matrix =  covariate_df[covariate_df.columns.values[np.array([('peer' in c)|(c==feature_id) for c in  covariate_df.columns.values])]].loc[sample2individual_feature['sample'],:].values if covariate_df is not None else None
                     
+                    if(snp_cov_df is not None):
+                        tmpCovs = covariate_df.loc[sample2individual_feature['sample'],:] if covariate_df is not None else None
+                        snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
+                        snp_cov_df_tmp.index=sample2individual_feature['sample']
+                        if(tmpCovs is not None):
+                            tmpCovs = tmpCovs.join(snp_cov_df_tmp)
+                            #print(tmpCovs)
+                            cov_matrix = tmpCovs.values
+                        else :
+                            snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
+                            cov_matrix= np.concatenate((np.ones(snp_cov_df_tmp.shape[0]).reshape(np.ones(snp_cov_df_tmp.shape[0]).shape[0],1),snp_cov_df_tmp.values),1)
+                            
                     ### select discrete covariates with at least 6 lines:
                     if covariate_df is not None :
                         if np.unique(cov_matrix).shape[0]==2:
@@ -261,11 +235,12 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     geneticaly_unique_individuals = tmp_unique_individuals
 
             #This we need to change in the written file.
-        if(n_perm!=0 and data_written):
+        if(n_perm>1 and data_written):
             #updated_permuted_p_in_hdf5(bestPermutationPval, feature_id);
             output_writer.apply_pval_correction(feature_id,bestPermutationPval)
         else :
             fail_qc_features.append(feature_id)
+        #print('step 5')
     output_writer.close()
     if(write_permutations):
         permutation_writer.close()
@@ -287,35 +262,36 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         snp_df.ix[tested_snp_idxs,:].to_csv(output_dir+'/snp_metadata_{}.txt'.format(chromosome),sep='\t',index=False)
         annotation_df.loc[feature_list,:].to_csv(output_dir+'/feature_metadata_{}.txt'.format(chromosome),sep='\t')
 
-
 if __name__=='__main__':
-    args = get_args()
+    args = qtl_parse_args.get_args()
     plink  = args.plink
     bgen = args.bgen
-    anno_file = args.anno_file
-    extended_anno_file = args.extended_anno_file
-    pheno_file = args.pheno_file
-    output_dir = args.output_dir
+    anno_file = args.annotation_file
+    extended_anno_file = args.extended_annotation_file
+    pheno_file = args.phenotype_file
+    output_dir = args.output_directory
     window_size = args.window
-    chromosome = args.chromosome
+    genetic_range = args.genomic_range
     covariates_file = args.covariates_file
     kinship_file = args.kinship_file
-    samplemap_file = args.samplemap_file
-    min_maf = args.maf
-    min_hwe_P = args.hwe
-    min_call_rate = args.cr
+    samplemap_file = args.sample_mapping_file
+    min_maf = args.minor_allel_frequency
+    min_hwe_P = args.hardy_weinberg_equilibrium
+    min_call_rate = args.call_rate
     block_size = args.block_size
-    n_perm = args.n_perm
-    snps_filename = args.snps
+    n_perm = int(args.number_of_permutations)
+    snps_filename = args.variant_filter
+    snp_feature_filename = args.feature_variant_filter
+    feature_variant_covariate_filename = args.feature_variant_covariate
     random_seed = args.seed
-    feature_filename = args.features
+    feature_filename = args.feature_filter
     relatedness_score = args.relatedness_score
     minimum_test_samples = args.minimum_test_samples
     gaussianize = args.gaussianize_method
     cis = args.cis
     trans = args.trans
     write_permutations = args.write_permutations
- 
+
     if ((plink is None) and (bgen is None)):
         raise ValueError("No genotypes provided. Either specify a path to a binary plink genotype file or a bgen file.")
     if ((plink is not None) and (bgen is not None)):
@@ -339,8 +315,13 @@ if __name__=='__main__':
     if(n_perm==0 and write_permutations):
         write_permutations=False
 
+    if(n_perm>1 and n_perm<10):
+        n_perm=10
+        print("Defaults to 10 permutations, if permutations are only used for calibration please give in 1.")
+
     run_QTL_analysis(pheno_file, anno_file,geno_prefix, plinkGenotype, output_dir, int(window_size),
                      min_maf=float(min_maf), min_hwe_P=float(min_hwe_P), min_call_rate=float(min_call_rate), blocksize=int(block_size),
-                     cis_mode=cis, gaussianize_method = gaussianize, minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), n_perm=int(n_perm), write_permutations = write_permutations, relatedness_score=float(relatedness_score),
-                     snps_filename=snps_filename, feature_filename=feature_filename, chromosome=chromosome, covariates_filename=covariates_file,
+                     cis_mode=cis, gaussianize_method = gaussianize, minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), 
+                     n_perm=int(n_perm), write_permutations = write_permutations, relatedness_score=float(relatedness_score), feature_variant_covariate_filename = feature_variant_covariate_filename,
+                     snps_filename=snps_filename, feature_filename=feature_filename, snp_feature_filename=snp_feature_filename, genetic_range=genetic_range, covariates_filename=covariates_file,
                      kinship_filename=kinship_file, sample_mapping_filename=samplemap_file, extended_anno_filename=extended_anno_file)

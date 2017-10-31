@@ -15,7 +15,7 @@ class hdf5_writer:
     def add_result_df(self,qtl_results_df):
         assert(len(set(qtl_results_df['feature_id'].values))==1)
         feature_id = qtl_results_df['feature_id'].values[0]
-        column_names = ['snp_id','p_value','beta','beta_se','n_samples','corr_p_value']
+        column_names = ['snp_id','p_value','beta','beta_se','n_samples','empirical_feature_p_value']
         try:
             #get the existing table for this feature
             table = self.h5file.get_node('/'+feature_id)
@@ -36,12 +36,12 @@ class hdf5_writer:
         table = self.h5file.get_node('/'+feature_id)
         if(np.mean(top_pvalues_perm)==1 and np.var(top_pvalues_perm)==0):
             for row in table:
-                row['corr_p_value'] = row['p_value']
+                row['empirical_feature_p_value'] = row['p_value']
                 row.update()
         else:
             correction_function = qtl_fdr_utilities.define_correction_function(top_pvalues_perm)
             for row in table:
-                row['corr_p_value'] = correction_function(row['p_value'])
+                row['empirical_feature_p_value'] = correction_function(row['p_value'])
                 row.update()
         table.flush()
         
@@ -49,7 +49,7 @@ class hdf5_writer:
 class text_writer:
 
     def __init__(self,output_filename):
-        self.column_names = ['feature_id','snp_id','p_value','beta','beta_se','n_samples','corr_p_value']
+        self.column_names = ['feature_id','snp_id','p_value','beta','beta_se','n_samples','empirical_feature_p_value']
         with open(output_filename,'w') as f:
             header = '\t'.join(self.column_names)
             f.write(header+'\n')

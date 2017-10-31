@@ -38,6 +38,13 @@ def get_samplemapping_df(sample_mapping_filename,sample_labels,key_from):
         mapping_df = pd.DataFrame(data=np.vstack([identifiers,identifiers]).T,index=identifiers,columns=['iid','sample'])
     return mapping_df
 
+def get_snp_feature_df(snp_feature_filename):
+    if snp_feature_filename:
+        snp_feature_df = pd.read_csv(snp_feature_filename,sep='\t')
+    else :
+        snp_feature_df = None
+    return snp_feature_df
+
 def get_covariate_df(covariates_filename):
     if covariates_filename:
         covariate_df = pd.read_csv(covariates_filename,sep='\t',index_col=0)
