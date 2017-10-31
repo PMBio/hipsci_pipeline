@@ -3,6 +3,7 @@ import numpy as np
 import limix
 import qtl_output
 import qtl_loader_utils
+import qtl_parse_args
 import qtl_utilities as utils
 from qtl_snp_qc import do_snp_qc
 import glob
@@ -12,62 +13,6 @@ import scipy.stats as scst
 import sys
 
 #V0.1.1
-
-def get_args():
-    parser = argparse.ArgumentParser(description='Run QTL analysis given genotype, phenotype, and annotation.')
-    parser.add_argument('--bgen','-bg',required=False)
-    parser.add_argument('--plink','-pg',required=False)
-    parser.add_argument('--annotation_file','-af', required=True)
-    parser.add_argument('--phenotype_file','-pf', required=True)
-    parser.add_argument('--output_directory','-od', required=True)
-    parser.add_argument('--interaction_terms','-it',
-                        help=
-                        'Terms to use for interaction analysis, values are extracted from the covariate matrix.'
-                        'The terms may be split by comma. Interaction are also taken along in the covariate matrix.',required=True,default=None)
-    parser.add_argument('--window','-w', required=False,
-                        help=
-                        'The size of the cis window to take SNPs from.'
-                        'The window will extend between:                     '
-                        '    (feature_start - (window))             '
-                        ' and:                                               '
-                        '    (feature_end + (window))               ',default=250000)
-    parser.add_argument('--genomic_range','-gr',required=False,
-                        help=
-                        'The chromosome or selection on a chromsome to make during analysis. Selection is based on features.'
-                        'Either a chromsome or chromosome:start-end is accepted.',default='all')
-    parser.add_argument('--covariates_file','-cf',required=False,default=None)
-    parser.add_argument('--kinship_file','-kf',required=False,default=None)
-    parser.add_argument('--sample_mapping_file','-smf',required=False,default=None)
-    parser.add_argument('--minor_alllel_frequency','-maf',required=False,default=0.05)
-    parser.add_argument('--hardy_weinberg_equilibrium','-hwe',required=False,default=0.0001)
-    parser.add_argument('--call_rate','-cr',required=False,default=0.95)
-    parser.add_argument('--block_size','-bs',required=False,default=500)
-    parser.add_argument('--number_of_permutations','-np',required=False,default=10)
-    parser.add_argument('--variant_filter','-vf',required=False,default=None)
-    parser.add_argument('--feature_variant_covariate','-fvc',required=False,default=None)
-    parser.add_argument('--feature_variant_filter','-fvf',required=False,default=None)
-    parser.add_argument('--feature_filter','-ff',required=False,default=None)
-    parser.add_argument('--seed','-s',required=False)
-    parser.add_argument('--extended_annotation_file','-eaf',
-                        help=
-                        'Secondary annotation file, to add a multiple locations to one feature.'
-                        'This can be used to either link multiple test regions to one feature or exclude multiple regions while testing a feature.', required=False)
-    parser.add_argument('--relatedness_score','-rs',required=False,default=0.95)
-    parser.add_argument('--write_permutations','-wp',action="store_true",required=False,default=False)
-    parser.add_argument('--minimum_test_samples','-mts',
-                    help="Force a minimal number of samples to test a phenotype, automaticaly adds number of covariates to this number.",required=False,default=10)
-    parser.add_argument("--gaussianize_method","-gm",
-                    help="Force normal distribution on phenotypes.", default=None)
-    parser.add_argument("--cis","-c",
-                        action="store_true",
-                        help="Run cis analysis.", default=False)
-    parser.add_argument("--trans","-t",
-                        action="store_true",
-                        help="Run trans analysis.", default=False)
-
-    args = parser.parse_args()
-
-    return args
 
 def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, output_dir, interaction_terms, window_size=250000, min_maf=0.05, min_hwe_P=0.001, min_call_rate=0.95, blocksize=1000,
                      cis_mode=True, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, feature_variant_covariate_filename = None, snps_filename=None, feature_filename=None, snp_feature_filename=None, genetic_range='all',
@@ -329,7 +274,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
 
 
 if __name__=='__main__':
-    args = get_args()
+    args = qtl_parse_args.get_interaction_args()
     plink  = args.plink
     bgen = args.bgen
     anno_file = args.annotation_file
@@ -341,7 +286,7 @@ if __name__=='__main__':
     covariates_file = args.covariates_file
     kinship_file = args.kinship_file
     samplemap_file = args.sample_mapping_file
-    min_maf = args.minor_alllel_frequency
+    min_maf = args.minor_allel_frequency
     min_hwe_P = args.hardy_weinberg_equilibrium
     min_call_rate = args.call_rate
     block_size = args.block_size
