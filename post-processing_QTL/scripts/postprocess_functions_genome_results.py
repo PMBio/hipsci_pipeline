@@ -1,12 +1,11 @@
 import sys
 import h5py
 import numpy as np
-import limix.stats.fdr as FDR
 import pandas
 import pandas as pd
 import glob
 import statsmodels.sandbox.stats.multicomp as scst2
-scst2.fdrcorrection0
+
 def local_adjustment(pv, N=1,  method=''):
 
     if method is None:
@@ -151,10 +150,19 @@ def summary_gene_feature_snp_all_files(qtl_results_file='qtl_results_',snp_metad
         except:
             print('chromosome'+str(chr)+' missing')
             continue
+
+        if(ffea.shape[0]==0):
+            print('No features in feature annotation, for block '+chr)
+            continue
+        if(fsnp.shape[0]==0):
+            print('No features in snps annotation, for block '+chr)
+            continue
+
         indexnan=np.where((ffea[feature_report])!=(ffea[feature_report]))[0]
         for i in indexnan:
             ffea[feature_report][i]='gene_'+str(ffea['chromosome'][i])+'_'+str(ffea['start'][i])
         ffea_feature=ffea.set_index('feature_id', drop=False).transpose()
+
         ffea_report_feature=ffea.set_index(feature_report, drop=False).transpose()
         
         count=0

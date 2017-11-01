@@ -10,9 +10,9 @@ range <- 2:101
 writeGlobalSig = T
 writeGeneSig = F
 threshold = 0.05
-multipleTestingGlobal = "BF"
+#multipleTestingGlobal = "BF"
 multipleTestingGlobal = "ST"
-topFeaturesOnly = TRUE
+topFeaturesOnly = FALSE
 
 
 ####

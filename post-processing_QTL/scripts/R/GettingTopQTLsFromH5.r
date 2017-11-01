@@ -3,11 +3,13 @@ library(qvalue)
 library(dplyr)
 
 ##Settings
-baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci/WithoutCorrection/Trans/OutTransGeneMapping/"
+baseFolder <- "./"
 writeGlobalSig = T
 writeGlobalSigTop = T
 writeFeatureSig = T
-threshold = 0.05
+writeNominalSig = T
+threshold = 0.25
+threshold2 = 0.05
 multipleTestingGlobal = "ST"
 # multipleTestingGlobal = "BF"
 #################
@@ -17,7 +19,18 @@ observedFeatures <- 0
 results <- NULL
 filesToRead <- list.files("./",pattern = ".h5",full.names = T)
 if(length(filesToRead)==1){
-  tmp <- h5dump(file = paste(folderName,"/qtl_results_all.h5",sep=""),)
+  tmp <- h5dump(file = "./qtl_results_all.h5")
+  if(length(tmp)>0){
+    for (j in names(tmp)) tmp[[j]][["feature"]] <- j
+    observedFeatures = observedFeatures+length(tmp)
+    df <- bind_rows(tmp)
+    if(multipleTestingGlobal=="BF"){
+      df <- df[df$corr_p_value<threshold,]
+    }
+    if(nrow(df)>0){
+      results = rbind(results,df)  
+    }
+  }
 } else {
   for(i in filesToRead){
     baseName <- gsub(gsub(i,pattern = ".h5",replacement = ""),pattern = "./qtl_results",replacement = "")
@@ -67,3 +80,6 @@ if(writeFeatureSig){
   write.table(paste(baseFolder,"results_gene_level_",threshold,".txt",sep=""),x = results[results$feature_corr_p_value<threshold,],sep="\t",row.names=F,quote=F)
 }
 
+if(writeNominalSig){
+  write.table(paste(baseFolder,"results_nominal_level_",threshold2,".txt",sep=""),x = results[results$p_value<threshold2,],sep="\t",row.names=F,quote=F)
+}
