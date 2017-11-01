@@ -370,7 +370,8 @@ def replication_two_features(path_data =None,  path_data2=None,  traits=None,
  
     for indf, feature in enumerate(feature_ids):
     
-        temp=featureh5[0][feature]['summary_data/min_p_value'][0]
+        try:temp=featureh5[0][feature]['summary_data/min_p_value'][0]
+        except: continue
         if temp<thr:
             
             rez[p_value_field][indf]=temp
