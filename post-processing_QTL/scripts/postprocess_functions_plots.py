@@ -16,6 +16,7 @@ import os
 import scipy.stats as scst
 import statsmodels.sandbox.stats.multicomp as scst2
 sys.path.append('../')
+sys.path.append('/Users/mirauta/Git/hipsci_pipeline/post-processing_QTL/')
 from scripts.postprocess_functions_genome_results import *
 import copy
 
@@ -102,6 +103,94 @@ def plot_summary_onechr_perm(plot_name='qtl_summary_onechr',folder_name=None,fol
     plt.tight_layout()
     plt.savefig(folder_destination+plot_name+'_'+'_'.join(trait_labels)+'.pdf',dpi=600)
     return [gene_list_common,rez]
+
+
+def plot_summary_vs2_2(plot_name='qtl_summary',folder_name=None,folder_destination=None,\
+                 traits=[''],trait_labels=None,
+                 file_name_results_genome='Feature_results_genome', qtl_results_file='QTL_results_',\
+                 colors=np.array(['orange','darkblue','green','m','k']),cis=2.5*10**5,gene_list=None, \
+                 fig=None,axes=None):
+    
+    if folder_destination is None:
+        folder_destination =folder_name
+    if not os.path.exists(folder_destination):
+        os.makedirs(folder_destination)
+
+ 
+    featureh5=[h5py.File(folder_name+'/'+trait+'_'+file_name_results_genome+'.h5','r') for trait in traits]
+ 
+    axes.spines['top'].set_visible(False)
+    axes.spines['right'].set_visible(False)
+    axes.yaxis.set_ticks_position('left')
+    axes.xaxis.set_ticks_position('bottom')
+    def get_distance_tss(gene,fh5):
+        if ( fh5[gene]['metadata/feature_strand'][:].astype('U')[0]=='+'):
+            return fh5[gene]['summary_data/min_p_value_position'][:][0]-fh5[gene]['metadata/start'][:][0]
+        else:
+            return -fh5[gene]['summary_data/min_p_value_position'][:][0]+fh5[gene]['metadata/end'][:][0]
+
+    if gene_list is None:
+        distance_tss=  [np.array([get_distance_tss(gene,fh5) for gene in  np.array(list(fh5.keys()))[ local_adjusted[indf]<10**-3]])\
+                        for indf,fh5 in enumerate(featureh5)]
+    else:
+        distance_tss=  [np.array([get_distance_tss(gene,fh5) for gene in \
+                                  np.intersect1d(gene_list[indf],np.array(list(fh5.keys())))])\
+                        for indf,fh5 in enumerate(featureh5)]
+        
+    axes.hist([np.clip(d[np.isfinite(d)],-cis,cis) for d in distance_tss], bins=7,width=20000,\
+               label=trait_labels,color=colors[:len(traits)],normed=1)
+    plt.ylabel('density',fontsize=13);
+    plt.xlabel('distance from TSS',fontsize=13);
+    plt.legend(loc=2,fontsize=9)
+    plt.xticks(np.linspace(-cis,cis,5),np.array([str(int(l))+'k' for l in np.linspace(-cis,cis,5)/1e3]))
+#    plt.yticks('off')
+                    
+    for f in featureh5: f.close()
+    
+    return 1
+
+def plot_summary_vs2_1(plot_name='qtl_summary',folder_name=None,folder_destination=None,\
+                 traits=[''],trait_labels=None,
+                 file_name_results_genome='Feature_results_genome', qtl_results_file='QTL_results_',\
+                 colors=np.array(['orange','darkblue','green','m','k']),cis=2.5*10**5, gene_list=None,\
+                 fig=None,axes=None):
+    
+    if folder_destination is None:
+        folder_destination =folder_name
+    if not os.path.exists(folder_destination):
+        os.makedirs(folder_destination)
+
+    featureh5=[h5py.File(folder_name+'/'+trait+'_'+file_name_results_genome+'.h5','r') for trait in traits]
+
+    featureh5=[h5py.File(folder_name+'/'+trait+'_'+file_name_results_genome+'.h5','r') for trait in traits]
+
+    if gene_list is None:
+        local_adjusted=np.array([np.array([fh5[gene]['summary_data/min_p_value_local_adjusted'][:][0] for gene in fh5.keys()]) \
+                                 for indf,fh5 in enumerate(featureh5)])
+ 
+    else:
+        local_adjusted=np.array([np.array([fh5[gene]['summary_data/min_p_value_local_adjusted'][:][0] for gene in np.intersect1d(gene_list,np.array(list(fh5.keys())))])for indf,fh5 in enumerate(featureh5)])
+
+    fdr=np.array([5,4,3,2,1])[::-1]
+ 
+    axes.spines['top'].set_visible(False)
+    axes.spines['right'].set_visible(False)
+    axes.yaxis.set_ticks_position('left')
+    axes.xaxis.set_ticks_position('bottom')
+    for iy,yy in enumerate(local_adjusted):
+
+        axes.plot(fdr[::-1] ,[(-np.log10(scst2.fdrcorrection0(yy)[1])>thr).sum() for thr in fdr],color=colors[iy],\
+                  label=trait_labels[iy],lw=3)
+    axes.plot((fdr[-1],fdr[-1]),(0,np.max([(a<10**-2).sum() for a in local_adjusted])) ,'--',color='k',lw=0.5)
+    axes.plot((fdr[0],fdr[-1]),(np.max([(a<10**-2).sum() for a in local_adjusted]),np.max([(a<10**-2).sum() for a in local_adjusted])) ,'--',color='k',lw=0.5)
+    plt.xlabel('-log10 FDR',fontsize=13);
+    plt.ylabel('#pGenes',fontsize=13)
+    plt.xticks(fdr,fdr[::-1])
+    if trait_labels is not None: plt.legend(loc=2,fontsize=9)
+
+    for f in featureh5: f.close()
+    
+    return local_adjusted
 
 
 def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=None,\
@@ -232,10 +321,9 @@ def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=Non
     return local_adjusted
 
 
-
 def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_destination='/Users/mirauta/Data/MS/hipsci/TMT/Images',plot_name='manhattan',\
                         traits=None,trait_labels=None,file_name_results_genome='ensembl_gene_id_qtl_results_genome',   qtl_results_file='qtl_results_',colors=np.array(['b','k','g','m']), figsize=4, gene_ensembl_id= 'ENSG00000182154',\
-                        p_value_field='p_value',log_flag=True,ylim=None,savefig=True,fplot=None,ax=None):
+                        p_value_field='p_value',log_flag=True,ylim=None,savefig=True,fplot=None,ax=None,pdf=True):
     if folder_destination is None:
         folder_destination =folder_name+'/manhattan/'
     if not os.path.exists(folder_destination):
@@ -244,6 +332,7 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
 
     print(traits)
     featureh5=[h5py.File(folder_name+'/'+trait+'_'+file_name_results_genome+'.h5','r')[gene_ensembl_id] for trait in traits]
+    nfeatures=len(featureh5)
     print ('featureh5')   
     rez={}
     temppos=[np.hstack([fh5['data']['position'][f][:] for f in fh5['data']['position'].keys()]) for fh5 in featureh5]
@@ -261,14 +350,13 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
     showxpos=np.array([int(i) for i in np.linspace(min(commonpos),max(commonpos),5)])
     startstop=np.array([featureh5[0]['metadata']['start'][:][0],featureh5[0]['metadata']['end'][:][0]]);
     startstop=(startstop-commonpos.min())/10.0**6
-    print ('test21')
 
     if fplot is None:
-        fig=plt.figure(figsize=(figsize*2,figsize*len(featureh5)))
+        fig=plt.figure(figsize=(figsize*3,figsize*nfeatures))
         fig.set_facecolor('white')
-        fplot = gridspec.GridSpec(len(featureh5)*6,8)
-        fplot.update(hspace=10, wspace=10)    
-        ax = [plt.subplot(fplot[(i*3):(i*3+3),:10]) for i in np.arange(len(featureh5))]
+        fplot = gridspec.GridSpec(nfeatures*3,8)
+#        fplot.update(hspace=200, wspace=10)    
+        ax = [plt.subplot(fplot[(i*3):(i*3+3),:10]) for i in np.arange(nfeatures)]
     
     gene_name=str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])
     
@@ -281,23 +369,25 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
         a.set_xticks( axxpos)
         a.set_xticklabels([str(np.around(i,1))+' Mb' for i in showxpos/10.0**6])
         for indt,t in  enumerate(rez[p_value_field][indf][np.argsort([tt.min() for tt in rez[p_value_field][indf]])[:4]]):
-            if log_flag: a.plot(xpos,-np.log10(t),'o',color=colors[indt],markersize=1.25)
-            else: a.plot(xpos, t,'o',color=colors[indt],markersize=1.25)
-        a.set_ylabel(trait_labels[indf]+'\n'+gene_name+"\n -log10PV            ",fontsize=10,rotation=0,horizontalalignment= 'center' ,verticalalignment= 'center')
+            if log_flag: a.plot(xpos,-np.log10(t),'o',color=colors[indt],markersize=2.25)
+            else: a.plot(xpos, t,'o',color=colors[indt],markersize=2.25)
+        a.set_ylabel(trait_labels[indf]+'\n'+gene_name+"\n -log10PV",labelpad=30,fontsize=10,rotation=0,horizontalalignment= 'center' ,verticalalignment= 'center')
     
         for indt,t in enumerate(rez[p_value_field][indf][np.argsort([tt.min() for tt in rez[p_value_field][indf]])[:4]]): 
             a.plot(xpos[np.argsort(t)[:5]],-np.log10(t[np.argsort(t)[:5]]),'*',color=colors[indt],markersize=5)
             for indf2, a2 in enumerate(ax):
                 if indf!=indf2:
                     for indt2,t2 in enumerate(rez[p_value_field][indf2][np.argsort([tt2.min() for tt2 in rez[p_value_field][indf2]])[:4]]):
-                        a.plot(xpos[np.argsort(t2)[:3]],-np.log10(t[np.argsort(t2)[:3]],),'ro',markersize=2.5)
+                        a.plot(xpos[np.argsort(t2)[:3]],-np.log10(t[np.argsort(t2)[:3]],),'ro',markersize=3)
      
     print (str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0]))
     ax[0].annotate(gene_name, xy=(startstop[1], 1),fontsize=11)
 
- 
+    plt.tight_layout()
     if savefig:
-        plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'.pdf',dpi=600)
+        if pdf:
+            plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'.pdf')
+        plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'.png',dpi=600)
 
 
 def plot_manhatan_genes(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',\
@@ -377,7 +467,7 @@ def plot_manhatan_genes(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',\
             print(np.nanmax(y))
             a.annotate(rez[fh5][subf]['snp_id'][np.argmax(y)], xy=(rez[fh5][subf]['position2'][np.argmax(y)], np.nanmax(y)),fontsize=9)
             
-        a.set_ylabel(genes_names[indf]+"         \n -log10PV            ",fontsize=10,rotation=0,horizontalalignment= 'center' ,verticalalignment= 'center')
+        a.set_ylabel(genes_names[indf]+"\n -log10PV", labelpad=40,fontsize=10,rotation=0,horizontalalignment= 'center' ,verticalalignment= 'center')
        
         
 
@@ -513,4 +603,34 @@ def render_mpl_table(data, col_width=3.0, row_height=0.625, font_size=14,
         else:
             cell.set_facecolor(row_colors[k[0]%len(row_colors) ])
     return ax
- 
+
+    
+def plot_intersect3_venn(folder_dest,qv,thrs,comment='',labels=['eQTL','pQTL_1','pQTL_2']):
+    
+    fig = plt.figure(figsize=(5, 5))
+    fig.patch.set_facecolor('white')
+    mpl.rcParams.update(mpl.rcParamsDefault)
+    axes = fig.add_subplot(1, 1, 1, axisbg='white')
+#    ids=np.intersect1d(e1['ensembl_ID'],np.intersect1d(e2['ensembl_ID'],e3['ensembl_ID']))
+#    qv=np.vstack([np.array([e['eqv_min'][np.in1d(e['ensembl_ID'],ids)]for e in [e1]]),np.array([e['qv_min'][np.in1d(e['ensembl_ID'],ids)]for e in [e2,e3]])])
+#    fracs=[np.sum((ee>np.min(ee[eq>thrs]))&(pp<np.min(pp[pq>thrs]))),np.sum((pp>np.min(pp[pq>thrs]))&(ee<np.min(ee[eq>thrs]))),np.sum((pp>np.min(pp[pq>thrs]))&(ee>np.min(ee[eq>thrs])))]
+    
+    fracs=[np.sum((qv[0]<thrs)&(qv[1]>thrs)&(qv[2]>thrs)),np.sum((qv[0]>thrs)&(qv[1]<thrs)&(qv[2]>thrs)),np.sum((qv[0]<thrs)&(qv[1]<thrs)&(qv[2]>thrs)),\
+    np.sum((qv[0]>thrs)&(qv[1]>thrs)&(qv[2]<thrs)),np.sum((qv[0]<thrs)&(qv[1]>thrs)&(qv[2]<thrs)),np.sum((qv[0]>thrs)&(qv[1]<thrs)&(qv[2]<thrs)),\
+    np.sum((qv[0]<thrs)&(qv[1]<thrs)&(qv[2]<thrs))]
+    
+    v=venn3(subsets=fracs, set_labels =labels)
+    v.get_patch_by_id('100').set_alpha(1.0)
+    v.get_patch_by_id('100').set_color('lightskyblue')
+    #v.get_label_by_id('A').set_text('Set "A"')
+    c = venn3_circles(subsets=fracs, lw=0.5)
+    for text in v.set_labels:    text.set_fontsize(10)
+#    for text in out.subset_labels:    text.set_fontsize(16)
+  
+    #plt.annotate('Unknown set', xy=v.get_label_by_id('100').get_position() - np.array([0, 0.05]), xytext=(-70,-70),
+#             ha='center', textcoords='offset points', bbox=dict(boxstyle='round,pad=0.5', fc='gray', alpha=0.1),
+#             arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5',color='gray'))
+
+    plt.savefig(folder_dest+"venn3_eql_pqtl"+comment+".png",dpi=800)
+      
+    
