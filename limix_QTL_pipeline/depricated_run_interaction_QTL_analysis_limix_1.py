@@ -227,7 +227,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                             perm+=1
                 #print('step 3')
                 #add these results to qtl_results
-                temp_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['feature_id','snp_id','p_value','beta','n_samples','corr_p_value'])
+                temp_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['feature_id','snp_id','p_value','beta','n_samples','empirical_feature_p_value'])
                 temp_df['snp_id'] = snp_matrix_DF.columns
                 temp_df['feature_id'] = feature_id
                 temp_df['beta'] = LMM.getBetaSNP()[0]
@@ -235,7 +235,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 temp_df['n_samples'] = sum(~np.isnan(phenotype))
                 temp_df['beta_se'] = LMM.getBetaSNPste()[0]
                 #insert default dummy value
-                temp_df['corr_p_value'] = -1.0
+                temp_df['empirical_feature_p_value'] = -1.0
                 if not temp_df.empty :
                     data_written = True
                     output_writer.add_result_df(temp_df)
