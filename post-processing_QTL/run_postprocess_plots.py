@@ -95,10 +95,10 @@ if 'replication_pv' in run_type:
                 folder_destination=folder_destination+'Images_pipeline/', figsize=6,red_dots_features=None, \
                 p_value_field=p_value_field,thr=0.01)
     
-    names=['corr_p_value', 'replicated_p_value', 'replicated_self_p_value','beta', 'replicated_beta', 'feature_id', 'gene_name', 'snp_id', 'chromosome', 'strand', 'position', 'ensembl_gene_id']
+    names=['empirical_feature_p_value', 'replicated_p_value', 'replicated_self_p_value','beta', 'replicated_beta', 'feature_id', 'gene_name', 'snp_id', 'chromosome', 'strand', 'position', 'ensembl_gene_id']
     df= pandas.DataFrame(data=np.array([rez_pro_pep[key] for key in names ]).T, index=rez_pro_pep['ensembl_gene_id'],columns=names)
     df.to_csv(path_or_buf=path_data+traits[0]+'_'+traits[1]+'_qtl_results.txt',mode='w', sep='\t', columns=None, header=True, index=True)
-    pandas.DataFrame(df['snp_id'][df['corr_p_value'].values.astype(float)<0.01]).to_csv(path_or_buf=path_data+traits[0]+'_qtl_results_significant_snps.txt',mode='w', sep='\t', columns=None, header=False, index=False)
+    pandas.DataFrame(df['snp_id'][df['empirical_feature_p_value'].values.astype(float)<0.01]).to_csv(path_or_buf=path_data+traits[0]+'_qtl_results_significant_snps.txt',mode='w', sep='\t', columns=None, header=False, index=False)
      
 #    genes1=df.index[(df['p_value'].values.astype(float)<10**-4)&(df['replicated_p_value'].values.astype(float)<10**-4)]
 #print (genes1.shape)

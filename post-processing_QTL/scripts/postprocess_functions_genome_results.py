@@ -127,10 +127,9 @@ def summary_gene_feature_divided(qtl_results_file='qtl_results_',snp_metadata_fi
             fOut.close()
 
     
-def summary_gene_feature_snp_all_files(qtl_results_file='qtl_results_',snp_metadata_file='snp_metadata_',\
-                                       feature_metadata_file='feature_metadata_',\
-                                       output_file='qtl_results_genome_feature_snp',\
-                                       feature_report='ensembl_gene_id',chr_list=None,path_data=None,folder_qtl=None,thr=0.1,df_snp_file=None,df_filter_field='',data_filter_field=''):
+def summary_gene_feature_snp_all_files(qtl_results_file='qtl_results_',snp_metadata_file='snp_metadata_', feature_metadata_file='feature_metadata_', output_file='qtl_results_genome_feature_snp',\
+                                       feature_report='ensembl_gene_id',chr_list=None,path_data=None,folder_qtl=None,thr=0.1,df_snp_file=None,\
+                                       df_filter_field='',data_filter_field=''):
 
     _doc=" aggregates qtl results to feature_report level"
     if chr_list is None:
@@ -167,7 +166,7 @@ def summary_gene_feature_snp_all_files(qtl_results_file='qtl_results_',snp_metad
         
         count=0
         data={}
-        for key in ['corr_p_value','p_value','beta','beta_se','snp_id','feature_id',feature_report, 'n_samples']:
+        for key in ['empirical_feature_p_value','p_value','beta','beta_se','snp_id','feature_id',feature_report, 'n_samples']:
             data[key]=np.zeros(len(list(ffea_report_feature)),dtype='object')+np.nan
 #        if feature_report!='ensembl_gene_id':
 #            data['ensembl_gene_id']=np.zeros(len(list(ffea_report_feature)),dtype='object')+np.nan
@@ -176,7 +175,7 @@ def summary_gene_feature_snp_all_files(qtl_results_file='qtl_results_',snp_metad
 
             features=np.intersect1d(np.array( ffea_report_feature[report_feature].transpose()['feature_id']), frezkeys)
             if len(features) >=1:
-                for key in ['corr_p_value','p_value','beta','beta_se','snp_id', 'n_samples']:
+                for key in ['empirical_feature_p_value','p_value','beta','beta_se','snp_id', 'n_samples']:
                     temp = np.array([frez[f][key] for f in  features ])
                     data[key][ifea]=np.hstack(temp).astype('U')
             data['feature_id'][ifea]=np.hstack([np.repeat(f,len(frez[f][key])) for f in  features ])
@@ -188,7 +187,7 @@ def summary_gene_feature_snp_all_files(qtl_results_file='qtl_results_',snp_metad
 #        if feature_report!='ensembl_gene_id':
 #            if 'ENSG00' in data['feature_id'][ifea]:
 #                data['ensembl_gene_id']=np.array([g.split('.')[0].split('_')[0] for g in data['feature_id']])
-#            data['q_value_corr_p_value']=scst2.fdrcorrection0(
+#            data['q_value_empirical_feature_p_value']=scst2.fdrcorrection0(
         if df_snp_file is None:
             temp=pd.DataFrame(data).iloc[data['p_value'].astype(float)<thr]
             temp.to_csv(path_or_buf=path_data+folder_qtl+'_qtl_results_feature_snp_'+str(thr)+'.txt',\
@@ -227,14 +226,14 @@ def summary_gene_feature_snp(qtl_results_file='qtl_results_',snp_metadata_file='
         
         count=0
         data={}
-        for key in ['corr_p_value','p_value','beta','snp_id','feature_id',feature_report]:
+        for key in ['empirical_feature_p_value','p_value','beta','snp_id','feature_id',feature_report]:
             data[key]=np.zeros(len(list(ffea_report_feature)),dtype='object')+np.nan
             
         for ifea,report_feature in enumerate(np.unique(list(ffea_report_feature))):
 
             features=np.intersect1d(np.array( ffea_report_feature[report_feature].transpose()['feature_id']), frezkeys)
             if len(features) >=1:
-                for key in ['corr_p_value','p_value','beta','snp_id']:
+                for key in ['empirical_feature_p_value','p_value','beta','snp_id']:
                     temp = np.array([frez[f][key] for f in  features ])
                     data[key][ifea]=np.hstack(temp).astype('U')
             data['feature_id'][ifea]=np.hstack([np.repeat(f,len(frez[f][key])) for f in  features ])
@@ -350,7 +349,7 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
 
 def replication_two_features(path_data =None,  path_data2=None,  traits=None,
     qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',
-    results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',p_value_field='corr_p_value',thr=0.01):
+    results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',p_value_field='empirical_feature_p_value',thr=0.01):
     
     _doc=" aggregates qtl results from two traits at feature_report level; return replication of pvalues for trait1  signigicant snps in trait2 "
 
@@ -432,7 +431,7 @@ def replication_two_features(path_data =None,  path_data2=None,  traits=None,
 
 def replication_two_features_allsnps(path_data =None,  path_data2=None,  traits=None,trait_labels=None,
     qtl_results_file='qtl_results_',    snp_metadata_file='snp_metadata_',    feature_metadata_file='feature_metadata_',
-    results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',p_value_field='corr_p_value',thr0=0.001,thr1=0.05):
+    results_genome_file='qtl_results_genome',    feature_report='ensembl_gene_id',p_value_field='empirical_feature_p_value',thr0=0.001,thr1=0.05):
     
     _doc=" aggregates qtl results from two traits at feature_report level; return replication of pvalues for trait1  signigicant snps in trait2 "
 
