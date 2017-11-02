@@ -104,4 +104,4 @@ class QTL_result_hdf5(tables.IsDescription):
     beta = tables.Float64Col()    # double (double-precision)
     beta_se = tables.Float64Col()    # double (double-precision)
     n_samples = tables.Int32Col()    # integer
-    corr_p_value = tables.Float64Col()
+    empirical_feature_p_value = tables.Float64Col()
