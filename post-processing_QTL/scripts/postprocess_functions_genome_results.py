@@ -77,6 +77,8 @@ def summary_gene_feature_divided(qtl_results_file='qtl_results_',snp_metadata_fi
                         for i, ppv in  enumerate(pv2): ppv[ppv!=ppv]=1
                         beta= np.array([frez[f]['beta'] for f in  features ])
                         for i, b in  enumerate(beta): b [b!=b]=1
+                        beta_se= np.array([frez[f]['beta_se']**2 for f in  features ])
+                        for i, b in  enumerate(beta_se): b [b!=b]=1
                         snp_id= np.array([frez[f]['snp_id'] for f in  features ])
                         position= np.array([fsnp[snp_id[indf].astype('U')].transpose()['position'] for indf, f in  enumerate(features) ])
                         for i, p in  enumerate(position): p [p!=p]=1
@@ -99,6 +101,8 @@ def summary_gene_feature_divided(qtl_results_file='qtl_results_',snp_metadata_fi
                         
                         fgdb=fgd.create_group('beta') 
                         for indf,f in enumerate(features): fgdb.create_dataset(f,data=beta[indf])
+                        fgdbse=fgd.create_group('beta_se') 
+                        for indf,f in enumerate(features): fgdbse.create_dataset(f,data=beta_se[indf])
                         fgdpo=fgd.create_group('position') 
                         for indf,f in enumerate(features): fgdpo.create_dataset(f,data=position[indf].astype(int))
                         fgds=fgd.create_group('snp_id') 
@@ -108,6 +112,7 @@ def summary_gene_feature_divided(qtl_results_file='qtl_results_',snp_metadata_fi
                         fgs=fg.create_group('summary_data')
                         fgs.create_dataset('min_p_value',data= np.nanmin(np.hstack(pv)) [None])
                         fgs.create_dataset('min_p_value_beta',data=np.hstack(beta)[np.nanargmin(np.hstack(pv))][None])
+                        fgs.create_dataset('min_p_value_beta_se',data=np.hstack(beta_se)[np.nanargmin(np.hstack(pv))][None])
                         
                         p_bonf=np.nanmin(local_adjustment((pv),method=local_adjustment_method));
                         if p_bonf>1:p_bonf=np.array(1)
@@ -247,7 +252,7 @@ def summary_gene_feature_snp(qtl_results_file='qtl_results_',snp_metadata_file='
 
         
 def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_metadata_', feature_metadata_file='feature_metadata_',output_file='qtl_results_genome',\
-                         feature_report='ensembl_gene_id',chr_list=[9],path_data=None,trait=None, \
+                         feature_report='ensembl_gene_id',chr_list=[9],path_data=None,folder_qtl=None, \
                          p_value_field='p_value',p_value_raw_field='p_value',local_adjustment_method='Bonferroni', exclude_snps=['']):
 
     _doc=" aggregates qtl results to feature_report level"
@@ -256,10 +261,10 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
         print ('chromosome: '+str(chr))
     
         try:
-            frez=h5py.File(path_data+'/'+trait+'/'+qtl_results_file+str(chr)+'.h5','r')
+            frez=h5py.File(path_data+'/'+folder_qtl+'/'+qtl_results_file+str(chr)+'.h5','r')
             frezkeys= np.array([k.replace('_i_','') for k in list(frez.keys())])
-            ffea= pandas.read_table(path_data+'/'+trait+'/'+feature_metadata_file+ str(chr)+'.txt', sep='\t')
-            fsnp= pandas.read_table(path_data+'/'+trait+'/'+snp_metadata_file+ str(chr)+'.txt', sep='\t').set_index('snp_id',drop=False).transpose()
+            ffea= pandas.read_table(path_data+'/'+folder_qtl+'/'+feature_metadata_file+ str(chr)+'.txt', sep='\t')
+            fsnp= pandas.read_table(path_data+'/'+folder_qtl+'/'+snp_metadata_file+ str(chr)+'.txt', sep='\t').set_index('snp_id',drop=False).transpose()
             print (ffea.columns.values)
         except:
             print('chromosome'+str(chr)+' missing')
@@ -277,10 +282,10 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
         
                              
         if iichr==0:
-            fOut=h5py.File(path_data+'/'+trait+'_'+feature_report+'_'+output_file+'.h5','w')
+            fOut=h5py.File(path_data+'/'+folder_qtl+'_'+feature_report+'_'+output_file+'.h5','w')
             iichr=1
         else:
-            fOut=h5py.File(path_data+'/'+trait+'_'+feature_report+'_'+output_file+'.h5','r+')
+            fOut=h5py.File(path_data+'/'+folder_qtl+'_'+feature_report+'_'+output_file+'.h5','r+')
     
         # for each report_feature  create h5 groups
         count=0
@@ -299,6 +304,8 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
                 for i, ppv in  enumerate(pv2): ppv[ppv!=ppv]=1
                 beta= np.array([frez[f]['beta'] for f in  features ])
                 for i, b in  enumerate(beta): b [b!=b]=1
+                beta_se= np.array([frez[f]['beta_se'] for f in  features ])
+                for i, b in  enumerate(beta_se): b [b!=b]=1
                 snp_id= np.array([frez[f]['snp_id'] for f in  features ])
                 position= np.array([fsnp[snp_id[indf].astype('U')].transpose()['position'] for indf, f in  enumerate(features) ])
                 for i, p in  enumerate(position): p [p!=p]=1
@@ -321,6 +328,8 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
                 
                 fgdb=fgd.create_group('beta') 
                 for indf,f in enumerate(features): fgdb.create_dataset(f,data=beta[indf])
+                fgdbse=fgd.create_group('beta_se') 
+                for indf,f in enumerate(features): fgdbse.create_dataset(f,data=beta_se[indf])
                 fgdpo=fgd.create_group('position') 
                 for indf,f in enumerate(features): fgdpo.create_dataset(f,data=position[indf].astype(int))
                 fgds=fgd.create_group('snp_id') 
@@ -330,7 +339,8 @@ def summary_gene_feature(qtl_results_file='qtl_results_',snp_metadata_file='snp_
                 fgs=fg.create_group('summary_data')
                 fgs.create_dataset('min_p_value',data= np.nanmin(np.hstack(pv)) [None])
                 fgs.create_dataset('min_p_value_beta',data=np.hstack(beta)[np.nanargmin(np.hstack(pv))][None])
-                
+                fgs.create_dataset('min_p_value_beta_se',data=np.hstack(beta_se)[np.nanargmin(np.hstack(pv))][None])
+                        
                 p_bonf=np.nanmin(local_adjustment((pv),method=local_adjustment_method));
                 if p_bonf>1:p_bonf=np.array(1)
                 fgs.create_dataset('min_p_value_local_adjusted',data=p_bonf[None])

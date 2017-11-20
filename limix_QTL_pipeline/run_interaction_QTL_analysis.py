@@ -230,10 +230,10 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 temp_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['feature_id','snp_id','p_value','beta','n_samples','empirical_feature_p_value'])
                 temp_df['snp_id'] = snp_matrix_DF.columns
                 temp_df['feature_id'] = feature_id
-                temp_df['beta'] = LMM.variant_effsizes
-                temp_df['p_value'] = LMM.variant_pvalues
+                temp_df['beta'] = np.asarray(LMM.variant_effsizes)
+                temp_df['p_value'] = np.asarray(LMM.variant_pvalues)
                 temp_df['n_samples'] = sum(~np.isnan(phenotype))
-                temp_df['beta_se'] = LMM.variant_effsizes_se
+                temp_df['beta_se'] = np.asarray(LMM.variant_effsizes_se)
                 #insert default dummy value
                 temp_df['empirical_feature_p_value'] = -1.0
                 if not temp_df.empty :
