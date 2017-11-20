@@ -149,8 +149,7 @@ def plot_summary_vs2_2(plot_name='qtl_summary',folder_name=None,folder_destinati
     
     return 1
 
-def plot_summary_vs2_1(plot_name='qtl_summary',folder_name=None,folder_destination=None,\
-                 traits=[''],trait_labels=None,
+def plot_summary_vs2_1(plot_name='qtl_summary',folder_name=None,folder_destination=None,traits=[''],trait_labels=None,
                  file_name_results_genome='Feature_results_genome', qtl_results_file='QTL_results_',\
                  colors=np.array(['orange','darkblue','green','m','k']),cis=2.5*10**5, gene_list=None,\
                  fig=None,axes=None):
@@ -193,8 +192,7 @@ def plot_summary_vs2_1(plot_name='qtl_summary',folder_name=None,folder_destinati
     return local_adjusted
 
 
-def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=None,\
-                 traits=[''],trait_labels=None,
+def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=None, traits=[''],trait_labels=None,
                  file_name_results_genome='Feature_results_genome', qtl_results_file='QTL_results_',\
                  colors=np.array(['orange','darkblue','green','m','k']),cis=2.5*10**5, figsize=(12,12),\
                                 gene_list=None,\
@@ -322,7 +320,7 @@ def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=Non
 
 
 def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_destination='/Users/mirauta/Data/MS/hipsci/TMT/Images',plot_name='manhattan',\
-                        traits=None,trait_labels=None,file_name_results_genome='ensembl_gene_id_qtl_results_genome',   qtl_results_file='qtl_results_',colors=np.array(['b','k','g','m']), figsize=4, gene_ensembl_id= 'ENSG00000182154',\
+                        traits=None,trait_labels=None,file_name_results_genome='ensembl_gene_id_qtl_results_genome',   qtl_results_file='qtl_results_',colors=np.array(['k','b','g','m']), figsize=4, gene_ensembl_id= 'ENSG00000182154',\
                         p_value_field='p_value',log_flag=True,ylim=None,savefig=True,fplot=None,ax=None,pdf=True):
     if folder_destination is None:
         folder_destination =folder_name+'/manhattan/'
@@ -330,10 +328,10 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
         os.makedirs(folder_destination)
 
 
-    print(traits)
+#    print(traits)
     featureh5=[h5py.File(folder_name+'/'+trait+'_'+file_name_results_genome+'.h5','r')[gene_ensembl_id] for trait in traits]
     nfeatures=len(featureh5)
-    print ('featureh5')   
+#    print ('featureh5')   
     rez={}
     temppos=[np.hstack([fh5['data']['position'][f][:] for f in fh5['data']['position'].keys()]) for fh5 in featureh5]
     temp=np.unique(np.hstack(temppos).flatten(),return_counts=1); 
@@ -380,14 +378,16 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
                     for indt2,t2 in enumerate(rez[p_value_field][indf2][np.argsort([tt2.min() for tt2 in rez[p_value_field][indf2]])[:4]]):
                         a.plot(xpos[np.argsort(t2)[:3]],-np.log10(t[np.argsort(t2)[:3]],),'ro',markersize=3)
      
-    print (str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0]))
-    ax[0].annotate(gene_name, xy=(startstop[1], 1),fontsize=11)
+#    print (str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0]))
+#    ax[0].annotate(gene_name, xy=(startstop[1], 1),fontsize=11)
 
-    plt.tight_layout()
+#    plt.tight_layout()
     if savefig:
         if pdf:
-            plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'.pdf')
-        plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'.png',dpi=600)
+            plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']\
+['gene_name'][:].astype('U')[0])+'.pdf',bbox_inches='tight')
+        plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']\
+['gene_name'][:].astype('U')[0])+'.png',dpi=600,bbox_inches='tight')
 
 
 def plot_manhatan_genes(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',\
@@ -463,9 +463,9 @@ def plot_manhatan_genes(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',\
             y=-np.log10(rez[fh5][subf][p_value_field].values.astype(float))
             for thr in [0,1,2,3,4,6]:
                 a.plot(rez[fh5][subf]['position2'][y>=thr],y[y>=thr],'o',color=colors[indf],markersize=min(thr/1.5+1,4))
-            print(rez[fh5][subf]['snp_id'][np.argmax(y)])
-            print(np.nanmax(y))
-            a.annotate(rez[fh5][subf]['snp_id'][np.argmax(y)], xy=(rez[fh5][subf]['position2'][np.argmax(y)], np.nanmax(y)),fontsize=9)
+#            print(rez[fh5][subf]['snp_id'][np.argmax(y)])
+#            print(np.nanmax(y))
+#            a.annotate(rez[fh5][subf]['snp_id'][np.argmax(y)], xy=(rez[fh5][subf]['position2'][np.argmax(y)], np.nanmax(y)),fontsize=9)
             
         a.set_ylabel(genes_names[indf]+"\n -log10PV", labelpad=40,fontsize=10,rotation=0,horizontalalignment= 'center' ,verticalalignment= 'center')
        
