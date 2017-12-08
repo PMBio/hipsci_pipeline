@@ -161,9 +161,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     if(snp_cov_df is not None and cov_matrix is not None):
                         snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
                         snp_cov_df_tmp.index=sample2individual_feature['sample']
-                        tmpCovs = cov_matrix
-                        tmpCovs = tmpCovs.join(snp_cov_df_tmp)
-                        cov_matrix = tmpCovs.values
+                        cov_matrix = np.concatenate((cov_matrix,snp_cov_df_tmp.values),1)
                     elif snp_cov_df is not None :
                         snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
                         snp_cov_df_tmp.index=sample2individual_feature['sample']
