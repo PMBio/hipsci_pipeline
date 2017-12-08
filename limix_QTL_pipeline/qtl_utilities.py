@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import qtl_loader_utils
 import sys
+import scipy.stats as scst
+
 
 def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         (pheno_filename, anno_filename, geno_prefix, plinkGenotype,minimum_test_samples= 10, relatedness_score=0.95,cis_mode=True, snps_filename=None,
@@ -194,7 +196,14 @@ def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
     if method=='log_standardize':
         temp=np.log(1+phenotype)
         return (temp-np.nanmean(temp))/np.nanstd(temp)
-                
+
+    if method=='arcsin':
+        return np.arcsin(np.sqrt(phenotype))
+    
+    if method=='arcsin_standardize':
+        temp=np.arcsin(np.sqrt(phenotype))
+        return (temp-np.nanmean(temp))/np.nanstd(temp)
+    
     if method=='standardize':
         return (phenotype-np.nanmean(phenotype))/np.nanstd(phenotype)
                         
@@ -230,7 +239,7 @@ def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
         return phenotypenorm  
     
     else:
-        print ('methods are: log, log_standardize, standardize, gaussnorm, ranknorm, ranknorm_duplicates')
+        print ('methods are: log, log_standardize, standardize, gaussnorm, ranknorm, ranknorm_duplicates, arcsin, arcsin_standardize')
     
 
 

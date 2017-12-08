@@ -161,23 +161,22 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     cov_matrix =  covariate_df.loc[sample2individual_feature['sample'],:].values if covariate_df is not None else None
 #                    cov_matrix =  covariate_df[covariate_df.columns.values[np.array([('peer' in c)|(c==feature_id) for c in  covariate_df.columns.values])]].loc[sample2individual_feature['sample'],:].values if covariate_df is not None else None
                     
-                    if(snp_cov_df is not None):
-                        tmpCovs = covariate_df.loc[sample2individual_feature['sample'],:] if covariate_df is not None else None
+                    if(snp_cov_df is not None and cov_matrix is not None):
                         snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
                         snp_cov_df_tmp.index=sample2individual_feature['sample']
-                        if(tmpCovs is not None):
-                            tmpCovs = tmpCovs.join(snp_cov_df_tmp)
-                            #print(tmpCovs)
-                            cov_matrix = tmpCovs.values
-                        else :
-                            snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
-                            cov_matrix= np.concatenate((np.ones(snp_cov_df_tmp.shape[0]).reshape(np.ones(snp_cov_df_tmp.shape[0]).shape[0],1),snp_cov_df_tmp.values),1)
-                            
-                    ### select discrete covariates with at least 6 lines:
-                    if covariate_df is not None :
-                        if np.unique(cov_matrix).shape[0]==2:
-                            cov_matrix=cov_matrix[:,np.nansum(cov_matrix==1,0)>6]
+                        cov_matrix = np.concatenate((cov_matrix,snp_cov_df_tmp.values),1)
+                    elif snp_cov_df is not None :
+                        snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
+                        snp_cov_df_tmp.index=sample2individual_feature['sample']
+                        cov_matrix = snp_cov_df_tmp.values
+                        #cov_matrix = np.concatenate((np.ones(snp_cov_df_tmp.shape[0]).reshape(np.ones(snp_cov_df_tmp.shape[0]).shape[0],1),snp_cov_df_tmp.values),1)
 
+                    ### select discrete covariates with at least 6 lines & add vector of one's if necessary:
+                    if cov_matrix is not None :
+                        #if np.unique(cov_matrix).shape[0]==2:
+                        #    cov_matrix=cov_matrix[:,np.nansum(cov_matrix==1,0)>6]
+                        if np.isfinite(cov_matrix.sum(0)/cov_matrix.std(0)).all():
+                            cov_matrix = np.concatenate((np.ones(cov_matrix.shape[0]).reshape(np.ones(cov_matrix.shape[0]).shape[0],1),cov_matrix.values),1)
                     phenotype = utils.force_normal_distribution(phenotype_ds.values,method=gaussianize_method) if gaussianize_method is not None else phenotype_ds.values
                 else:
                     print ('there is an issue in mapping phenotypes and genotypes')

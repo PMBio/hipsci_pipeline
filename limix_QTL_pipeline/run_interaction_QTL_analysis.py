@@ -174,21 +174,22 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     cov_matrix =  covariate_df.loc[sample2individual_feature['sample'],:].values if covariate_df is not None else None
 #                    cov_matrix =  covariate_df[covariate_df.columns.values[np.array([('peer' in c)|(c==feature_id) for c in  covariate_df.columns.values])]].loc[sample2individual_feature['sample'],:].values if covariate_df is not None else None
                     
-                    if(snp_cov_df is not None):
-                        tmpCovs = covariate_df.loc[sample2individual_feature['sample'],:] if covariate_df is not None else None
+                    if(snp_cov_df is not None and cov_matrix is not None):
                         snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
                         snp_cov_df_tmp.index=sample2individual_feature['sample']
-                        if(tmpCovs is not None):
-                            tmpCovs = tmpCovs.join(snp_cov_df_tmp)
-                            #print(tmpCovs)
-                            cov_matrix = tmpCovs.values
-                        else :
-                            snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
-                            cov_matrix= np.concatenate((np.ones(snp_cov_df_tmp.shape[0]).reshape(np.ones(snp_cov_df_tmp.shape[0]).shape[0],1),snp_cov_df_tmp.values),1)
-                    ### select discrete covariates with at least 6 lines:
-                    if covariate_df is not None :
-                        if np.unique(cov_matrix).shape[0]==2:
-                            cov_matrix=cov_matrix[:,np.nansum(cov_matrix==1,0)>6]
+                        cov_matrix = np.concatenate((cov_matrix,snp_cov_df_tmp.values),1)
+                    elif snp_cov_df is not None :
+                        snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
+                        snp_cov_df_tmp.index=sample2individual_feature['sample']
+                        cov_matrix = snp_cov_df_tmp.values
+                        #cov_matrix = np.concatenate((np.ones(snp_cov_df_tmp.shape[0]).reshape(np.ones(snp_cov_df_tmp.shape[0]).shape[0],1),snp_cov_df_tmp.values),1)
+
+                    ### select discrete covariates with at least 6 lines & add vector of one's if necessary:
+                    if cov_matrix is not None :
+                        #if np.unique(cov_matrix).shape[0]==2:
+                        #    cov_matrix=cov_matrix[:,np.nansum(cov_matrix==1,0)>6]
+                        if np.isfinite(cov_matrix.sum(0)/cov_matrix.std(0)).all():
+                            cov_matrix = np.concatenate((np.ones(cov_matrix.shape[0]).reshape(np.ones(cov_matrix.shape[0]).shape[0],1),cov_matrix.values),1)
                     phenotype = utils.force_normal_distribution(phenotype_ds.values,method=gaussianize_method) if gaussianize_method is not None else phenotype_ds.values
                 else:
                     print ('there is an issue in mapping phenotypes and genotypes')
@@ -206,8 +207,8 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                         perm_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['snp_id'] + ['permutation_'+str(x+1) for x in range(n_perm)])
                         perm_df['snp_id'] = snp_matrix_DF.columns
                     if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
-                        temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm,verbose=False)
-                        LMM_perm = limix.qtl.iscan(temp, phenotype, 'normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M)
+                        temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
+                        LMM_perm = limix.qtl.iscan(temp, phenotype, 'normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M,verbose=False)
                         perm = 0;
                         for relevantOutput in utils.chunker(LMM_perm.variant_pvalues.values,snp_matrix_DF.shape[1]) :
                             if(write_permutations):
