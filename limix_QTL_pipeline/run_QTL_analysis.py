@@ -177,7 +177,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     if cov_matrix is not None :
                         #if np.unique(cov_matrix).shape[0]==2:
                         #    cov_matrix=cov_matrix[:,np.nansum(cov_matrix==1,0)>6]
-                        if np.isfinite(cov_matrix.sum(0)/cov_matrix.std(0)):
+                        if np.isfinite(cov_matrix.sum(0)/cov_matrix.std(0)).all():
                             cov_matrix = np.concatenate((np.ones(cov_matrix.shape[0]).reshape(np.ones(cov_matrix.shape[0]).shape[0],1),cov_matrix.values),1)
                     phenotype = utils.force_normal_distribution(phenotype_ds.values,method=gaussianize_method) if gaussianize_method is not None else phenotype_ds.values
                 else:
