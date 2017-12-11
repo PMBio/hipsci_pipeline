@@ -249,7 +249,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
         if(n_perm>1 and data_written):
             #updated_permuted_p_in_hdf5(bestPermutationPval, feature_id);
             output_writer.apply_pval_correction(feature_id,bestPermutationPval)
-        else :
+        if not data_written :
             fail_qc_features.append(feature_id)
         #print('step 5')
     output_writer.close()
