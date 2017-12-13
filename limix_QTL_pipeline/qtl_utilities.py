@@ -4,9 +4,8 @@ import qtl_loader_utils
 import sys
 import scipy.stats as scst
 
-
 def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
-        (pheno_filename, anno_filename, geno_prefix, plinkGenotype,minimum_test_samples= 10, relatedness_score=0.95,cis_mode=True, snps_filename=None,
+        (pheno_filename, anno_filename, geno_prefix, plinkGenotype,minimum_test_samples= 10, relatedness_score=0.95,cis_mode=True, skipAutosomeFiltering = False, snps_filename=None,
          feature_filename=None, snp_feature_filename=None, selection='all', covariates_filename=None, kinship_filename=None, sample_mapping_filename=None,
          extended_anno_filename=None, feature_variant_covariate_filename=None):
     
@@ -30,15 +29,30 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
     ''' function to take input and intersect sample and genotype.'''
     #Load input data files & filter for relevant data
     #Load input data filesf
+
+    phenotype_df = qtl_loader_utils.get_phenotype_df(pheno_filename)
+    annotation_df = qtl_loader_utils.get_annotation_df(anno_filename)
+
     if(plinkGenotype):
         bim,fam,bed = qtl_loader_utils.get_genotype_data(geno_prefix)
+        annotation_df.replace(['X', 'Y', 'XY', 'MT'], ['23', '24', '25', '26'],inplace=True)
+        if chromosome=='X' :
+            chromosome = '23'
+        elif chromosome=='Y':
+            chromosome = '24'
+        elif chromosome=='XY':
+            chromosome=='25'
+        elif chromosome=='MT':
+            chromosome=='26'
+         #X  -> 23
+         #Y  -> 24
+         #XY -> 25
+         #MT -> 26
 
     else :
         geno_prefix+='.bgen'
         print(geno_prefix)
     print("Intersecting data.")
-    phenotype_df = qtl_loader_utils.get_phenotype_df(pheno_filename)
-    annotation_df = qtl_loader_utils.get_annotation_df(anno_filename)
 
     if(annotation_df.shape[0] != annotation_df.groupby(annotation_df.index).first().shape[0]): 
         print("Only one location per feature supported. If multiple locations are needed please look at: --extended_anno_file")
@@ -116,7 +130,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
 
     if(cis_mode):
         #Remove features from the annotation that are on chromosomes which are not present anyway.
-        annotation_df = annotation_df = annotation_df[np.in1d(annotation_df['chromosome'],list(set(bim['chrom'])))]
+        annotation_df = annotation_df[np.in1d(annotation_df['chromosome'],list(set(bim['chrom'])))]
 
     #Prepare to filter on snps.
     snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
@@ -129,7 +143,8 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         ##Filtering on features  to test from the combined feature snp filter.
     
     #Filtering for sites on non allosomes.
-    annotation_df = annotation_df[annotation_df['chromosome'].map(lambda x: x in list(map(str, range(1, 23))))]
+    if not skipAutosomeFiltering :
+        annotation_df = annotation_df[annotation_df['chromosome'].map(lambda x: x in list(map(str, range(1, 23))))]
     
     #Determine features to be tested
     if chromosome=='all':
@@ -315,7 +330,7 @@ def qtl_plot(snp_matrix_DF, phenotype,K=None, M=None,LMM=None,snp=None,show_reg_
         index1= indexunique 
         sb.swarmplot(y=temp['Phenotype donor'].iloc[index1],x=temp['Variant'].iloc[index1])
 
-def do_snp_selection(feature_id, annotation_df, bim, cis_mode, window_size):
+def do_snp_selection(feature_id, annotation_df, bim, cis_mode, window_size, skipAutosomeFiltering = False):
     annotation_sub_df = annotation_df.loc[[feature_id],:]
     list_of_snp_dfs = []
     snpQuery = None
@@ -343,7 +358,8 @@ def do_snp_selection(feature_id, annotation_df, bim, cis_mode, window_size):
         selected_snp_df = pd.concat(list_of_snp_dfs).drop_duplicates()
     else:
         selected_snp_df = snpQuery
-    # filtering for sites on non allosomes.
-    selected_snp_df = selected_snp_df.loc[selected_snp_df['chrom'].map(lambda x: x in list(map(str, range(1, 23))))]
+    if not skipAutosomeFiltering :
+        # filtering for sites on non allosomes.
+        selected_snp_df = selected_snp_df.loc[selected_snp_df['chrom'].map(lambda x: x in list(map(str, range(1, 23))))]
     
     return selected_snp_df

@@ -15,14 +15,14 @@ import sys
 #V0.1.1
 
 def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, output_dir, interaction_terms, window_size=250000, min_maf=0.05, min_hwe_P=0.001, min_call_rate=0.95, blocksize=1000,
-                     cis_mode=True, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, feature_variant_covariate_filename = None, snps_filename=None, feature_filename=None, snp_feature_filename=None, genetic_range='all',
+                     cis_mode=True, skipAutosomeFiltering = False, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, feature_variant_covariate_filename = None, snps_filename=None, feature_filename=None, snp_feature_filename=None, genetic_range='all',
                      covariates_filename=None, kinship_filename=None, sample_mapping_filename=None, extended_anno_filename=None):
     fill_NaN = Imputer(missing_values=np.nan, strategy='mean', axis=0)
 
     '''Core function to take input and run QTL tests on a given chromosome.'''
     
     [phenotype_df, kinship_df, covariate_df, sample2individual_df,complete_annotation_df, annotation_df, snp_filter_df, snp_feature_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed, chromosome, selectionStart, selectionEnd, feature_variant_covariate_df]=\
-    utils.run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(pheno_filename=pheno_filename, anno_filename=anno_filename, geno_prefix=geno_prefix, plinkGenotype=plinkGenotype, cis_mode=cis_mode,
+    utils.run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(pheno_filename=pheno_filename, anno_filename=anno_filename, geno_prefix=geno_prefix, plinkGenotype=plinkGenotype, cis_mode=cis_mode, skipAutosomeFiltering = skipAutosomeFiltering,
                       minimum_test_samples= minimum_test_samples,  relatedness_score=relatedness_score, snps_filename=snps_filename, feature_filename=feature_filename, snp_feature_filename=snp_feature_filename, selection=genetic_range,
                      covariates_filename=covariates_filename, kinship_filename=kinship_filename, sample_mapping_filename=sample_mapping_filename, extended_anno_filename=extended_anno_filename, feature_variant_covariate_filename=feature_variant_covariate_filename)
     #
@@ -62,7 +62,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
             print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
             continue
         data_written = False
-        snpQuery = utils.do_snp_selection(feature_id, complete_annotation_df, bim, cis_mode, window_size)
+        snpQuery = utils.do_snp_selection(feature_id, complete_annotation_df, bim, cis_mode, window_size, skipAutosomeFiltering)
         snp_cov_df = None
         if(feature_variant_covariate_df is not None):
             if(feature_id in feature_variant_covariate_df['feature'].values):
@@ -304,6 +304,7 @@ if __name__=='__main__':
     trans = args.trans
     interaction_terms = args.interaction_terms
     write_permutations = args.write_permutations
+    includeAllChromsomes = args.no_chromosome_filter
 
     if ((plink is None) and (bgen is None)):
         raise ValueError("No genotypes provided. Either specify a path to a binary plink genotype file or a bgen file.")
@@ -333,7 +334,7 @@ if __name__=='__main__':
         print("Defaults to 10 permutations, if permutations are only used for calibration please give in 1.")
     run_interaction_QTL_analysis(pheno_file, anno_file,geno_prefix, plinkGenotype, output_dir, interaction_terms, int(window_size),
                      min_maf=float(min_maf), min_hwe_P=float(min_hwe_P), min_call_rate=float(min_call_rate), blocksize=int(block_size),
-                     cis_mode=cis, gaussianize_method = gaussianize, minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), 
+                     cis_mode=cis, skipAutosomeFiltering= includeAllChromsomes, gaussianize_method = gaussianize, minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), 
                      n_perm=int(n_perm), write_permutations = write_permutations, relatedness_score=float(relatedness_score), feature_variant_covariate_filename = feature_variant_covariate_filename,
                      snps_filename=snps_filename, feature_filename=feature_filename, snp_feature_filename=snp_feature_filename, genetic_range=genetic_range, covariates_filename=covariates_file,
                      kinship_filename=kinship_file, sample_mapping_filename=samplemap_file, extended_anno_filename=extended_anno_file)
