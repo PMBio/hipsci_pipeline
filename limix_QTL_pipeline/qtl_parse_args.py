@@ -47,6 +47,10 @@ def get_args():
     parser.add_argument("--trans","-t",
                         action="store_true",
                         help="Run trans analysis.", default=False)
+    parser.add_argument("--no_chromosome_filter","-ncf",
+                        action="store_true",
+                        help="Don't filter on autosomes. By default only autosomes are selected, this is where the defaults are designed for."
+                        "When running on X/Y/MT please be aware that these defaults might not be appropriate.", default=False)
     args = parser.parse_args()
     return args
 
@@ -101,7 +105,10 @@ def get_interaction_args():
     parser.add_argument("--trans","-t",
                         action="store_true",
                         help="Run trans analysis.", default=False)
-
+    parser.add_argument("--no_chromosome_filter","-ncf",
+                        action="store_true",
+                        help="Don't filter on autosomes. By default only autosomes are selected, this is where the defaults are designed for."
+                        "When running on X/Y/MT please be aware that these defaults might not be appropriate.", default=False)
     args = parser.parse_args()
 
     return args
