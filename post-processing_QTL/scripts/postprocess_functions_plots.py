@@ -321,7 +321,8 @@ def plot_summary(plot_name='qtl_summary',folder_name=None,folder_destination=Non
 
 def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_destination='/Users/mirauta/Data/MS/hipsci/TMT/Images',plot_name='manhattan',\
                         traits=None,trait_labels=None,file_name_results_genome='ensembl_gene_id_qtl_results_genome',   qtl_results_file='qtl_results_',colors=np.array(['k','b','g','m']), figsize=4, gene_ensembl_id= 'ENSG00000182154',\
-                        p_value_field='p_value',log_flag=True,ylim=None,savefig=True,fplot=None,ax=None,pdf=True):
+                        p_value_field='p_value',log_flag=True,ylim=None,savefig=True,fplot=None,ax=None,pdf=True,\
+                        ann_snp=None):
     if folder_destination is None:
         folder_destination =folder_name+'/manhattan/'
     if not os.path.exists(folder_destination):
@@ -379,15 +380,17 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
                         a.plot(xpos[np.argsort(t2)[:3]],-np.log10(t[np.argsort(t2)[:3]],),'ro',markersize=3)
      
 #    print (str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0]))
-#    ax[0].annotate(gene_name, xy=(startstop[1], 1),fontsize=11)
+        if ann_snp is not None:
+            if (ann_snp[indf,1]!='None')&(ann_snp[indf,1]==ann_snp[indf,1]):
+                x=(np.array([s.split('_')[1] for s in ann_snp[indf,1].split(';')]).astype(int)[0]-commonpos.min())/10.0**6
+                a.plot(x,-np.log10(np.nanmin(rez[p_value_field][indf])),'ro')
+                a.annotate(ann_snp[indf,0].split(';')[0], xy=(x, -np.log10(np.nanmin(rez[p_value_field][indf]))),fontsize=11)
 
-#    plt.tight_layout()
+    plt.tight_layout()
     if savefig:
         if pdf:
-            plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']\
-['gene_name'][:].astype('U')[0])+'.pdf',bbox_inches='tight')
-        plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']\
-['gene_name'][:].astype('U')[0])+'.png',dpi=600,bbox_inches='tight')
+            plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'_manhattan.pdf',bbox_inches='tight')
+        plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'_manhattan.png',dpi=600,bbox_inches='tight')
 
 
 def plot_manhatan_genes(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',\
