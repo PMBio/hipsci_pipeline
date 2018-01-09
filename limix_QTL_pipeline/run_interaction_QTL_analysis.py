@@ -321,8 +321,8 @@ if __name__=='__main__':
 
     if (cis and trans):
         raise ValueError("cis and trans cannot be specified simultaneously")
-    if (not cis and not trans):
-        cis = True
+    elif (not cis and not trans):
+        raise ValueError("At least one run mode (-c / -t) is needed.")
     if (random_seed is None):
         random_seed = np.random.randint(40000)
 
