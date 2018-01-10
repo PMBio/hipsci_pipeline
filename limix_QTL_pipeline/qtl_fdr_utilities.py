@@ -29,7 +29,7 @@ def define_correction_function(top_pvalues_perm):
     beta_dist = scipy.stats.beta(alpha_para,beta_para)
     correction_function = lambda x: beta_dist.cdf(x)
     #Would be good to replace 0 with minimal double value of python.
-    return correction_function
+    return [correction_function, alpha_para, beta_para]
 
 def calculate_corrected_pvalues(top_pvalues_perm,nominal_pvalues):
     correction_function = define_correction_function(top_pvalues_perm)

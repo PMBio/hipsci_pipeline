@@ -38,12 +38,15 @@ class hdf5_writer:
             for row in table:
                 row['empirical_feature_p_value'] = row['p_value']
                 row.update()
+            alpha_para=-9
+            beta_para=-9
         else:
-            correction_function = qtl_fdr_utilities.define_correction_function(top_pvalues_perm)
+            correction_function, alpha_para, beta_para = qtl_fdr_utilities.define_correction_function(top_pvalues_perm)
             for row in table:
                 row['empirical_feature_p_value'] = correction_function(row['p_value'])
                 row.update()
         table.flush()
+        return [alpha_para, beta_para]
         
  
 class text_writer:
