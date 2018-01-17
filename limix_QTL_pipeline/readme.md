@@ -27,6 +27,7 @@ To create a limix development enviroment
 `source activate limix_qtl_develop`
 
 `bash <(curl -fsSL https://raw.githubusercontent.com/limix/limix/develop/install)`
+
 `pip install tables`
 
 
