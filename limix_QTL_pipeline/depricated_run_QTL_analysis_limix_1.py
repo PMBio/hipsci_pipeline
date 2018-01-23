@@ -3,11 +3,11 @@ import numpy as np
 import limix
 import qtl_output
 import qtl_loader_utils
+import qtl_parse_args
 import qtl_utilities as utils
 from qtl_snp_qc import do_snp_qc
 import glob
 from sklearn.preprocessing import Imputer
-import argparse
 import scipy.stats as scst
 import sys
 
@@ -41,7 +41,11 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     pass_qc_snps_all = []
     fail_qc_snps_all = []
     fail_qc_features = []
+    alpha_params = []
+    beta_params = []
+    currentFeatureNumber = 0
     for feature_id in feature_list:
+        currentFeatureNumber+= 1
         if (len(phenotype_df.loc[feature_id,:]))<minimum_test_samples:
             print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
             continue
@@ -92,7 +96,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             if not contains_missing_samples:
                 snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x not in list(map(str, fail_qc_snps_all)))]
             
-            print ('For, feature: ' + feature_id + ' ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
+            print ('For, feature: ' +str(currentFeatureNumber)+ '/'+str(len(feature_list))+ '. With name: ' + feature_id + ', ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
             if(n_perm!=0):
                 bestPermutationPval = np.ones((n_perm), dtype=np.float)
             for snpGroup in utils.chunker(snpQuery, blocksize):
@@ -226,7 +230,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             #This we need to change in the written file.
         if(n_perm>1 and data_written):
             #updated_permuted_p_in_hdf5(bestPermutationPval, feature_id);
-            output_writer.apply_pval_correction(feature_id,bestPermutationPval)
+            alpha_para, beta_para = output_writer.apply_pval_correction(feature_id,bestPermutationPval)
+            alpha_params.append(alpha_para)
+            beta_params.append(beta_para)
         if not data_written :
             fail_qc_features.append(feature_id)
         #print('step 5')
@@ -244,12 +250,16 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     snp_df['assessed_allele'] = bim['a1']
 
     feature_list = [x for x in feature_list if x not in fail_qc_features]
+    annotation_df = annotation_df.loc[feature_list,:]
+    if(n_perm>1 and data_written):
+        annotation_df['alpha_param'] = alpha_params
+        annotation_df['beta_param'] = beta_params
     if not selectionStart is None :
         snp_df.ix[tested_snp_idxs,:].to_csv(output_dir+'/snp_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t',index=False)
-        annotation_df.loc[feature_list,:].to_csv(output_dir+'/feature_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t')
+        annotation_df.to_csv(output_dir+'/feature_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t')
     else :
         snp_df.ix[tested_snp_idxs,:].to_csv(output_dir+'/snp_metadata_{}.txt'.format(chromosome),sep='\t',index=False)
-        annotation_df.loc[feature_list,:].to_csv(output_dir+'/feature_metadata_{}.txt'.format(chromosome),sep='\t')
+        annotation_df.to_csv(output_dir+'/feature_metadata_{}.txt'.format(chromosome),sep='\t')
 
 if __name__=='__main__':
     args = qtl_parse_args.get_args()
@@ -297,8 +307,8 @@ if __name__=='__main__':
 
     if (cis and trans):
         raise ValueError("cis and trans cannot be specified simultaneously")
-    if (not cis and not trans):
-        cis = True
+    elif (not cis and not trans):
+        raise ValueError("At least one run mode (-c / -t) is needed.")
     if (random_seed is None):
         random_seed = np.random.randint(40000)
 
