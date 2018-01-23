@@ -109,6 +109,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 #subset genotype matrix, we cannot subselect at the same time, do in two steps.
                 snp_df = pd.DataFrame(data=bed[snp_idxs,:].compute().transpose(),index=fam.index,columns=snp_names)
                 snp_df = snp_df.loc[individual_ids,:]
+                
+                #Here we can check for fully missing samples on genotype side!
                 #SNP QC.
                     #Now we do more proper QC on non-identical samples.
                     #However, we do not use it when checking for missingness.
