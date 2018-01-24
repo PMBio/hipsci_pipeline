@@ -24,7 +24,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                       minimum_test_samples= minimum_test_samples,  relatedness_score=relatedness_score, snps_filename=snps_filename, feature_filename=feature_filename, snp_feature_filename=snp_feature_filename, selection=genetic_range,
                      covariates_filename=covariates_filename, kinship_filename=kinship_filename, sample_mapping_filename=sample_mapping_filename, feature_variant_covariate_filename=feature_variant_covariate_filename)
     
-    if(feature_list==None | len(feature_list)<1 | feature_list.empty):
+    if(feature_list==None or len(feature_list)==0):
         print ('No features to be tested.')
         sys.exit()
     
@@ -126,12 +126,6 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                         cov_matrix = snp_cov_df_tmp.values
                         #cov_matrix = np.concatenate((np.ones(snp_cov_df_tmp.shape[0]).reshape(np.ones(snp_cov_df_tmp.shape[0]).shape[0],1),snp_cov_df_tmp.values),1)
 
-                    ### select discrete covariates with at least 6 lines & add vector of one's if necessary:
-                    if cov_matrix is not None :
-                        #if np.unique(cov_matrix).shape[0]==2:
-                        #    cov_matrix=cov_matrix[:,np.nansum(cov_matrix==1,0)>6]
-                        if np.isfinite(cov_matrix.sum(0)/cov_matrix.std(0)).all():
-                            cov_matrix = np.concatenate((np.ones(cov_matrix.shape[0]).reshape(np.ones(cov_matrix.shape[0]).shape[0],1),cov_matrix.values),1)
                     phenotype = utils.force_normal_distribution(phenotype_ds.values,method=gaussianize_method) if gaussianize_method is not None else phenotype_ds.values
                 else:
                     print ('There is an issue in mapping phenotypes and genotypes')
@@ -220,13 +214,11 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
         annotation_df.to_csv(output_dir+'/feature_metadata_{}.txt'.format(chromosome),sep='\t')
 
 if __name__=='__main__':
-    args = get_grsQtl_args.get_args()
-    grs  = args.grs
+    args = qtl_parse_args.get_grsQtl_args()
+    grsFile  = args.genetic_risk_scores
     anno_file = args.annotation_file
-    extended_anno_file = args.extended_annotation_file
     pheno_file = args.phenotype_file
     output_dir = args.output_directory
-    window_size = args.window
     genetic_range = args.genomic_range
     covariates_file = args.covariates_file
     kinship_file = args.kinship_file
@@ -244,7 +236,7 @@ if __name__=='__main__':
     write_permutations = args.write_permutations
     includeAllChromsomes = args.no_chromosome_filter
 
-    if ((grs is None)):
+    if ((grsFile is None)):
         raise ValueError("No risk scores provided. Either specify a path to Genetic risc score flatfile.")
 
     if (random_seed is None):
@@ -257,7 +249,7 @@ if __name__=='__main__':
         n_perm=10
         print("Defaults to 10 permutations, if permutations are only used for calibration please give in 1.")
 
-    run_PrsQtl_analysis(pheno_file, anno_file, prsFile, output_dir, blocksize=int(block_size), skipAutosomeFiltering= includeAllChromsomes, gaussianize_method = gaussianize,
+    run_PrsQtl_analysis(pheno_file, anno_file, grsFile, output_dir, blocksize=int(block_size), skipAutosomeFiltering= includeAllChromsomes, gaussianize_method = gaussianize,
                      minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), n_perm=int(n_perm), write_permutations = write_permutations, relatedness_score=float(relatedness_score), 
                      feature_variant_covariate_filename = feature_variant_covariate_filename, snps_filename=snps_filename, feature_filename=feature_filename, snp_feature_filename=snp_feature_filename, 
                      genetic_range=genetic_range, covariates_filename=covariates_file, kinship_filename=kinship_file, sample_mapping_filename=samplemap_file)
