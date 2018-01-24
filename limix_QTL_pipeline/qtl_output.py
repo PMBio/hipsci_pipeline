@@ -72,7 +72,7 @@ class hdf5_permutations_writer:
         self.column_names = ['snp_id'] + ['permutation_'+str(x) for x in range(n_permutations)]
         #define the permutation result object on-the-fly, depending on the number of permutations that will be performed
         self.permutation_result_definition = dict([(x,tables.Float64Col()) for x in self.column_names if x.split('_')[0]=='permutation'])
-        self.permutation_result_definition['snp_id'] = tables.StringCol(16)
+        self.permutation_result_definition['snp_id'] = tables.StringCol(100)
 
     def close(self):
         self.h5file.close()
@@ -102,7 +102,7 @@ class hdf5_permutations_writer:
 
         
 class QTL_result_hdf5(tables.IsDescription):
-    snp_id  = tables.StringCol(16)   # 16-character String
+    snp_id  = tables.StringCol(100)   # 100-character String
     p_value = tables.Float64Col()    # double (double-precision)
     beta = tables.Float64Col()    # double (double-precision)
     beta_se = tables.Float64Col()    # double (double-precision)
