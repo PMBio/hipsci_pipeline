@@ -91,7 +91,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                 fail_qc_features.append(feature_id)
                 continue
             
-            print ('For feature: ' +str(currentFeatureNumber)+ '/'+str(len(feature_list))+ ' (' + feature_id + '): ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
+            print ('For feature: ' +str(currentFeatureNumber)+ '/'+str(len(feature_list))+ ' (' + feature_id + '): ' + str(snpQuery.shape[0]) + ' risk scores will be tested.\n Please stand by.')
             
             if(n_perm!=0):
                 bestPermutationPval = np.ones((n_perm), dtype=np.float)
@@ -103,6 +103,9 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                 snp_matrix_DF = risk_df.loc[snp_names,:].transpose()
                 snp_matrix_DF = snp_matrix_DF.loc[individual_ids,:]
                 
+                if contains_missing_samples:
+                    tmp_unique_individuals = geneticaly_unique_individuals
+                    geneticaly_unique_individuals = utils.get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
 
 #               test if the covariates, kinship, snp and phenotype are in the same order
                 if ((all(snp_matrix_DF.index==kinship_df.loc[individual_ids,individual_ids].index) if kinship_df is not None else True) &\
@@ -180,6 +183,8 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                     output_writer.add_result_df(temp_df)
                     if(write_permutations):
                         permutation_writer.add_permutation_results_df(perm_df,feature_id)
+                if contains_missing_samples:
+                    geneticaly_unique_individuals = tmp_unique_individuals
 
             #This we need to change in the written file.
         if(n_perm>1 and data_written):
