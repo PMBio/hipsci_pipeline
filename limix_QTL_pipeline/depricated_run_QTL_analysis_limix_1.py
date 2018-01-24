@@ -100,7 +100,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             if not contains_missing_samples:
                 snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x not in list(map(str, fail_qc_snps_all)))]
             
-            print ('For, feature: ' +str(currentFeatureNumber)+ '/'+str(len(feature_list))+ '. With name: ' + feature_id + ', ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
+            print ('For feature: ' +str(currentFeatureNumber)+ '/'+str(len(feature_list))+ ' (' + feature_id + '): ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
             if(n_perm!=0):
                 bestPermutationPval = np.ones((n_perm), dtype=np.float)
             for snpGroup in utils.chunker(snpQuery, blocksize):

@@ -91,7 +91,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                 fail_qc_features.append(feature_id)
                 continue
             
-            print ('For, feature: ' +str(currentFeatureNumber)+ '/'+str(len(feature_list))+ '. With name: ' + feature_id + ', ' + str(len(snpQuery)) + ' SNPs need to be tested.\n Please stand by.')
+            print ('For feature: ' +str(currentFeatureNumber)+ '/'+str(len(feature_list))+ ' (' + feature_id + '): ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
             
             if(n_perm!=0):
                 bestPermutationPval = np.ones((n_perm), dtype=np.float)
