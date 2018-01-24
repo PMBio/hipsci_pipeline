@@ -25,7 +25,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                       minimum_test_samples= minimum_test_samples,  relatedness_score=relatedness_score, snps_filename=snps_filename, feature_filename=feature_filename, snp_feature_filename=snp_feature_filename, selection=genetic_range,
                      covariates_filename=covariates_filename, kinship_filename=kinship_filename, sample_mapping_filename=sample_mapping_filename, extended_anno_filename=extended_anno_filename, feature_variant_covariate_filename=feature_variant_covariate_filename)
     
-    if(feature_list==None | len(feature_list)<1):
+    if(feature_list==None or len(feature_list)==0):
         print ('No features to be tested.')
         sys.exit()
     
@@ -180,12 +180,6 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         cov_matrix = snp_cov_df_tmp.values
                         #cov_matrix = np.concatenate((np.ones(snp_cov_df_tmp.shape[0]).reshape(np.ones(snp_cov_df_tmp.shape[0]).shape[0],1),snp_cov_df_tmp.values),1)
 
-                    ### select discrete covariates with at least 6 lines & add vector of one's if necessary:
-                    if cov_matrix is not None :
-                        #if np.unique(cov_matrix).shape[0]==2:
-                        #    cov_matrix=cov_matrix[:,np.nansum(cov_matrix==1,0)>6]
-                        if np.isfinite(cov_matrix.sum(0)/cov_matrix.std(0)).all():
-                            cov_matrix = np.concatenate((np.ones(cov_matrix.shape[0]).reshape(np.ones(cov_matrix.shape[0]).shape[0],1),cov_matrix.values),1)
                     phenotype = utils.force_normal_distribution(phenotype_ds.values,method=gaussianize_method) if gaussianize_method is not None else phenotype_ds.values
                 else:
                     print ('there is an issue in mapping phenotypes and genotypes')
