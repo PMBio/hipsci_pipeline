@@ -28,7 +28,9 @@ To create a limix development enviroment
 
 `bash <(curl -fsSL https://raw.githubusercontent.com/limix/limix/develop/install)`
 
-`pip install tables`
+`conda install -c anaconda pytest`
+
+`conda install -c ska tables`
 
 
 NB. be sure to be in a folder where you can download files to and there is no folder called limix.
