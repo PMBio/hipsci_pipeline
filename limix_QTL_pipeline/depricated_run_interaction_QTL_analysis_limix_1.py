@@ -25,7 +25,11 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
     utils.run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(pheno_filename=pheno_filename, anno_filename=anno_filename, geno_prefix=geno_prefix, plinkGenotype=plinkGenotype, cis_mode=cis_mode, skipAutosomeFiltering = skipAutosomeFiltering,
                       minimum_test_samples= minimum_test_samples,  relatedness_score=relatedness_score, snps_filename=snps_filename, feature_filename=feature_filename, snp_feature_filename=snp_feature_filename, selection=genetic_range,
                      covariates_filename=covariates_filename, kinship_filename=kinship_filename, sample_mapping_filename=sample_mapping_filename, extended_anno_filename=extended_anno_filename, feature_variant_covariate_filename=feature_variant_covariate_filename)
-    #
+    
+    if(feature_list==None | len(feature_list)<1):
+        print ('No features to be tested.')
+        sys.exit()
+    
     #Open output files
     qtl_loader_utils.ensure_dir(output_dir)
     if not selectionStart is None :
