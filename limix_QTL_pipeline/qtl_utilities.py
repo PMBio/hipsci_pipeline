@@ -179,6 +179,147 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
 
     return [phenotype_df, kinship_df, covariate_df, sample2individual_df, complete_annotation_df, annotation_df, snp_filter_df, snp_feature_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed, chromosome, selectionStart, selectionEnd, feature_variant_covariate_df]
 
+def run_PrsQtl_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
+        (pheno_filename, anno_filename, prsFile, minimum_test_samples= 10, relatedness_score=0.95, skipAutosomeFiltering = False, snps_filename=None,
+         feature_filename=None, snp_feature_filename=None, selection='all', covariates_filename=None, kinship_filename=None, sample_mapping_filename=None, feature_variant_covariate_filename=None):
+    
+    selectionStart = None
+    selectionEnd = None
+    if(":" in selection):
+        parts = selection.split(":")
+        if("-" not in parts[1]):
+            print("No correct sub selection.")
+            print("Given in: "+selection)
+            print("Expected format: (chr number):(start location)-(stop location)")
+            sys.exit()
+        chromosome = parts[0]
+        if("-" in parts[1]):
+            parts2 = parts[1].split("-") 
+            selectionStart = int(parts2[0])
+            selectionEnd = int(parts2[1])
+    else :
+        chromosome=selection
+
+    ''' function to take input and intersect sample and genotype.'''
+    #Load input data files & filter for relevant data
+    #Load input data filesf
+
+    phenotype_df = qtl_loader_utils.get_phenotype_df(pheno_filename)
+    annotation_df = qtl_loader_utils.get_annotation_df(anno_filename)
+
+    risk_df = qtl_loader_utils.get_phenotype_df(prsFile)
+    print("Intersecting data.")
+
+    if(annotation_df.shape[0] != annotation_df.groupby(annotation_df.index).first().shape[0]): 
+        print("Only one location per feature supported. If multiple locations are needed please look at: --extended_anno_file")
+        sys.exit()
+
+    ##Make sure that there is only one entry per feature id!.
+
+    sample2individual_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'sample')
+    sample2individual_df['sample']=sample2individual_df.index
+
+    ##Filter first the linking files!
+    #Subset linking to relevant genotypes.
+    orgSize = sample2individual_df.shape[0]
+    sample2individual_df = sample2individual_df.loc[sample2individual_df['iid'].map(lambda x: x in list(map(str, risk_df.columns))),:]
+    diff = orgSize- sample2individual_df.shape[0]
+    orgSize = sample2individual_df.shape[0]
+    print("Dropped: "+str(diff)+" samples because they are not present in the genotype file.")
+    
+    #Subset linking to relevant phenotypes.
+    sample2individual_df = sample2individual_df.loc[np.intersect1d(sample2individual_df.index,phenotype_df.columns),:]
+    diff = orgSize- sample2individual_df.shape[0]
+    orgSize = sample2individual_df.shape[0]
+    print("Dropped: "+str(diff)+" samples because they are not present in the phenotype file.")
+    #Subset linking vs kinship.
+    kinship_df = qtl_loader_utils.get_kinship_df(kinship_filename)
+    if kinship_df is not None:
+        #Filter from individual2sample_df & sample2individual_df since we don't want to filter from the genotypes.
+        sample2individual_df = sample2individual_df[sample2individual_df['iid'].map(lambda x: x in list(map(str, kinship_df.index)))]
+        diff = orgSize- sample2individual_df.shape[0]
+        orgSize = sample2individual_df.shape[0]
+        print("Dropped: "+str(diff)+" samples because they are not present in the kinship file.")
+    #Subset linking vs covariates.
+    covariate_df = qtl_loader_utils.get_covariate_df(covariates_filename)
+    if covariate_df is not None:
+        if np.nansum(covariate_df==1,0).max()<covariate_df.shape[0]: covariate_df.insert(0, 'ones',np.ones(covariate_df.shape[0]))
+        sample2individual_df = sample2individual_df.loc[list(set(sample2individual_df.index) & set(covariate_df.index)),:]
+        diff = orgSize- sample2individual_df.shape[0]
+        orgSize = sample2individual_df.shape[0]
+        print("Dropped: "+str(diff)+" samples because they are not present in the covariate file.")
+
+    ###
+    print("Number of samples with genotype & phenotype data: " + str(sample2individual_df.shape[0]))
+    if(sample2individual_df.shape[0]<minimum_test_samples):
+        print("Not enough samples with both genotype & phenotype data.")
+        sys.exit()
+
+    ##Filter now the actual data!
+    #Filter phenotype data based on the linking files.
+    phenotype_df = phenotype_df.loc[list(set(phenotype_df.index)&set(annotation_df.index)),sample2individual_df.index.values]
+
+    #Filter kinship data based on the linking files.
+    geneticaly_unique_individuals = None
+    if kinship_df is not None:
+        kinship_df = kinship_df.loc[np.intersect1d(kinship_df.index,sample2individual_df['iid']),np.intersect1d(kinship_df.index,sample2individual_df['iid'])]
+        geneticaly_unique_individuals = get_unique_genetic_samples(kinship_df, relatedness_score);
+
+    #Filter covariate data based on the linking files.
+    
+    snp_feature_filter_df= qtl_loader_utils.get_snp_feature_df(snp_feature_filename)
+    try:
+        feature_filter_df = qtl_loader_utils.get_snp_df(feature_filename)
+    except:
+        if feature_filename  is not None:
+            feature_filter_df=pd.DataFrame(index=feature_filename)
+    #Do filtering on features.
+    if feature_filter_df is not None:
+        phenotype_df = phenotype_df.loc[feature_filter_df.index,:]
+        ##Filtering on features to test.
+    if snp_feature_filter_df is not None:
+        phenotype_df = phenotype_df.loc[np.unique(snp_feature_filter_df['feature']),:]
+        ##Filtering on features  to test from the combined feature snp filter.
+
+    #Prepare to filter on snps.
+    snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
+    if snps_filename is not None:
+        risk_df=risk_df[np.in1d(risk_df.index.values,snp_filter_df.index)]
+        ##Filtering on SNPs to test from the snp filter.
+
+    if snp_feature_filter_df is not None:
+        risk_df=risk_df[np.in1d(risk_df.index.values,snp_filter_df.index)]
+        ##Filtering on features  to test from the combined feature snp filter.
+    
+    #Filtering for sites on non allosomes.
+    if not skipAutosomeFiltering :
+        annotation_df = annotation_df[annotation_df['chromosome'].map(lambda x: x in list(map(str, range(1, 23))))]
+    
+    #Determine features to be tested
+    if chromosome=='all':
+        feature_list = list(set(annotation_df.index)&set(phenotype_df.index))
+    else:
+        if not selectionStart is None :
+            lowest = min([selectionStart,selectionEnd])
+            highest = max([selectionStart,selectionEnd])
+            annotation_df['mean'] = ((annotation_df["start"] + annotation_df["end"])/2)
+            feature_list = list(set(annotation_df.iloc[(annotation_df['chromosome'].values==chromosome) & (annotation_df['mean'].values>=lowest) & (annotation_df["mean"].values<highest)].index.values)&set(phenotype_df.index))
+            del annotation_df['mean']
+        else :
+            feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
+
+    print("Number of features to be tested: " + str(len(feature_list)))
+    print("Total number of variants to be considered, before variante QC and feature intersection: " + str(risk_df.shape[0]))
+    
+    if(phenotype_df.shape[1]<minimum_test_samples):
+        print("Not enough samples with both genotype & phenotype data, for current number of covariates.")
+        sys.exit()
+    
+    feature_variant_covariate_df = qtl_loader_utils.get_snp_feature_df(feature_variant_covariate_filename)
+    
+    return [phenotype_df, kinship_df, covariate_df, sample2individual_df, annotation_df, snp_filter_df, snp_feature_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list, risk_df, chromosome, selectionStart, selectionEnd, feature_variant_covariate_df]
+
+
 def merge_QTL_results(results_dir):
     '''Merge QTL results for individual chromosomes into a combined, indexed
     hdf5 file.'''
