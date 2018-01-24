@@ -220,7 +220,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
         annotation_df.to_csv(output_dir+'/feature_metadata_{}.txt'.format(chromosome),sep='\t')
 
 if __name__=='__main__':
-    args = qtl_parse_args.get_args()
+    args = get_grsQtl_args.get_args()
     grs  = args.grs
     anno_file = args.annotation_file
     extended_anno_file = args.extended_annotation_file
