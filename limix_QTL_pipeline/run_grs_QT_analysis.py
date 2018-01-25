@@ -45,6 +45,8 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
     fail_qc_features = []
     alpha_params = []
     beta_params = []
+    n_samples = []
+    n_e_samples = []
     currentFeatureNumber = 0
     for feature_id in feature_list:
         currentFeatureNumber+= 1
@@ -74,7 +76,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
             contains_missing_samples = any(~np.isfinite(phenotype_ds))
             if(contains_missing_samples):
                 print ('Feature: ' + feature_id + ' contains missing data.')
-            phenotype_ds.dropna(inplace=True)
+                phenotype_ds.dropna(inplace=True)
 #   
             '''select indices for relevant individuals in genotype matrix
             These are not unique. NOT to be used to access phenotype/covariates data
@@ -91,22 +93,22 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                 fail_qc_features.append(feature_id)
                 continue
             
-            print ('For feature: ' +str(currentFeatureNumber)+ '/'+str(len(feature_list))+ ' (' + feature_id + '): ' + str(snpQuery.shape[0]) + ' risk scores will be tested.\n Please stand by.')
+            ##SNP QC
+            if contains_missing_samples:
+                tmp_unique_individuals = geneticaly_unique_individuals
+                geneticaly_unique_individuals = utils.get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
             
+            n_samples.append(sum(~np.isnan(phenotype)))
+            n_e_samples.append(len(geneticaly_unique_individuals))
+            
+            print ('For feature: ' +str(currentFeatureNumber)+ '/'+str(len(feature_list))+ ' (' + feature_id + '): ' + str(snpQuery.shape[0]) + ' risk scores will be tested.\n Please stand by.')
             if(n_perm!=0):
                 bestPermutationPval = np.ones((n_perm), dtype=np.float)
             for snpGroup in utils.chunker(snpQuery, blocksize):
                 snp_names = snpGroup.values
                 
                 tested_snp_names.extend(snp_names)
-                #subset genotype matrix, we cannot subselect at the same time, do in two steps.
-                snp_matrix_DF = risk_df.loc[snp_names,:].transpose()
-                snp_matrix_DF = snp_matrix_DF.loc[individual_ids,:]
-                
-                if contains_missing_samples:
-                    tmp_unique_individuals = geneticaly_unique_individuals
-                    geneticaly_unique_individuals = utils.get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
-
+                snp_matrix_DF = risk_df.loc[snp_names,individual_ids].transpose()
 #               test if the covariates, kinship, snp and phenotype are in the same order
                 if ((all(snp_matrix_DF.index==kinship_df.loc[individual_ids,individual_ids].index) if kinship_df is not None else True) &\
                      (all(phenotype_ds.index==covariate_df.loc[sample2individual_feature['sample'],:].index)if covariate_df is not None else True)&\
@@ -169,15 +171,15 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                             perm+=1
 
                 #add these results to qtl_results
-                temp_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['feature_id','snp_id','p_value','beta','beta_se','n_samples','empirical_feature_p_value'])
+                temp_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value'])
                 temp_df['snp_id'] = snp_matrix_DF.columns
                 temp_df['feature_id'] = feature_id
                 temp_df['beta'] = np.asarray(LMM.variant_effsizes)
                 temp_df['p_value'] = np.asarray(LMM.variant_pvalues)
-                temp_df['n_samples'] = sum(~np.isnan(phenotype))
                 temp_df['beta_se'] = np.asarray(LMM.variant_effsizes_se)
                 #insert default dummy value
                 temp_df['empirical_feature_p_value'] = -1.0
+                
                 if not temp_df.empty :
                     data_written = True
                     output_writer.add_result_df(temp_df)
@@ -185,8 +187,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                         permutation_writer.add_permutation_results_df(perm_df,feature_id)
                 if contains_missing_samples:
                     geneticaly_unique_individuals = tmp_unique_individuals
-
-            #This we need to change in the written file.
+        
         if(n_perm>1 and data_written):
             #updated_permuted_p_in_hdf5(bestPermutationPval, feature_id);
             alpha_para, beta_para = output_writer.apply_pval_correction(feature_id,bestPermutationPval)
@@ -206,6 +207,8 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
 
     feature_list = [x for x in feature_list if x not in fail_qc_features]
     annotation_df = annotation_df.loc[feature_list,:]
+    annotation_df['n_samples'] = n_samples
+    annotation_df['n_e_samples'] = n_e_samples
     if(n_perm>1 and data_written):
         annotation_df['alpha_param'] = alpha_params
         annotation_df['beta_param'] = beta_params
