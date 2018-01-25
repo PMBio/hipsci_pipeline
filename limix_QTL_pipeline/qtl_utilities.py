@@ -62,7 +62,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
 
     sample2individual_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'sample')
     sample2individual_df['sample']=sample2individual_df.index
-
+    sample2individual_df = sample2individual_df.drop_duplicates();
     ##Filter first the linking files!
     #Subset linking to relevant genotypes.
     orgSize = sample2individual_df.shape[0]
@@ -218,7 +218,7 @@ def run_PrsQtl_analysis_load_intersect_phenotype_covariates_kinship_sample_mappi
 
     sample2individual_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'sample')
     sample2individual_df['sample']=sample2individual_df.index
-
+    sample2individual_df = sample2individual_df.drop_duplicates();
     ##Filter first the linking files!
     #Subset linking to relevant genotypes.
     orgSize = sample2individual_df.shape[0]
