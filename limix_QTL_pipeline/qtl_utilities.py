@@ -501,6 +501,6 @@ def do_snp_selection(feature_id, annotation_df, bim, cis_mode, window_size, skip
         selected_snp_df = snpQuery
     if not skipAutosomeFiltering :
         # filtering for sites on non allosomes.
-        selected_snp_df = selected_snp_df.iloc[selected_snp_df['chrom'].map(lambda x: x in list(map(str, range(1, 23))))]
+        selected_snp_df = selected_snp_df.loc[selected_snp_df['chrom'].map(lambda x: x in list(map(str, range(1, 23))))]
     
     return selected_snp_df
