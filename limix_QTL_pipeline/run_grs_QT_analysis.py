@@ -16,7 +16,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                      skipAutosomeFiltering = False, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, feature_variant_covariate_filename = None, snps_filename=None, feature_filename=None, snp_feature_filename=None, genetic_range='all',
                      covariates_filename=None, kinship_filename=None, sample_mapping_filename=None):
     fill_NaN = Imputer(missing_values=np.nan, strategy='mean', axis=0)
-
+    print('Running GRS QT analysis.')
     '''Core function to take input and run QTL tests on a given chromosome.'''
 
     [phenotype_df, kinship_df, covariate_df, sample2individual_df, annotation_df, snp_filter_df, snp_feature_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list, risk_df, chromosome, selectionStart, selectionEnd, feature_variant_covariate_df]=\
@@ -98,7 +98,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                 tmp_unique_individuals = geneticaly_unique_individuals
                 geneticaly_unique_individuals = utils.get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
             
-            n_samples.append(sum(~np.isnan(phenotype)))
+            n_samples.append(phenotype_ds.size)
             n_e_samples.append(len(geneticaly_unique_individuals))
             
             print ('For feature: ' +str(currentFeatureNumber)+ '/'+str(len(feature_list))+ ' (' + feature_id + '): ' + str(snpQuery.shape[0]) + ' risk scores will be tested.\n Please stand by.')
