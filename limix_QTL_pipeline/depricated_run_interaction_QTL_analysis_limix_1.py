@@ -18,7 +18,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                      cis_mode=True, skipAutosomeFiltering = False, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, feature_variant_covariate_filename = None, snps_filename=None, feature_filename=None, snp_feature_filename=None, genetic_range='all',
                      covariates_filename=None, kinship_filename=None, sample_mapping_filename=None, extended_anno_filename=None):
     fill_NaN = Imputer(missing_values=np.nan, strategy='mean', axis=0)
-
+    print('Running interaction QTL analysis.')
     '''Core function to take input and run QTL tests on a given chromosome.'''
     
     [phenotype_df, kinship_df, covariate_df, sample2individual_df,complete_annotation_df, annotation_df, snp_filter_df, snp_feature_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list,bim,fam,bed, chromosome, selectionStart, selectionEnd, feature_variant_covariate_df]=\
@@ -61,9 +61,10 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
     pass_qc_snps_all = []
     fail_qc_snps_all = []
     fail_qc_features = []
-    fail_qc_features = []
     alpha_params = []
     beta_params = []
+    n_samples = []
+    n_e_samples = []
     currentFeatureNumber = 0
     for feature_id in feature_list:
         currentFeatureNumber+= 1
@@ -95,27 +96,35 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
 
             if(contains_missing_samples):
                 print ('Feature: ' + feature_id + ' contains missing data.')
-            phenotype_ds.dropna(inplace=True)
+                phenotype_ds.dropna(inplace=True)
 
             '''select indices for relevant individuals in genotype matrix
             These are not unique. NOT to be used to access phenotype/covariates data
             '''
             individual_ids = sample2individual_df.loc[phenotype_ds.index,'iid'].values
             sample2individual_feature= sample2individual_df.loc[phenotype_ds.index]
-            if phenotype_ds.empty | len(phenotype_ds)<minimum_test_samples :
+            
+            if(contains_missing_samples):
+                tmp_unique_individuals = geneticaly_unique_individuals
+                geneticaly_unique_individuals = utils.get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
+            
+            if phenotype_ds.empty or len(phenotype_ds)<minimum_test_samples or len(geneticaly_unique_individuals)<minimum_test_samples :
                 print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
                 fail_qc_features.append(feature_id)
+                geneticaly_unique_individuals = tmp_unique_individuals
                 continue
             elif np.var(phenotype_ds.values) == 0:
                 print("Feature: "+feature_id+" has no variance in selected individuals.")
                 fail_qc_features.append(feature_id)
+                geneticaly_unique_individuals = tmp_unique_individuals
                 continue
 
             #If no missing samples we can use the previous SNP Qc information before actually loading data.
             #This allowes for more efficient blocking and retreaving of data
             if not contains_missing_samples:
                 snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x not in list(map(str, fail_qc_snps_all)))]
-            
+            n_samples.append(phenotype_ds.size)
+            n_e_samples.append(len(geneticaly_unique_individuals))
             print ('For feature: ' +str(currentFeatureNumber)+ '/'+str(len(feature_list))+ ' (' + feature_id + '): ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
             if(n_perm!=0):
                 bestPermutationPval = np.ones((n_perm), dtype=np.float)
@@ -151,10 +160,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                         fail_qc_snps_all.extend(failed_snp_names)
                     snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(pass_qc_snps_all)]]
                 else:
-                    tmp_unique_individuals = geneticaly_unique_individuals
-                    geneticaly_unique_individuals = utils.get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
                     #Do snp QC for relevant section.
-
                     if kinship_df is not None and len(geneticaly_unique_individuals)>1 and len(geneticaly_unique_individuals)<snp_df.shape[0]:
                         passed_snp_names,failed_snp_names = do_snp_qc(snp_df.iloc[np.unique(snp_df.index,return_index=1)[1]].loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P) 
                     else:
@@ -168,7 +174,6 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 snp_matrix_DF.columns = snp_df.columns
                 snp_matrix_DF.index = snp_df.index
                 snp_df = None
-
                 inter = covariate_df.loc[:,interaction_terms]
 #                test if the covariates, kinship, snp and phenotype are in the same order
                 if ((all(snp_matrix_DF.index==kinship_df.loc[individual_ids,individual_ids].index) if kinship_df is not None else True) &\
@@ -197,7 +202,6 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 else:
                     print ('there is an issue in mapping phenotypes and genotypes')
                     sys.exit()
-                M = np.asarray(cov_matrix, float)
                 #For limix 1.1 we need to switch to lm our selfs if there is no K.
 #                return[snp_matrix_DF,phenotype, kinship_mat,cov_matrix]
                 try: 
@@ -236,7 +240,6 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 temp_df['feature_id'] = feature_id
                 temp_df['beta'] = LMM.getBetaSNP()[0]
                 temp_df['p_value'] = LMM.getPv()[0]
-                temp_df['n_samples'] = sum(~np.isnan(phenotype))
                 temp_df['beta_se'] = LMM.getBetaSNPste()[0]
                 #insert default dummy value
                 temp_df['empirical_feature_p_value'] = -1.0
@@ -245,8 +248,8 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     output_writer.add_result_df(temp_df)
                     if(write_permutations):
                         permutation_writer.add_permutation_results_df(perm_df,feature_id)
-                if contains_missing_samples:
-                    geneticaly_unique_individuals = tmp_unique_individuals
+            if contains_missing_samples:
+                geneticaly_unique_individuals = tmp_unique_individuals
                 #print('step 4')
             #This we need to change in the written file.
         if(n_perm>1 and data_written):
@@ -272,6 +275,8 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
 
     feature_list = [x for x in feature_list if x not in fail_qc_features]
     annotation_df = annotation_df.loc[feature_list,:]
+    annotation_df['n_samples'] = n_samples
+    annotation_df['n_e_samples'] = n_e_samples
     if(n_perm>1 and data_written):
         annotation_df['alpha_param'] = alpha_params
         annotation_df['beta_param'] = beta_params
