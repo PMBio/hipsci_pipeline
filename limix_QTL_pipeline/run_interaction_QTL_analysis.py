@@ -8,7 +8,6 @@ import qtl_utilities as utils
 from qtl_snp_qc import do_snp_qc
 import glob
 from sklearn.preprocessing import Imputer
-import argparse
 import scipy.stats as scst
 import sys
 
@@ -108,7 +107,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 tmp_unique_individuals = geneticaly_unique_individuals
                 geneticaly_unique_individuals = utils.get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
             
-            if phenotype_ds.empty or len(phenotype_ds)<minimum_test_samples or len(geneticaly_unique_individuals)<minimum_test_samples :
+            if phenotype_ds.empty or len(geneticaly_unique_individuals)<minimum_test_samples :
                 print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
                 fail_qc_features.append(feature_id)
                 geneticaly_unique_individuals = tmp_unique_individuals
@@ -150,7 +149,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     snps_to_test_df = snp_df.loc[:,snp_df.columns[~snp_df.columns.isin(pass_qc_snps_all)]]
                     if snps_to_test_df.shape[1] > 0:
                         #Only do QC on relevant SNPs. join pre-QCed list and new QCed list.
-                        if kinship_df is not None and len(geneticaly_unique_individuals)<snps_to_test_df.shape[0]:
+                        if kinship_df is not None:
                             passed_snp_names,failed_snp_names = do_snp_qc(snps_to_test_df.iloc[np.unique(snps_to_test_df.index,return_index=1)[1]].loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P)
                         else:
                             passed_snp_names,failed_snp_names = do_snp_qc(snps_to_test_df, min_call_rate, min_maf, min_hwe_P)
@@ -161,7 +160,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(pass_qc_snps_all)]]
                 else:
                     #Do snp QC for relevant section.
-                    if kinship_df is not None and len(geneticaly_unique_individuals)>1 and len(geneticaly_unique_individuals)<snp_df.shape[0]:
+                    if kinship_df is not None:
                         passed_snp_names,failed_snp_names = do_snp_qc(snp_df.iloc[np.unique(snp_df.index,return_index=1)[1]].loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P) 
                     else:
                         passed_snp_names,failed_snp_names = do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P)
@@ -201,7 +200,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
 
                     phenotype = utils.force_normal_distribution(phenotype_ds.values,method=gaussianize_method) if gaussianize_method is not None else phenotype_ds.values
                 else:
-                    print ('there is an issue in mapping phenotypes and genotypes')
+                    print ('There is an issue in mapping phenotypes and genotypes')
                     sys.exit()
                 #For limix 1.1 we need to switch to lm our selfs if there is no K.
 #                return[snp_matrix_DF,phenotype, kinship_mat,cov_matrix]
@@ -210,30 +209,41 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 except: 
                     print (feature_id)
                     print ('Interaction-LMM failed')
+                    sys.exit()
                 if(n_perm!=0):
+                    pValueBuffer = []
+                    totalSnpsToBeTested = (snp_matrix_DF.shape[1]*n_perm)
+                    perm = 0;
                     if(write_permutations):
-                        perm_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['snp_id'] + ['permutation_'+str(x+1) for x in range(n_perm)])
+                        perm_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['snp_id'] + ['permutation_'+str(x) for x in range(n_perm)])
                         perm_df['snp_id'] = snp_matrix_DF.columns
-                    if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
-                        temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
+                    if(blocksize>totalSnpsToBeTested):
+                        if kinship_df is not None:
+                            temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
+                        else :
+                            temp = utils.get_shuffeld_genotypes(snp_matrix_DF, n_perm)
                         LMM_perm = limix.qtl.iscan(temp, phenotype, 'Normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M,verbose=False)
-                        perm = 0;
-                        for relevantOutput in utils.chunker(LMM_perm.variant_pvalues.values,snp_matrix_DF.shape[1]) :
-                            if(write_permutations):
-                                perm_df['permutation_'+str(perm)] = relevantOutput
-                            if(bestPermutationPval[perm] > min(relevantOutput)):
-                                bestPermutationPval[perm] = min(relevantOutput)
-                            perm+=1
+                        pValueBuffer.extend(np.asarray(LMM_perm.variant_pvalues))
                     else :
-                        temp = utils.get_shuffeld_genotypes(snp_matrix_DF, n_perm)
-                        LMM_perm = limix.qtl.iscan(temp, phenotype, 'Normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M,verbose=False)
-                        perm = 0;
-                        for relevantOutput in utils.chunker(LMM_perm.variant_pvalues.values,snp_matrix_DF.shape[1]) :
-                            if(write_permutations):
-                                perm_df['permutation_'+str(perm)] = relevantOutput
-                            if(bestPermutationPval[perm] > min(relevantOutput)):
-                                bestPermutationPval[perm] = min(relevantOutput)
-                            perm+=1
+                        for currentNperm in utils.chunker(list(range(1, n_perm+1)), np.floor(totalSnpsToBeTested/blocksize)):
+                            if kinship_df is not None:
+                                temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], len(currentNperm))
+                            else :
+                                temp = utils.get_shuffeld_genotypes(snp_matrix_DF, len(currentNperm))
+                            LMM_perm = limix.qtl.iscan(temp, phenotype, 'Normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M,verbose=False)
+                            pValueBuffer.extend(np.asarray(LMM_perm.variant_pvalues))
+                    if(not(len(pValueBuffer)==totalSnpsToBeTested)):
+                        #print(len(pValueBuffer))
+                        #print(pValueBuffer)
+                        #print(totalSnpsToBeTested)
+                        print('Error in blocking logic for permutations.')
+                        sys.exit()
+                    for relevantOutput in utils.chunker(pValueBuffer,snp_matrix_DF.shape[1]) :
+                        if(write_permutations):
+                            perm_df['permutation_'+str(perm)] = relevantOutput
+                        if(bestPermutationPval[perm] > min(relevantOutput)):
+                            bestPermutationPval[perm] = min(relevantOutput)
+                        perm+=1
                 #print('step 3')
                 #add these results to qtl_results
                 temp_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['feature_id','snp_id','p_value','beta','beta_se','n_samples','empirical_feature_p_value'])
