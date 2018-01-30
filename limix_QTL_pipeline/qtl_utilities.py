@@ -335,7 +335,7 @@ def merge_QTL_results(results_dir):
         
 
 def chunker(seq, size):
-    return (seq[pos:pos + size] for pos in range(0, len(seq), size))
+    return (seq[pos:pos + np.int(size)] for pos in range(0, len(seq), np.int(size)))
 
 def get_unique_genetic_samples(kinship_df, relatedness_score):
 #    tril returns the lower triungular.
@@ -428,7 +428,7 @@ def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, rel
         end+= snp_matrix_DF.shape[1]
     return(snp_matrix_copy)
 
-def get_shuffeld_genotypes(snp_matrix_DF,kinship_df,n_perm):
+def get_shuffeld_genotypes(snp_matrix_DF,n_perm):
     snp_matrix_copy = np.zeros((snp_matrix_DF.shape[0],snp_matrix_DF.shape[1]*n_perm))
     counter = 0
     end = (snp_matrix_DF.shape[1])

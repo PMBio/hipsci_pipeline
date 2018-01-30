@@ -160,7 +160,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                                 bestPermutationPval[perm] = min(relevantOutput)
                             perm+=1
                     else :
-                        temp = utils.get_shuffeld_genotypes(snp_matrix_DF,kinship_df, n_perm)
+                        temp = utils.get_shuffeld_genotypes(snp_matrix_DF, n_perm)
                         LMM_perm = limix.qtl.scan(temp, phenotype, 'Normal',K=kinship_mat,M=cov_matrix,verbose=False)
                         perm = 0;
                         for relevantOutput in utils.chunker(LMM_perm.variant_pvalues,snp_matrix_DF.shape[1]) :

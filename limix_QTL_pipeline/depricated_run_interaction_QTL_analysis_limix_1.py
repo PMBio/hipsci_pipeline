@@ -224,7 +224,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                                 bestPermutationPval[perm] = min(relevantOutput)
                             perm+=1
                     else :
-                        temp = utils.get_shuffeld_genotypes(snp_matrix_DF,kinship_df, n_perm)
+                        temp = utils.get_shuffeld_genotypes(snp_matrix_DF,n_perm)
                         LMM_perm = limix.qtl.qtl_test_interaction_lmm(temp, phenotype, inter.values, K=kinship_mat,covs=cov_matrix)
                         perm = 0;
                         for relevantOutput in utils.chunker(LMM_perm.getPv()[0],snp_matrix_DF.shape[1]) :
