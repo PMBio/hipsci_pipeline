@@ -84,7 +84,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
             individual_ids = sample2individual_df.loc[phenotype_ds.index,'iid'].values
             sample2individual_feature= sample2individual_df.loc[phenotype_ds.index]
 
-            if phenotype_ds.empty | len(phenotype_ds)<minimum_test_samples :
+            if phenotype_ds.empty or len(geneticaly_unique_individuals)<minimum_test_samples :
                 print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
                 fail_qc_features.append(feature_id)
                 continue
