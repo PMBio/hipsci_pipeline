@@ -504,20 +504,3 @@ def do_snp_selection(feature_id, annotation_df, bim, cis_mode, window_size, skip
         selected_snp_df = selected_snp_df.loc[selected_snp_df['chrom'].map(lambda x: x in list(map(str, range(1, 23))))]
     
     return selected_snp_df
-
-def reduce_snp(snp_df, threshold=0.98):
-    ''' input a snp df  samples(rows) x snps( columns)'''
-    ''' returns a df with columns: 'lead_snp_id' the pruned snp names and snp_id'''
-    allsnps=snp_df.columns
-    cor=abs(np.corrcoef(snp_df.T))>=threshold
-    cor1=pd.DataFrame(data=np.triu(cor,k=1),index=allsnps,columns=allsnps).sum(1)
-    cor2=pd.DataFrame(data=np.triu(cor,k=1),index=allsnps,columns=allsnps)
-    uniquesnps=cor1[cor1==0].index
-    duplicatedsnps=cor1[cor1>0].index
-    '''the unique ones'''
-    rez=pd.DataFrame(data=uniquesnps,index=uniquesnps,columns=['snp_id'])
-    ''' the ones that are in LD.. if a,c and a,b but not b,c returns a,b)'''
-    rez2=pd.DataFrame(data=duplicatedsnps,index=allsnps[np.argmax(cor2.loc[duplicatedsnps].values*cor2.loc[duplicatedsnps].values.sum(0),1)],columns=['snp_id'])
-    rez=pd.concat([rez,rez2])
-    rez['lead_snp_id']=rez.index
-    return(rez)

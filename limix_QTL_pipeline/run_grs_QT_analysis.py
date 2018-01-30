@@ -93,6 +93,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                 fail_qc_features.append(feature_id)
                 continue
             
+            ##SNP QC
             if contains_missing_samples:
                 tmp_unique_individuals = geneticaly_unique_individuals
                 geneticaly_unique_individuals = utils.get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
@@ -108,8 +109,6 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                 
                 tested_snp_names.extend(snp_names)
                 snp_matrix_DF = risk_df.loc[snp_names,individual_ids].transpose()
-                ##GRS var QC
-                snp_matrix_DF = snp_matrix_DF.loc[(np.std(snp_df,axis=0)>0),:]
 #               test if the covariates, kinship, snp and phenotype are in the same order
                 if ((all(snp_matrix_DF.index==kinship_df.loc[individual_ids,individual_ids].index) if kinship_df is not None else True) &\
                      (all(phenotype_ds.index==covariate_df.loc[sample2individual_feature['sample'],:].index)if covariate_df is not None else True)&\
