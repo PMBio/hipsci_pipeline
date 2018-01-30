@@ -187,7 +187,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
 
                     phenotype = utils.force_normal_distribution(phenotype_ds.values,method=gaussianize_method) if gaussianize_method is not None else phenotype_ds.values
                 else:
-                    print ('there is an issue in mapping phenotypes and genotypes')
+                    print ('There is an issue in mapping phenotypes and genotypes')
                     sys.exit()
                 LMM = limix.qtl.qtl_test_lmm(snp_matrix_DF.values, phenotype,K=kinship_mat,covs=cov_matrix)
 
@@ -204,7 +204,6 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         else :
                             temp = utils.get_shuffeld_genotypes(snp_matrix_DF, n_perm)
                         LMM_perm = limix.qtl.qtl_test_lmm(temp, phenotype,K=kinship_mat,covs=cov_matrix)
-                        print(np.asarray(LMM_perm.variant_pvalues))
                         pValueBuffer.extend(np.asarray(LMM_perm.variant_pvalues))
                     else :
                         for currentNperm in utils.chunker(list(range(1, n_perm+1)), np.floor(totalSnpsToBeTested/blocksize)):

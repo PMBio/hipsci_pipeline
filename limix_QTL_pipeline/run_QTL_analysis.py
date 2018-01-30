@@ -190,7 +190,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
 
                     phenotype = utils.force_normal_distribution(phenotype_ds.values,method=gaussianize_method) if gaussianize_method is not None else phenotype_ds.values
                 else:
-                    print ('there is an issue in mapping phenotypes and genotypes')
+                    print ('There is an issue in mapping phenotypes and genotypes')
                     sys.exit()
                 
                 #For limix 1.1 we need to switch to lm our selfs if there is no K.
@@ -216,7 +216,6 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         else :
                             temp = utils.get_shuffeld_genotypes(snp_matrix_DF, n_perm)
                         LMM_perm = limix.qtl.scan(temp, phenotype, 'Normal',K=kinship_mat,M=cov_matrix,verbose=False)
-                        print(np.asarray(LMM_perm.variant_pvalues))
                         pValueBuffer.extend(np.asarray(LMM_perm.variant_pvalues))
                     else :
                         for currentNperm in utils.chunker(list(range(1, n_perm+1)), np.floor(totalSnpsToBeTested/blocksize)):
