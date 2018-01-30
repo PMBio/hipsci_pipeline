@@ -146,29 +146,39 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                     print ('LMM failed')
                 
                 if(n_perm!=0):
+                    pValueBuffer = []
+                    totalSnpsToBeTested = (snp_matrix_DF.shape[1]*n_perm)
+                    perm = 0;
                     if(write_permutations):
                         perm_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['snp_id'] + ['permutation_'+str(x) for x in range(n_perm)])
                         perm_df['snp_id'] = snp_matrix_DF.columns
-                    if kinship_df is not None and len(geneticaly_unique_individuals)<snp_matrix_DF.shape[0]:
-                        temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
+                    if(blocksize>totalSnpsToBeTested):
+                        if kinship_df is not None:
+                            temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
+                        else :
+                            temp = utils.get_shuffeld_genotypes(snp_matrix_DF, n_perm)
                         LMM_perm = limix.qtl.scan(temp, phenotype, 'Normal',K=kinship_mat,M=cov_matrix,verbose=False)
-                        perm = 0;
-                        for relevantOutput in utils.chunker(LMM_perm.variant_pvalues,snp_matrix_DF.shape[1]) :
-                            if(write_permutations):
-                                perm_df['permutation_'+str(perm)] = relevantOutput
-                            if(bestPermutationPval[perm] > min(relevantOutput)):
-                                bestPermutationPval[perm] = min(relevantOutput)
-                            perm+=1
+                        pValueBuffer.extend(np.asarray(LMM_perm.variant_pvalues))
                     else :
-                        temp = utils.get_shuffeld_genotypes(snp_matrix_DF, n_perm)
-                        LMM_perm = limix.qtl.scan(temp, phenotype, 'Normal',K=kinship_mat,M=cov_matrix,verbose=False)
-                        perm = 0;
-                        for relevantOutput in utils.chunker(LMM_perm.variant_pvalues,snp_matrix_DF.shape[1]) :
-                            if(write_permutations):
-                                perm_df['permutation_'+str(perm)] = relevantOutput
-                            if(bestPermutationPval[perm] > min(relevantOutput)):
-                                bestPermutationPval[perm] = min(relevantOutput)
-                            perm+=1
+                        for currentNperm in utils.chunker(list(range(1, n_perm+1)), np.floor(totalSnpsToBeTested/blocksize)):
+                            if kinship_df is not None:
+                                temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], len(currentNperm))
+                            else :
+                                temp = utils.get_shuffeld_genotypes(snp_matrix_DF, len(currentNperm))
+                            LMM_perm = limix.qtl.scan(temp, phenotype, 'Normal',K=kinship_mat,M=cov_matrix,verbose=False)
+                            pValueBuffer.extend(np.asarray(LMM_perm.variant_pvalues))
+                    if(not(len(pValueBuffer)==totalSnpsToBeTested)):
+                        #print(len(pValueBuffer))
+                        #print(pValueBuffer)
+                        #print(totalSnpsToBeTested)
+                        print('Error in blocking logic for permutations.')
+                        sys.exit()
+                    for relevantOutput in utils.chunker(pValueBuffer,snp_matrix_DF.shape[1]) :
+                        if(write_permutations):
+                            perm_df['permutation_'+str(perm)] = relevantOutput
+                        if(bestPermutationPval[perm] > min(relevantOutput)):
+                            bestPermutationPval[perm] = min(relevantOutput)
+                        perm+=1
 
                 #add these results to qtl_results
                 temp_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value'])
@@ -185,8 +195,8 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                     output_writer.add_result_df(temp_df)
                     if(write_permutations):
                         permutation_writer.add_permutation_results_df(perm_df,feature_id)
-                if contains_missing_samples:
-                    geneticaly_unique_individuals = tmp_unique_individuals
+            if contains_missing_samples:
+                geneticaly_unique_individuals = tmp_unique_individuals
         
         if(n_perm>1 and data_written):
             #updated_permuted_p_in_hdf5(bestPermutationPval, feature_id);
