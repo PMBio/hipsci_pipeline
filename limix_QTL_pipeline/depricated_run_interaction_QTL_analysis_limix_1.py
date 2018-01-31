@@ -221,9 +221,11 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                             temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], len(currentNperm))
                         else :
                             temp = utils.get_shuffeld_genotypes(snp_matrix_DF, len(currentNperm))
-                        reduceInfo  = utils.reduce_snp(temp)
-                        LMM_perm = limix.qtl.iscan(temp.loc[:,np.unique(reduceInfo['lead_snp_id'].values)], phenotype, 'Normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M,verbose=False)
-                        pValueBuffer.extend(np.asarray(LMM_perm.variant_pvalues[reduceInfo['lead_snp_id']]))
+                        #reduceInfo  = utils.reduce_snp(temp)
+                        #LMM_perm = limix.qtl.iscan(temp.loc[:,np.unique(reduceInfo['lead_snp_id'].values)], phenotype, 'Normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M,verbose=False)
+                        #pValueBuffer.extend(np.asarray(LMM_perm.variant_pvalues[reduceInfo['lead_snp_id']]))
+                        LMM_perm = limix.qtl.iscan(temp, phenotype, 'Normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M,verbose=False)
+                        pValueBuffer.extend(np.asarray(LMM_perm.variant_pvalues))
                     if(not(len(pValueBuffer)==totalSnpsToBeTested)):
                         #print(len(pValueBuffer))
                         #print(pValueBuffer)
