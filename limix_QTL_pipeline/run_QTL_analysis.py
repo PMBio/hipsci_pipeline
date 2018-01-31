@@ -210,21 +210,13 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     if(write_permutations):
                         perm_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['snp_id'] + ['permutation_'+str(x) for x in range(n_perm)])
                         perm_df['snp_id'] = snp_matrix_DF.columns
-                    if(blocksize>totalSnpsToBeTested):
+                    for currentNperm in utils.chunker(list(range(1, n_perm+1)), np.floor(totalSnpsToBeTested/blocksize)):
                         if kinship_df is not None:
-                            temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
+                            temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], len(currentNperm))
                         else :
-                            temp = utils.get_shuffeld_genotypes(snp_matrix_DF, n_perm)
+                            temp = utils.get_shuffeld_genotypes(snp_matrix_DF, len(currentNperm))
                         LMM_perm = limix.qtl.scan(temp, phenotype, 'Normal',K=kinship_mat,M=cov_matrix,verbose=False)
                         pValueBuffer.extend(np.asarray(LMM_perm.variant_pvalues))
-                    else :
-                        for currentNperm in utils.chunker(list(range(1, n_perm+1)), np.floor(totalSnpsToBeTested/blocksize)):
-                            if kinship_df is not None:
-                                temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], len(currentNperm))
-                            else :
-                                temp = utils.get_shuffeld_genotypes(snp_matrix_DF, len(currentNperm))
-                            LMM_perm = limix.qtl.scan(temp, phenotype, 'Normal',K=kinship_mat,M=cov_matrix,verbose=False)
-                            pValueBuffer.extend(np.asarray(LMM_perm.variant_pvalues))
                     if(not(len(pValueBuffer)==totalSnpsToBeTested)):
                         #print(len(pValueBuffer))
                         #print(pValueBuffer)
