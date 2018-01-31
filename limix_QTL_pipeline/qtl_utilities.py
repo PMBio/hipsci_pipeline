@@ -512,8 +512,8 @@ def reduce_snp(snp_df, threshold=0.98):
     cor=abs(np.corrcoef(snp_df.T))>=threshold
     cor1=pd.DataFrame(data=np.triu(cor,k=1),index=allsnps,columns=allsnps).sum(1)
     cor2=pd.DataFrame(data=np.triu(cor,k=1),index=allsnps,columns=allsnps)
-    uniquesnps=cor1[cor1==0].index
-    duplicatedsnps=cor1[cor1>0].index
+    uniquesnps=cor1[cor1==0].index.values
+    duplicatedsnps=cor1[cor1>0].index.values
     '''the unique ones'''
     rez=pd.DataFrame(data=uniquesnps,index=uniquesnps,columns=['snp_id'])
     ''' the ones that are in LD.. if a,c and a,b but not b,c returns a,b)'''
