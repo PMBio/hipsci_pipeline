@@ -505,7 +505,7 @@ def do_snp_selection(feature_id, annotation_df, bim, cis_mode, window_size, skip
     
     return selected_snp_df
 
-def reduce_snp(snp_df, threshold=0.98):
+def reduce_snp(snp_df, threshold=0.975):
     ''' input a snp df  samples(rows) x snps( columns)'''
     ''' returns a df with columns: 'lead_snp_id' the pruned snp names and snp_id'''
     allsnps=snp_df.columns
