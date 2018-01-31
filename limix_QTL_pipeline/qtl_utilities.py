@@ -426,7 +426,7 @@ def get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, rel
         snp_matrix_copy[:,counter:end] = temp_u[locationBuffer,:]
         counter+= snp_matrix_DF.shape[1]
         end+= snp_matrix_DF.shape[1]
-    return(snp_matrix_copy)
+    return(pd.DataFrame(snp_matrix_copy))
 
 def get_shuffeld_genotypes(snp_matrix_DF,n_perm):
     snp_matrix_copy = np.zeros((snp_matrix_DF.shape[0],snp_matrix_DF.shape[1]*n_perm))
@@ -439,7 +439,7 @@ def get_shuffeld_genotypes(snp_matrix_DF,n_perm):
         snp_matrix_copy[:,counter:end] = snp_matrix_DF.values[index_samples,:]
         counter+= snp_matrix_DF.shape[1]
         end+= snp_matrix_DF.shape[1]
-    return(snp_matrix_copy)
+    return(pd.DataFrame(snp_matrix_copy))
 
 def qtl_plot(snp_matrix_DF, phenotype,K=None, M=None,LMM=None,snp=None,show_reg_cov=True):
     if LMM is None:
