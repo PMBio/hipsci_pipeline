@@ -6,9 +6,10 @@ import math
 #V0.1.1
 
 def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
-   
+    
     #Determine call rate.
     call_rate = 1-snp_df.isnull().sum()/len(snp_df.index)
+    #Return call_rate
     selection = call_rate < min_call_rate
     #print("Pass CR: ");print(snp_df.isnull().sum())
     #print(call_rate)
@@ -37,7 +38,7 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
         mac[snp] = int((genotypeCounter[snp,2]*2)+genotypeCounter[snp,1])
         gc[snp] = int(genotypeCounter[snp,2]+genotypeCounter[snp,1]+genotypeCounter[snp,0])
         maf[snp] = mac[snp] / (float(2*gc[snp]))
-    
+    #Return maf
     selection = maf < min_maf
     failed_snp_names.extend(list(snp_df_c.columns[selection]))
     snp_df_c = snp_df_c.iloc[:,~selection]
@@ -99,6 +100,7 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
                 p_hwe += het_probs[index];
 
         hweP[snp] = 1 if p_hwe > 1.0 else p_hwe;
+    #Return hweP
     selection = hweP < min_hwe_P
     failed_snp_names.extend(list(snp_df_c.columns[selection]))
     snp_df_c = snp_df_c.loc[:,list(snp_df_c.columns[~selection])]
