@@ -169,11 +169,8 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 if len(snp_df.columns) == 0:
                     continue
                 #We could make use of relatedness when imputing.
-                snp_matrix_DF = pd.DataFrame(fill_NaN.fit_transform(snp_df))
-                snp_matrix_DF.columns = snp_df.columns
-                snp_matrix_DF.index = snp_df.index
+                snp_matrix_DF = pd.DataFrame(fill_NaN.fit_transform(snp_df),index=snp_df.index,columns=snp_df.columns)
                 snp_df = None
-
 
                 inter = covariate_df.loc[:,interaction_terms]
 #                test if the covariates, kinship, snp and phenotype are in the same order
@@ -213,11 +210,14 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 if(n_perm!=0):
                     pValueBuffer = []
                     totalSnpsToBeTested = (snp_matrix_DF.shape[1]*n_perm)
+                    permutationStepSize = np.floor(totalSnpsToBeTested/blocksize)
+                    if(permutationStepSize==0):
+                        permutationStepSize=1
                     perm = 0;
                     if(write_permutations):
                         perm_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['snp_id'] + ['permutation_'+str(x) for x in range(n_perm)])
                         perm_df['snp_id'] = snp_matrix_DF.columns
-                    for currentNperm in utils.chunker(list(range(1, n_perm+1)), np.floor(totalSnpsToBeTested/blocksize)):
+                    for currentNperm in utils.chunker(list(range(1, n_perm+1)), permutationStepSize):
                         if kinship_df is not None:
                             temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], len(currentNperm))
                         else :
