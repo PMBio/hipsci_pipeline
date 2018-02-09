@@ -136,7 +136,13 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     elif (contains_missing_samples):
                         QS_tmp = QS
                         QS = economic_qs(kinship_mat)
-                
+                if kinship_df is None:
+                    K = eye(len(phenotype_ds.index))
+                    if(QS is None and not contains_missing_samples):
+                        QS = economic_qs(kinship_mat)
+                    elif (contains_missing_samples):
+                        QS_tmp = QS
+                        QS = economic_qs(kinship_mat)
                 cov_matrix =  covariate_df.loc[sample2individual_feature['sample'],:].values if covariate_df is not None else None
                 if covariate_df is None:
                     cov_matrix = ones((len(individual_ids), 1))
