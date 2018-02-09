@@ -57,7 +57,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
             continue
         data_written = False
-        
+
         snpQuery = utils.do_snp_selection(feature_id, complete_annotation_df, bim, cis_mode, window_size, skipAutosomeFiltering)
         snp_cov_df = None
         if(feature_variant_covariate_df is not None):
@@ -77,11 +77,13 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         if (len(snpQuery) != 0) and (snp_feature_filter_df is not None):
             snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x in list(snp_feature_filter_df['snp_id'].loc[snp_feature_filter_df['feature']==feature_id]))]
         if len(snpQuery) != 0:
+
             phenotype_ds = phenotype_df.loc[feature_id]
             contains_missing_samples = any(~np.isfinite(phenotype_ds))
             if(contains_missing_samples):
                 print ('Feature: ' + feature_id + ' contains missing data.')
                 phenotype_ds.dropna(inplace=True)
+#   
             '''select indices for relevant individuals in genotype matrix
             These are not unique. NOT to be used to access phenotype/covariates data
             '''
@@ -106,6 +108,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             #This allowes for more efficient blocking and retreaving of data
             if not contains_missing_samples:
                 snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x not in list(map(str, fail_qc_snps_all)))]
+            
+            n_samples.append(phenotype_ds.size)
+            n_e_samples.append(len(geneticaly_unique_individuals))
             
             print ('For feature: ' +str(currentFeatureNumber)+ '/'+str(len(feature_list))+ ' (' + feature_id + '): ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
             
@@ -158,7 +163,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 #We could make use of relatedness when imputing.
                 snp_matrix_DF = pd.DataFrame(fill_NaN.fit_transform(snp_df),index=snp_df.index,columns=snp_df.columns)
                 snp_df = None
-                
+
 #                test if the covariates, kinship, snp and phenotype are in the same order
                 if ((all(snp_matrix_DF.index==kinship_df.loc[individual_ids,individual_ids].index) if kinship_df is not None else True) &\
                      (all(phenotype_ds.index==covariate_df.loc[sample2individual_feature['sample'],:].index)if covariate_df is not None else True)&\
@@ -230,7 +235,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         perm+=1
                 
                 #add these results to qtl_results
-                temp_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value'])
+                temp_df = pd.DataFrame(index = range(len(snp_matrix_DF.columns)),columns=['feature_id','snp_id','p_value','beta','beta_se','n_samples','empirical_feature_p_value'])
                 temp_df['snp_id'] = snp_matrix_DF.columns
                 temp_df['feature_id'] = feature_id
                 temp_df['beta'] = np.asarray(LMM.variant_effsizes)
@@ -243,19 +248,17 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     output_writer.add_result_df(temp_df)
                     if(write_permutations):
                         permutation_writer.add_permutation_results_df(perm_df,feature_id)
-            #This we need to change in the written file.
-            if(n_perm>1 and data_written):
-                #updated_permuted_p_in_hdf5(bestPermutationPval, feature_id);
-                alpha_para, beta_para = output_writer.apply_pval_correction(feature_id,bestPermutationPval)
-                alpha_params.append(alpha_para)
-                beta_params.append(beta_para)
-            if not data_written :
-                fail_qc_features.append(feature_id)
-            else:
-                n_samples.append(phenotype_ds.size)
-                n_e_samples.append(len(geneticaly_unique_individuals))
             if contains_missing_samples:
                 geneticaly_unique_individuals = tmp_unique_individuals
+            
+            #This we need to change in the written file.
+        if(n_perm>1 and data_written):
+            #updated_permuted_p_in_hdf5(bestPermutationPval, feature_id);
+            alpha_para, beta_para = output_writer.apply_pval_correction(feature_id,bestPermutationPval)
+            alpha_params.append(alpha_para)
+            beta_params.append(beta_para)
+        if not data_written :
+            fail_qc_features.append(feature_id)
         #print('step 5')
     output_writer.close()
     if(write_permutations):
