@@ -31,6 +31,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     
     mixed = kinship_df is not None
     QS = None
+    lmm = None
+    flmm = None
+    null_lml = None
     if(feature_list==None or len(feature_list)==0):
         print ('No features to be tested.')
         sys.exit()
@@ -168,14 +171,27 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             #lmm = LMM(phenotype, cov_matrix, QS, SVD=svd_cov)
             #These steps need to happen only once per phenotype.
             #print(QS)
-            lmm = LMM(phenotype, cov_matrix, QS)
-            if not mixed:
-                lmm.delta = 1
-                lmm.fix('delta')
+            if((lmm is None or flmm is None or null_lml is None) and not contains_missing_samples):
+                lmm = LMM(phenotype, cov_matrix, QS)
+                if not mixed:
+                    lmm.delta = 1
+                    lmm.fix('delta')
             #Prepare null model.
-            lmm.fit(verbose=False)
-            null_lml = lmm.lml()
-            flmm = lmm.get_fast_scanner()
+                lmm.fit(verbose=False)
+                null_lml = lmm.lml()
+                flmm = lmm.get_fast_scanner()
+            elif (contains_missing_samples):
+                t_lmm = lmm
+                t_flmm = flmm
+                t_null_lml = null_lml
+                lmm = LMM(phenotype, cov_matrix, QS)
+                if not mixed:
+                    lmm.delta = 1
+                    lmm.fix('delta')
+            #Prepare null model.
+                lmm.fit(verbose=False)
+                null_lml = lmm.lml()
+                flmm = lmm.get_fast_scanner()
             
             for snpGroup in utils.chunker(snpQuery, blocksize):
                 #Fix seed at the start of the first chunker so all permutations are based on the same random first split.
@@ -295,9 +311,15 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 n_e_samples.append(len(geneticaly_unique_individuals))
             if contains_missing_samples:
                 QS = QS_tmp
+                lmm = t_lmm
+                flmm = t_flmm
+                null_lml = t_null_lml
                 geneticaly_unique_individuals = tmp_unique_individuals
                 del QS_tmp
                 del tmp_unique_individuals
+                del t_lmm
+                del t_flmm
+                del t_null_lml
         #print('step 5')
     output_writer.close()
     if(write_permutations):
