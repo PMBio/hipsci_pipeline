@@ -93,15 +93,18 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
             if contains_missing_samples:
                 tmp_unique_individuals = geneticaly_unique_individuals
                 geneticaly_unique_individuals = utils.get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
+            
             if phenotype_ds.empty or len(geneticaly_unique_individuals)<minimum_test_samples :
                 print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
                 fail_qc_features.append(feature_id)
-                geneticaly_unique_individuals = tmp_unique_individuals
+                if contains_missing_samples:
+                    geneticaly_unique_individuals = tmp_unique_individuals
                 continue
             elif np.var(phenotype_ds.values) == 0:
                 print("Feature: "+feature_id+" has no variance in selected individuals.")
                 fail_qc_features.append(feature_id)
-                geneticaly_unique_individuals = tmp_unique_individuals
+                if contains_missing_samples:
+                    geneticaly_unique_individuals = tmp_unique_individuals
                 continue
             
             print ('For feature: ' +str(currentFeatureNumber)+ '/'+str(len(feature_list))+ ' (' + feature_id + '): ' + str(snpQuery.shape[0]) + ' risk scores will be tested.\n Please stand by.')
@@ -305,7 +308,7 @@ if __name__=='__main__':
     includeAllChromsomes = args.no_chromosome_filter
 
     if ((grsFile is None)):
-        raise ValueError("No risk scores provided. Either specify a path to Genetic risc score flatfile.")
+        raise ValueError("No risk scores provided. Either specify a path to Genetic risk score flat-file.")
     
     if (random_seed is None):
         random_seed = np.random.randint(40000)

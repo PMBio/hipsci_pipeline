@@ -61,8 +61,11 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         currentFeatureNumber+= 1
         if (len(phenotype_df.loc[feature_id,:]))<minimum_test_samples:
             print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
+            fail_qc_features.append(feature_id)
+            geneticaly_unique_individuals = tmp_unique_individuals
             continue
         data_written = False
+        contains_missing_samples = False
         snpQuery = utils.do_snp_selection(feature_id, complete_annotation_df, bim, cis_mode, window_size, skipAutosomeFiltering)
         snp_cov_df = None
         if(feature_variant_covariate_df is not None):
@@ -104,12 +107,14 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             if phenotype_ds.empty or len(geneticaly_unique_individuals)<minimum_test_samples :
                 print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
                 fail_qc_features.append(feature_id)
-                geneticaly_unique_individuals = tmp_unique_individuals
+                if contains_missing_samples:
+                    geneticaly_unique_individuals = tmp_unique_individuals
                 continue
             elif np.var(phenotype_ds.values) == 0:
                 print("Feature: "+feature_id+" has no variance in selected individuals.")
                 fail_qc_features.append(feature_id)
-                geneticaly_unique_individuals = tmp_unique_individuals
+                if contains_missing_samples:
+                    geneticaly_unique_individuals = tmp_unique_individuals
                 continue
             
             print ('For feature: ' +str(currentFeatureNumber)+ '/'+str(len(feature_list))+ ' (' + feature_id + '): ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
@@ -283,21 +288,21 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     if(write_permutations):
                         permutation_writer.add_permutation_results_df(perm_df,feature_id)
             #This we need to change in the written file.
-            if(n_perm>1 and data_written):
-                #updated_permuted_p_in_hdf5(bestPermutationPval, feature_id);
-                alpha_para, beta_para = output_writer.apply_pval_correction(feature_id,bestPermutationPval)
-                alpha_params.append(alpha_para)
-                beta_params.append(beta_para)
-            if not data_written :
-                fail_qc_features.append(feature_id)
-            else:
-                n_samples.append(phenotype_ds.size)
-                n_e_samples.append(len(geneticaly_unique_individuals))
-            if contains_missing_samples:
-                QS = QS_tmp
-                geneticaly_unique_individuals = tmp_unique_individuals
-                del QS_tmp
-                del tmp_unique_individuals
+        if(n_perm>1 and data_written):
+            #updated_permuted_p_in_hdf5(bestPermutationPval, feature_id);
+            alpha_para, beta_para = output_writer.apply_pval_correction(feature_id,bestPermutationPval)
+            alpha_params.append(alpha_para)
+            beta_params.append(beta_para)
+        if not data_written :
+            fail_qc_features.append(feature_id)
+        else:
+            n_samples.append(phenotype_ds.size)
+            n_e_samples.append(len(geneticaly_unique_individuals))
+        if contains_missing_samples:
+            QS = QS_tmp
+            geneticaly_unique_individuals = tmp_unique_individuals
+            del QS_tmp
+            del tmp_unique_individuals
         #print('step 5')
     output_writer.close()
     if(write_permutations):
@@ -317,7 +322,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     annotation_df['n_samples'] = n_samples
     annotation_df['n_e_samples'] = n_e_samples
     
-    if(n_perm>1 and data_written):
+    if(n_perm>1):
         annotation_df['alpha_param'] = alpha_params
         annotation_df['beta_param'] = beta_params
     if not selectionStart is None :
