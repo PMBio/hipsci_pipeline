@@ -48,7 +48,7 @@ def test_QTL_analysis():
                      blocksize,cis_mode=True, seed=randomSeed, n_perm=100, snps_filename=None,feature_filename = None,
                      genetic_range=chromosome,
                      covariates_filename=covariates_filename,
-                     kinship_filename=kinship_filename,
+                     kinship_filename=kinship_filename, write_permutations = True,
                      sample_mapping_filename=individual2sample_filename)
 
 if __name__=='__main__':

@@ -227,7 +227,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                         #reduceInfo  = utils.reduce_snp(temp)
                         #LMM_perm = limix.qtl.iscan(temp.loc[:,np.unique(reduceInfo['lead_snp_id'].values)], phenotype, 'Normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M,verbose=False)
                         #pValueBuffer.extend(np.asarray(LMM_perm.variant_pvalues[reduceInfo['lead_snp_id']]))
-                        LMM_perm = limix.qtl.iscan(temp, phenotype, 'Normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M,verbose=False)
+                        LMM_perm = limix.qtl.iscan(temp, phenotype, 'Normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=np.asarray(cov_matrix, float),verbose=False)
                         pValueBuffer.extend(np.asarray(LMM_perm.variant_pvalues))
                     if(not(len(pValueBuffer)==totalSnpsToBeTested)):
                         #print(len(pValueBuffer))

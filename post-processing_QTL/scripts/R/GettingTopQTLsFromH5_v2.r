@@ -13,12 +13,14 @@ if(!(filterFile=="" || is.na(filterFile))){
 #baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/WithCorrection/ExonLevel/OutExonMapping.joint.PeerCorrected/"
 #baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/Trans_WithCorrection_V2/t/"
 #baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/Trans_WithCorrection/Replication/OutTransReplication_cisCorrected/"
-baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/Trans_WithCorrection/Replication/OutTransReplication_extended_filtered_cisCorrected/"
+#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/T/GRS_QT/"
+#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/Trans_WithCorrection/Replication/OutTransReplication_extended_filtered_cisCorrected/"
 #baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/WithCorrection/TranscriptLevel/OutTranscriptMapping.joint.PeerCorrected/"
 #baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/WithCorrection/ApaLevel/OutApaMapping.joint.PeerCorrected/"
 #baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/WithCorrection/SplicingLevel/OutSplicingMappingNeg.joint/"
 #baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/WithCorrection/SplicingLevel/OutSplicingMappingPos.joint/"
-#baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/WithCorrection/GeneLevel/OutJointGeneMapping.PeerCorrected/"
+baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/WithCorrection/GeneLevel/OutJointGeneMapping.PeerCorrected/"
+baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/Trans_iPSC/QC/Paired_MultiQC/T/"
 # baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/WithCorrection/GeneLevel/OutGeneMapping.joint.PeerCorrected.Secondary/"
 # baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/WithCorrection/GeneLevel/OutGeneMapping.joint.PeerCorrected.Tertiary/"
 # baseFolder <- "C:/OnlineFolders/BitSync/Current_Work/EBI_HipSci/QTL_Output/HipSci_iPSCORE/WithCorrection/GeneLevel/OutGeneMapping.joint.PeerCorrected.Quaternary/"
@@ -44,7 +46,7 @@ setwd(baseFolder)
 observedFeatures <- 0
 results <- NULL
 snpAnnotation <- NULL
-filesToRead <- list.files("./",pattern = ".h5",full.names = T)
+filesToRead <- list.files(".",pattern = ".h5",full.names = T)
 if(file.exists("./qtl_results_all.h5")){
   tmp <- h5dump(file = "./qtl_results_all.h5")
   if(length(tmp)>0){
@@ -78,6 +80,12 @@ if(file.exists("./qtl_results_all.h5")){
       if(multipleTestingGlobal=="BF"){
         df <- df[df$corr_p_value<threshold,]
       }
+      if(length(grep(colnames(df),pattern = "n_samples"))>0){
+        df <- df[,-grep(colnames(df),pattern = "n_samples")]
+      }
+      if(!is.null(filterFeatures)){
+        df <- df[which(df$feature%in%filterFeatures),]
+      }
       if(nrow(df)>0){
         results = rbind(results,df)  
       }
@@ -105,7 +113,7 @@ results <- results[order(results$empirical_feature_p_value, results$p_value,decr
 
 if(topResultBased){
   resultsFull <- results
-  results <- results[which(!duplicated(results$feature)),]
+  results <- resultsFull[which(!duplicated(resultsFull$feature)),]
 }
 
 #saveRDS(results, "SplicingResults.Rds")

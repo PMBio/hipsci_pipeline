@@ -57,7 +57,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     n_samples = []
     n_e_samples = []
     currentFeatureNumber = 0
+    snpQcInfoMain = None
     for feature_id in feature_list:
+        snpQcInfo = None
         currentFeatureNumber+= 1
         if (len(phenotype_df.loc[feature_id,:]))<minimum_test_samples:
             print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
@@ -203,9 +205,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     if snps_to_test_df.shape[1] > 0:
                         #Only do QC on relevant SNPs. join pre-QCed list and new QCed list.
                         if kinship_df is not None:
-                            passed_snp_names,failed_snp_names = do_snp_qc(snps_to_test_df.iloc[np.unique(snps_to_test_df.index,return_index=1)[1]].loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P)
+                            passed_snp_names,failed_snp_names,call_rate,maf,hweP = do_snp_qc(snps_to_test_df.iloc[np.unique(snps_to_test_df.index,return_index=1)[1]].loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P)
                         else:
-                            passed_snp_names,failed_snp_names = do_snp_qc(snps_to_test_df, min_call_rate, min_maf, min_hwe_P)
+                            passed_snp_names,failed_snp_names,call_rate,maf,hweP = do_snp_qc(snps_to_test_df, min_call_rate, min_maf, min_hwe_P)
                         snps_to_test_df = None
                         #append snp_names and failed_snp_names
                         pass_qc_snps_all.extend(passed_snp_names)
@@ -215,12 +217,27 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     #Do snp QC for relevant section.
                     #Get relevant slice from: phenotype_ds
                     if kinship_df is not None:
-                        passed_snp_names,failed_snp_names = do_snp_qc(snp_df.iloc[np.unique(snp_df.index,return_index=1)[1]].loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P) 
+                        passed_snp_names,failed_snp_names,call_rate,maf,hweP = do_snp_qc(snp_df.iloc[np.unique(snp_df.index,return_index=1)[1]].loc[geneticaly_unique_individuals,:], min_call_rate, min_maf, min_hwe_P) 
                     else:
-                        passed_snp_names,failed_snp_names = do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P)
+                        passed_snp_names,failed_snp_names,call_rate,maf,hweP = do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P)
                     snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(passed_snp_names)]]
                 if len(snp_df.columns) == 0:
                     continue
+                snpQcInfo_t = None
+                if call_rate is not None:
+                    snpQcInfo_t = call_rate.transpose()
+                    if maf is not None:
+                        snpQcInfo_t = snpQcInfo_t.merge(maf.transpose(), how='outer')
+                        if hweP is not None:
+                            snpQcInfo_t = snpQcInfo_t.merge(hweP.transpose(), how='outer')
+                
+                if snpQcInfo is None : 
+                    if snpQcInfo_t is not None:
+                        snpQcInfo = snpQcInfo_t
+                else:
+                    if snpQcInfo_t is not None:
+                        snpQcInfo = pd.concat([snpQcInfo, snpQcInfo_t], axis=1)
+                
                 #We could make use of relatedness when imputing.  And impute only based on genetically unique individuals.
                 snp_df = pd.DataFrame(fill_NaN.fit_transform(snp_df),index=snp_df.index,columns=snp_df.columns)
                 ##No more snp_matrix_DF > snp_df
@@ -301,8 +318,17 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         if contains_missing_samples:
             QS = QS_tmp
             geneticaly_unique_individuals = tmp_unique_individuals
+            snpQcInfo = snpQcInfo.transpose()
+            snpQcInfo.to_csv(output_dir+'/snp_qc_metrics_naContaining_feature_{}.txt'.format(feature_id),sep='\t')
             del QS_tmp
             del tmp_unique_individuals
+        else:
+            if (snpQcInfo is not None and snpQcInfoMain is not None):
+                cols_to_use = snpQcInfo.columns.difference(snpQcInfoMain.columns)
+                snpQcInfoMain = pd.concat([snpQcInfoMain, snpQcInfo[cols_to_use]], axis=1)
+            elif snpQcInfo is not None :
+                snpQcInfoMain = snpQcInfo.copy(deep=True)
+                
         #print('step 5')
     output_writer.close()
     if(write_permutations):
@@ -316,7 +342,21 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     snp_df['chromosome'] = bim['chrom']
     snp_df['position'] = bim['pos']
     snp_df['assessed_allele'] = bim['a1']
-
+    snp_df = snp_df.ix[tested_snp_idxs,:]
+    snp_df = snp_df.drop_duplicates()
+    snp_df.index = snp_df['snp_id']
+    
+    if snpQcInfoMain is not None :
+        snp_df = snp_df.transpose()
+        snpQcInfoMain = snpQcInfoMain.transpose()
+        snpQcInfoMain['snp_id']=snpQcInfoMain.index
+        snpQcInfoMain =  snpQcInfoMain.drop_duplicates().transpose()
+        #print(snp_df)
+        #print(snpQcInfoMain)
+        snp_df = snp_df.merge(snpQcInfoMain, how='outer') 
+        snp_df = snp_df.transpose()
+        snp_df.columns = ['snp_id','chromosome','position','assessed_allele','call_rate','maf','hwe_pvalue']
+    
     feature_list = [x for x in feature_list if x not in fail_qc_features]
     annotation_df = annotation_df.loc[feature_list,:]
     annotation_df['n_samples'] = n_samples
@@ -326,10 +366,10 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         annotation_df['alpha_param'] = alpha_params
         annotation_df['beta_param'] = beta_params
     if not selectionStart is None :
-        snp_df.ix[tested_snp_idxs,:].to_csv(output_dir+'/snp_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t',index=False)
+        snp_df.to_csv(output_dir+'/snp_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t',index=False)
         annotation_df.to_csv(output_dir+'/feature_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t')
     else :
-        snp_df.ix[tested_snp_idxs,:].to_csv(output_dir+'/snp_metadata_{}.txt'.format(chromosome),sep='\t',index=False)
+        snp_df.to_csv(output_dir+'/snp_metadata_{}.txt'.format(chromosome),sep='\t',index=False)
         annotation_df.to_csv(output_dir+'/feature_metadata_{}.txt'.format(chromosome),sep='\t')
 
 if __name__=='__main__':
