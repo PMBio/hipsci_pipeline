@@ -14,7 +14,7 @@ from numpy_sugar.linalg import economic_qs, economic_svd
 from limix.stats import effsizes_se, lrt_pvalues
 from glimix_core.lmm import LMM
 
-#V0.1.2
+#V0.1.3
 
 def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, output_dir, window_size=250000, min_maf=0.05, min_hwe_P=0.001, min_call_rate=0.95, blocksize=1000,
                      cis_mode=True, skipAutosomeFiltering = False, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, feature_variant_covariate_filename = None, snps_filename=None, feature_filename=None, snp_feature_filename=None, genetic_range='all',
@@ -183,8 +183,10 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             lmm.fit(verbose=False)
             null_lml = lmm.lml()
             flmm = lmm.get_fast_scanner()
-            
+            countChunker = 0
             for snpGroup in utils.chunker(snpQuery, blocksize):
+                countChunker=countChunker+1
+                #print(countChunker)
                 #Fix seed at the start of the first chunker so all permutations are based on the same random first split.
                 np.random.seed(seed)
                 #print(snpGroup)
@@ -230,13 +232,13 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         snpQcInfo_t = snpQcInfo_t.merge(maf.transpose(), how='outer')
                         if hweP is not None:
                             snpQcInfo_t = snpQcInfo_t.merge(hweP.transpose(), how='outer')
-                
-                if snpQcInfo is None : 
-                    if snpQcInfo_t is not None:
-                        snpQcInfo = snpQcInfo_t
-                else:
-                    if snpQcInfo_t is not None:
-                        snpQcInfo = pd.concat([snpQcInfo, snpQcInfo_t], axis=1)
+                call_rate = None
+                maf = None
+                hweP = None
+                if snpQcInfo is None and snpQcInfo_t is not None:
+                    snpQcInfo = snpQcInfo_t
+                elif snpQcInfo_t is not None:
+                    snpQcInfo = pd.concat([snpQcInfo, snpQcInfo_t], axis=1)
                 
                 #We could make use of relatedness when imputing.  And impute only based on genetically unique individuals.
                 snp_df = pd.DataFrame(fill_NaN.fit_transform(snp_df),index=snp_df.index,columns=snp_df.columns)
@@ -328,7 +330,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 snpQcInfoMain = pd.concat([snpQcInfoMain, snpQcInfo[cols_to_use]], axis=1)
             elif snpQcInfo is not None :
                 snpQcInfoMain = snpQcInfo.copy(deep=True)
-                
+        #if snpQcInfo is not None:
+            #snpQcInfo2 = snpQcInfo.copy().transpose()
+            #snpQcInfo2.to_csv(output_dir+'/snp_qc_metrics_feature_{}.txt'.format(feature_id),sep='\t')
         #print('step 5')
     output_writer.close()
     if(write_permutations):
