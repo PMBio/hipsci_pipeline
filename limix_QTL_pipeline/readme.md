@@ -20,3 +20,6 @@ To create a limix development enviroment
 
 
 NB. be sure to be in a folder where you can download files to and there is no folder called limix.
+
+Some filesystems have locking disabled to write to be able to use the tool use:
+export HDF5_USE_FILE_LOCKING=FALSE
