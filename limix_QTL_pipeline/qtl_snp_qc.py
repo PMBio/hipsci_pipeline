@@ -1,4 +1,3 @@
-import limix
 import pandas as pd
 import numpy as np
 import math
@@ -14,11 +13,12 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
     #print("Pass CR: ");print(snp_df.isnull().sum())
     #print(call_rate)
     #print(call_rate < min_call_rate)
+    call_rate = pd.DataFrame(data=call_rate.values, index=snp_df.columns, columns=['call_rate'])
     failed_snp_names  = list(snp_df.columns[selection])
     snp_df_c = snp_df.loc[:,list(snp_df.columns[~selection])]
     #print("Pass CR: ");print(snp_df_c.shape)
     if(len(snp_df_c.columns)==0):
-        return snp_df_c.columns, failed_snp_names
+        return snp_df_c.columns, failed_snp_names, call_rate, None, None
     #Determine MAF.
     genotypeCounter = np.zeros((len(snp_df_c.columns),3), dtype=np.int)
     for allele_index in [0,1,2]:
@@ -40,11 +40,12 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
         maf[snp] = mac[snp] / (float(2*gc[snp]))
     #Return maf
     selection = maf < min_maf
+    maf = pd.DataFrame(data=maf, index=snp_df_c.columns, columns=['maf'])
     failed_snp_names.extend(list(snp_df_c.columns[selection]))
     snp_df_c = snp_df_c.iloc[:,~selection]
     #print("Pass MAF: ");print(snp_df_c.shape)
     if(len(snp_df_c.columns)==0):
-        return snp_df_c.columns, failed_snp_names
+        return snp_df_c.columns, failed_snp_names, call_rate, maf, None
     
     mac=mac[~selection]
     gc=gc[~selection]
@@ -102,10 +103,11 @@ def do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P):
         hweP[snp] = 1 if p_hwe > 1.0 else p_hwe;
     #Return hweP
     selection = hweP < min_hwe_P
+    hweP = pd.DataFrame(data=hweP, index=snp_df_c.columns, columns=['hwe_p'])
     failed_snp_names.extend(list(snp_df_c.columns[selection]))
     snp_df_c = snp_df_c.loc[:,list(snp_df_c.columns[~selection])]
     #print("Pass HWE: ");print(snp_df_c.shape)
-    return snp_df_c.columns, failed_snp_names
+    return snp_df_c.columns, failed_snp_names, call_rate, maf, hweP
 
 def do_snp_qc_stringent(snp_df, min_call_rate, min_maf, min_hwe_P, min_hmachR2):
    

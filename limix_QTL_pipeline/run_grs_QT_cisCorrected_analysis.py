@@ -15,16 +15,15 @@ from glimix_core.lmm import LMM
 
 #V0.1.2
 
-def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, blocksize=1000,
-                     skipAutosomeFiltering = False, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, feature_variant_covariate_filename = None, snps_filename=None, feature_filename=None, snp_feature_filename=None, genetic_range='all',
-                     covariates_filename=None, kinship_filename=None, sample_mapping_filename=None):
+def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, geno_prefix, plinkGenotype, output_dir, blocksize=1000,skipAutosomeFiltering = False, gaussianize_method=None, minimum_test_samples= 10, 
+                        seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, feature_variant_covariate_filename = None, snps_filename=None,
+                        feature_filename=None, snp_feature_filename=None, genetic_range='all', covariates_filename=None, kinship_filename=None, sample_mapping_filename=None):
     fill_NaN = Imputer(missing_values=np.nan, strategy='mean', axis=0)
     print('Running GRS QT analysis.')
     lik = 'normal'
     '''Core function to take input and run QTL tests on a given chromosome.'''
-
-    [phenotype_df, kinship_df, covariate_df, sample2individual_df, annotation_df, snp_filter_df, snp_feature_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list, risk_df, chromosome, selectionStart, selectionEnd, feature_variant_covariate_df]=\
-    utils.run_PrsQtl_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(pheno_filename=pheno_filename, anno_filename=anno_filename, prsFile=prsFile, skipAutosomeFiltering = skipAutosomeFiltering,
+    [phenotype_df, kinship_df, covariate_df, sample2individual_df, annotation_df, snp_filter_df, snp_feature_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list, bim, fam, bed, risk_df, chromosome, selectionStart, selectionEnd, feature_variant_covariate_df]=\
+    utils.run_PrsQtl_CisCorrected_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(pheno_filename=pheno_filename, anno_filename=anno_filename, geno_prefix=geno_prefix, plinkGenotype=plinkGenotype, prsFile=prsFile, skipAutosomeFiltering = skipAutosomeFiltering,
                       minimum_test_samples= minimum_test_samples,  relatedness_score=relatedness_score, snps_filename=snps_filename, feature_filename=feature_filename, snp_feature_filename=snp_feature_filename, selection=genetic_range,
                      covariates_filename=covariates_filename, kinship_filename=kinship_filename, sample_mapping_filename=sample_mapping_filename, feature_variant_covariate_filename=feature_variant_covariate_filename)
     
@@ -63,13 +62,16 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
 
         snpQuery = risk_df.index
         snp_cov_df = None
-        #Here we need to do more changes as we want to correct for cis SNPs
-        #if(feature_variant_covariate_df is not None):
-        #    if(feature_id in feature_variant_covariate_df['feature'].values):
-        #        covariateSnp = feature_variant_covariate_df['snp_id'].values[feature_variant_covariate_df['feature']==feature_id]
-        #        if(any(i in  risk_df.index.values for i in covariateSnp)):
-        #            snpQuery_cov = risk_df.index.loc[risk_df.index.map(lambda x: x in list(covariateSnp)),:]
-        #            snp_cov_df = risk_df.index.loc[risk_df.index.map(lambda x: x in list(covariateSnp)),:].transpose()
+        if(feature_variant_covariate_df is not None):
+            if(feature_id in feature_variant_covariate_df['feature'].values):
+                covariateSnp = feature_variant_covariate_df['snp_id'].values[feature_variant_covariate_df['feature']==feature_id]
+                if(any(i in  bim['snp'].values for i in covariateSnp)):
+                    snpQuery_cov = bim.loc[bim['snp'].map(lambda x: x in list(covariateSnp)),:]
+                    snp_cov_df_t = pd.DataFrame(data=bed[snpQuery_cov['i'].values,:].compute().transpose(),index=fam.index,columns=snpQuery_cov['snp'],)
+                    snp_cov_df = pd.DataFrame(fill_NaN.fit_transform(snp_cov_df_t))
+                    snp_cov_df.index=snp_cov_df_t.index
+                    snp_cov_df.columns=snp_cov_df_t.columns
+                    snp_cov_df_t = None
         if (len(snpQuery) != 0) and (snp_filter_df is not None):
             snpQuery = snpQuery.loc[snpQuery['snp'].map(lambda x: x in list(map(str, snp_filter_df.index)))]
         
@@ -144,6 +146,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
                     snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
                     snp_cov_df_tmp.index=sample2individual_feature['sample']
                     cov_matrix = np.concatenate((cov_matrix,snp_cov_df_tmp.values),1)
+                    print("added snp information as covariate.")
                 cov_matrix = cov_matrix.astype(float)
             else:
                 print ('There is an issue in mapping phenotypes vs covariates and/or kinship')
@@ -285,7 +288,9 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, bloc
         annotation_df.to_csv(output_dir+'/feature_metadata_{}.txt'.format(chromosome),sep='\t')
 
 if __name__=='__main__':
-    args = qtl_parse_args.get_grsQtl_args()
+    args = qtl_parse_args.get_grsQtl_cis_corrected_args()
+    plink  = args.plink
+    bgen = args.bgen
     grsFile  = args.genetic_risk_scores
     anno_file = args.annotation_file
     pheno_file = args.phenotype_file
@@ -306,7 +311,20 @@ if __name__=='__main__':
     gaussianize = args.gaussianize_method
     write_permutations = args.write_permutations
     includeAllChromsomes = args.no_chromosome_filter
+    
+    if ((plink is None) and (bgen is None)):
+        raise ValueError("No genotypes provided. Either specify a path to a binary plink genotype file or a bgen file.")
+    if ((plink is not None) and (bgen is not None)):
+        raise ValueError("Only one genotype file can be provided at once, not both plink and bgen")
 
+    if (bgen is not None) :
+        plinkGenotype=False
+        geno_prefix = bgen
+        raise ValueError("Not supported")
+    else:
+        plinkGenotype=True
+        geno_prefix = plink
+    
     if ((grsFile is None)):
         raise ValueError("No risk scores provided. Either specify a path to Genetic risk score flat-file.")
     
@@ -320,7 +338,7 @@ if __name__=='__main__':
         print("Warning: With only 1 permutation P-value correction is not performed.")
     if(n_perm<50):
         print("Warning: With less than 50 permutations P-values correction is not very accurate.")
-    run_PrsQtl_analysis(pheno_file, anno_file, grsFile, output_dir, blocksize=int(block_size), skipAutosomeFiltering= includeAllChromsomes, gaussianize_method = gaussianize,
+    run_PrsQtl_analysis(pheno_file, anno_file, grsFile,geno_prefix, plinkGenotype, output_dir, blocksize=int(block_size), skipAutosomeFiltering= includeAllChromsomes, gaussianize_method = gaussianize,
                      minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), n_perm=int(n_perm), write_permutations = write_permutations, relatedness_score=float(relatedness_score), 
                      feature_variant_covariate_filename = feature_variant_covariate_filename, snps_filename=snps_filename, feature_filename=feature_filename, snp_feature_filename=snp_feature_filename, 
                      genetic_range=genetic_range, covariates_filename=covariates_file, kinship_filename=kinship_file, sample_mapping_filename=samplemap_file)

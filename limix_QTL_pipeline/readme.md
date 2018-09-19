@@ -12,12 +12,11 @@ To create a limix development enviroment
 
 `source activate limix_qtl_develop`
 
-`bash <(curl -fsSL https://raw.githubusercontent.com/limix/limix/develop/install)`
-
 `conda install -c anaconda pytest`
 
 `conda install pytables`
 
+`bash <(curl -fsSL https://raw.githubusercontent.com/limix/limix/develop/install)`
 
 NB. be sure to be in a folder where you can download files to and there is no folder called limix.
 

@@ -37,19 +37,19 @@ def test_QTL_analysis():
     min_hwe_P=0.001
     min_call_rate =0.95
     blocksize = 50
-    output_dir = data_path+'limix_QTL_results_kinship_covs/'
+    output_dir = data_path+'limix_QTL_results_bgen_kinship_covs/'
     randomSeed = 73
     chromosome = '1'
     
     ws = 2500000
     
-    run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,True,output_dir,ws,
+    run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,False,output_dir,ws,
                      min_maf, min_hwe_P, min_call_rate,
                      blocksize,cis_mode=True, seed=randomSeed, n_perm=100, snps_filename=None,feature_filename = None,
                      genetic_range=chromosome,
                      covariates_filename=covariates_filename,
                      kinship_filename=kinship_filename, write_permutations = True,
-                     sample_mapping_filename=individual2sample_filename)
+                     sample_mapping_filename=individual2sample_filename, regressCovariatesUpfront = True)
 
 if __name__=='__main__':
     test_QTL_analysis()

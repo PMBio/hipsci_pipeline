@@ -110,12 +110,14 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
             if phenotype_ds.empty or len(geneticaly_unique_individuals)<minimum_test_samples :
                 print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
                 fail_qc_features.append(feature_id)
-                geneticaly_unique_individuals = tmp_unique_individuals
+                if contains_missing_samples:
+                    geneticaly_unique_individuals = tmp_unique_individuals
                 continue
             elif np.var(phenotype_ds.values) == 0:
                 print("Feature: "+feature_id+" has no variance in selected individuals.")
                 fail_qc_features.append(feature_id)
-                geneticaly_unique_individuals = tmp_unique_individuals
+                if contains_missing_samples:
+                    geneticaly_unique_individuals = tmp_unique_individuals
                 continue
 
             #If no missing samples we can use the previous SNP Qc information before actually loading data.
@@ -202,7 +204,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 #For limix 1.1 we need to switch to lm our selfs if there is no K.
 #                return[snp_matrix_DF,phenotype, kinship_mat,cov_matrix]
                 try: 
-                    LMM = limix.qtl.qtl_test_interaction_lmm(snp_matrix_DF.values, phenotype, inter.values, K=kinship_mat,covs=cov_matrix)
+                    LMM = limix.qtl.qtl_test_interaction_lmm(snp_matrix_DF.values, phenotype, inter.values, K=kinship_mat,covs=np.asarray(cov_matrix, float))
                 except: 
                     print (feature_id)
                     print ('Interaction-LMM failed')
@@ -225,7 +227,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                         #reduceInfo  = utils.reduce_snp(temp)
                         #LMM_perm = limix.qtl.iscan(temp.loc[:,np.unique(reduceInfo['lead_snp_id'].values)], phenotype, 'Normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M,verbose=False)
                         #pValueBuffer.extend(np.asarray(LMM_perm.variant_pvalues[reduceInfo['lead_snp_id']]))
-                        LMM_perm = limix.qtl.iscan(temp, phenotype, 'Normal', np.atleast_2d(inter.values.T).T, K=kinship_mat, M=M,verbose=False)
+                        LMM_perm = limix.qtl.qtl_test_interaction_lmm(temp, phenotype, inter.values, K=kinship_mat,covs=np.asarray(cov_matrix, float))
                         pValueBuffer.extend(np.asarray(LMM_perm.variant_pvalues))
                     if(not(len(pValueBuffer)==totalSnpsToBeTested)):
                         #print(len(pValueBuffer))
