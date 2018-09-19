@@ -361,36 +361,43 @@ def plot_manhatan_alone(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',folder_
     
     feature_name=str(featureh5[0]['metadata']['feature_id'][:].astype('U')[0])
     colors2=colors[1:]
+    firsttrait=rez[p_value_field][0][np.argsort([tt.min() for tt in rez[p_value_field][0]])[0]]
+    
     for indf, a in enumerate(ax):
         if ylim is not None: a.set_ylim(ylim)
         a.spines['top'].set_visible(False);    a.spines['right'].set_visible(False);a.yaxis.set_ticks_position('left'); a.xaxis.set_ticks_position('bottom');a.set_axis_bgcolor('white');
         a.add_patch(Rectangle((startstop[0], 0), startstop[1]-startstop[0], 1, facecolor="grey",    alpha=0.35))
         a.set_xticks( axxpos)
         a.set_xticklabels([str(np.around(i,1))+' Mb' for i in showxpos/10.0**6])
-        for indt,t in  enumerate(rez[p_value_field][indf][np.argsort([tt.min() for tt in rez[p_value_field][indf]])[:4]]):
+        for indt,t in  enumerate(rez[p_value_field][indf][np.argsort([tt.min() for tt in rez[p_value_field][indf]])[:14]]):
             if log_flag: a.plot(xpos,-np.log10(t),'o',color=colors[indt],markersize=2.25)
             else: a.plot(xpos, t,'o',color=colors[indt],markersize=2.25)
         a.set_ylabel(trait_labels[indf]+'\n'+gene_name+"\n -log10PV",labelpad=30,fontsize=10,rotation=0,horizontalalignment= 'center' ,verticalalignment= 'center')
     
-        for indt,t in enumerate(rez[p_value_field][indf][np.argsort([tt.min() for tt in rez[p_value_field][indf]])[:4]]): 
+        for indt,t in enumerate(rez[p_value_field][indf][np.argsort([tt.min() for tt in rez[p_value_field][indf]])[:14]]): 
             a.plot(xpos[np.argsort(t)[:5]],-np.log10(t[np.argsort(t)[:5]]),'*',color=colors[indt],markersize=5)
-            for indf2, a2 in enumerate(ax):
-                if indf!=indf2:
-                    for indt2,t2 in enumerate(rez[p_value_field][indf2][np.argsort([tt2.min() for tt2 in rez[p_value_field][indf2]])[:4]]):
-                        a.plot(xpos[np.argsort(t2)[:3]],-np.log10(t[np.argsort(t2)[:3]],),'ro',markersize=3)
-     
+            
+#            for indf2, a2 in enumerate(ax):
+#                if indf!=indf2:
+        
+        
+        for indt,t in enumerate(rez[p_value_field][indf][np.argsort([tt.min() for tt in rez[p_value_field][indf]])[:14]]): 
+            a.plot(xpos[np.argsort(firsttrait)[:10]],-np.log10(t[np.argsort(firsttrait)[:10]],),'ro',markersize=3)
+#        plt.ylim(0,5)
+ 
 #    print (str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0]))
         if ann_snp is not None:
-            if (ann_snp[indf,1]!='None')&(ann_snp[indf,1]==ann_snp[indf,1]):
-                x=(np.array([s.split('_')[1] for s in ann_snp[indf,1].split(';')]).astype(int)[0]-commonpos.min())/10.0**6
+            if (ann_snp[indf].loc['gwas_snp']==ann_snp[indf].loc['gwas_snp']):
+                x=(np.array([s.split('_')[1] for s in ann_snp[indf].loc['gwas_snp'].split(';')]).astype(int)[0]-commonpos.min())/10.0**6
                 a.plot(x,-np.log10(np.nanmin(rez[p_value_field][indf])),'ro')
-                a.annotate(ann_snp[indf,0].split(';')[0], xy=(x, -np.log10(np.nanmin(rez[p_value_field][indf]))),fontsize=11)
+                a.annotate(ann_snp[indf].loc['gwas_trait'].split(';')[0], xy=(x, -np.log10(np.nanmin(rez[p_value_field][indf]))),fontsize=11)
 
     plt.tight_layout()
     if savefig:
         if pdf:
             plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'_manhattan.pdf',bbox_inches='tight')
         plt.savefig(folder_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'_manhattan.png',dpi=600,bbox_inches='tight')
+
 
 
 def plot_manhatan_genes(folder_name='/Users/mirauta/Data/MS/hipsci/TMT/',\
@@ -636,4 +643,171 @@ def plot_intersect3_venn(folder_dest,qv,thrs,comment='',labels=['eQTL','pQTL_1',
 
     plt.savefig(folder_dest+"venn3_eql_pqtl"+comment+".png",dpi=800)
       
+
+
+
+
+def plot_manhatan_custom(path_data='/Users/mirauta/Results/hipsci/QTL_jan/',path_destination='/Users/mirauta/Results/hipsci/manuscript_images/Manhattan',\
+                         plot_name='manhattan',\
+                        traits=None,trait_labels=None,file_name_results_genome='ensembl_gene_id_qtl_results_genome',\
+                        colors=np.array(['darkgreen','grey','darkblue','deepskyblue']), figsize=4, \
+                        gene_ensembl_id= 'ENSG00000182154',\
+                        p_value_field='p_value',log_flag=True,ylim=None,savefig=True,fplot=None,ax=None,pdf=True,transcripts=None,\
+                        ann_snp=None):
+
+    if not os.path.exists(path_destination):
+        os.makedirs(path_destination)
+
+
+    featureh5=[h5py.File(path_data+'/'+trait+'_'+file_name_results_genome+'.h5','r')[gene_ensembl_id] for trait in traits]
     
+    rez={}
+    temppos=[np.hstack([fh5['data']['position'][f][:] for f in fh5['data']['position'].keys()]) for fh5 in featureh5]
+    temp=np.unique(np.hstack(temppos).flatten(),return_counts=1); 
+    commonpos=temp[0][temp[1]==np.max(temp[1])]
+    
+    for dat in [p_value_field,'position']:
+        rez[dat]=[np.array([fh5['data'][dat][f][:][np.in1d(fh5['data']['position'][f][:],commonpos)] for f in fh5['data'][dat].keys()]) for fh5 in featureh5]
+    if transcripts is not None:
+        fh5=featureh5[3]
+        for dat in [p_value_field,'position']:
+            rez[dat][3]=np.array([fh5['data'][dat][f][:][np.in1d(fh5['data']['position'][f][:],commonpos)] for f in transcripts])
+#    return(rez)
+    bestrez0=np.argmin(np.min(rez[p_value_field][0],1))
+    #==============================================================================
+    #  modifty positions for plot
+    #==============================================================================
+    xpos=(commonpos-commonpos.min())/10.0**6;
+    axxpos=np.array([i for i in np.linspace(min(xpos),max(xpos),5)])
+    showxpos=np.array([int(i) for i in np.linspace(min(commonpos),max(commonpos),5)])
+    startstop=np.array([featureh5[0]['metadata']['start'][:][0],featureh5[0]['metadata']['end'][:][0]]);
+    startstop=(startstop-commonpos.min())/10.0**6
+
+    nfeatures=2
+    fig=plt.figure(figsize=(figsize*3,figsize*nfeatures))
+    fig.set_facecolor('white')
+    fplot = gridspec.GridSpec(nfeatures*3,8)
+    ax = [plt.subplot(fplot[(i*3):(i*3+3),:10]) for i in np.arange(nfeatures)]
+    
+    gene_name=str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])  
+    feature_name=str(featureh5[0]['metadata']['feature_id'][:].astype('U')[0])
+    colors2=colors[1:]
+    firsttrait=rez[p_value_field][0][np.argsort([tt.min() for tt in rez[p_value_field][0]])[0]]
+    
+    for indf, a in enumerate(ax):
+        if ylim is not None: a.set_ylim(ylim)
+        a.spines['top'].set_visible(False);    a.spines['right'].set_visible(False);a.yaxis.set_ticks_position('left'); a.xaxis.set_ticks_position('bottom');a.set_axis_bgcolor('white');
+        a.add_patch(Rectangle((startstop[0], 0), startstop[1]-startstop[0], 1, facecolor="grey",    alpha=0.35))
+        a.set_xticks( axxpos)
+        a.set_xticklabels([str(np.around(i,1))+' Mb' for i in showxpos/10.0**6])
+    
+    t=rez[p_value_field][0][bestrez0];
+    ax[0].plot(xpos,-np.log10(t),'o',color='steelblue',markersize=4, mfc='none')
+    ax[0].set_ylabel(gene_name+'\nProtein \n -log10PV',labelpad=30,fontsize=10,rotation=0,horizontalalignment= 'center' ,verticalalignment= 'center')
+    
+ 
+    
+
+    markers=['P','*']*100
+    for indt,t in  enumerate(rez[p_value_field][3]):
+         ax[1].plot(xpos,-np.log10(t),markers[indt],color=colors[indt],markersize=4, mfc='none')
+        
+    if ann_snp is not None:
+       if (ann_snp[indf].loc['gwas_snp']==ann_snp[indf].loc['gwas_snp']):
+                x=(np.array([s.split('_')[1] for s in ann_snp[indf].loc['gwas_snp'].split(';')]).astype(int)[0]-commonpos.min())/10.0**6
+                a.plot(x,-np.log10(np.nanmin(rez[p_value_field][indf])),'ro')
+                a.annotate(ann_snp[indf].loc['gwas_trait'].split(';')[0], xy=(x, -np.log10(np.nanmin(rez[p_value_field][indf]))),fontsize=11)
+    t=rez[p_value_field][2][0];
+    ax[1].plot(xpos,-np.log10(t),'o',color='grey',markersize=4, mfc='none')
+    ax[1].set_ylabel('mRNA\n(gene & transcript)\n -log10PV',labelpad=30,fontsize=10,rotation=0,horizontalalignment= 'center' ,verticalalignment= 'center')
+    
+    plt.tight_layout()
+    if savefig:
+#        if pdf:
+#            plt.savefig(path_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'_manhattan.pdf',bbox_inches='tight')
+        plt.savefig(path_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'_manhattan.png',dpi=600,bbox_inches='tight')
+
+
+def plot_manhatan_custom2(path_data='/Users/mirauta/Results/hipsci/QTL_jan/',path_destination='/Users/mirauta/Results/hipsci/manuscript_images/Manhattan',\
+                         plot_name='manhattan',\
+                        traits=None,trait_labels=None,file_name_results_genome='ensembl_gene_id_qtl_results_genome',\
+                        colors=np.array(['darkgreen','grey','darkblue','deepskyblue']), figsize=4, \
+                        gene_ensembl_id= 'ENSG00000182154',\
+                        p_value_field='p_value',log_flag=True,ylim=None,savefig=True,fplot=None,ax=None,pdf=True,\
+                        ann_snp=None,transcripts=None):
+
+    if not os.path.exists(path_destination):
+        os.makedirs(path_destination)
+
+
+    featureh5=[h5py.File(path_data+'/'+trait+'_'+file_name_results_genome+'.h5','r')[gene_ensembl_id] for trait in traits]
+    
+    rez={}
+    temppos=[np.hstack([fh5['data']['position'][f][:] for f in fh5['data']['position'].keys()]) for fh5 in featureh5]
+    temp=np.unique(np.hstack(temppos).flatten(),return_counts=1); 
+    commonpos=temp[0][temp[1]==np.max(temp[1])]
+    
+    for dat in [p_value_field,'position']:
+        rez[dat]=[np.array([fh5['data'][dat][f][:][np.in1d(fh5['data']['position'][f][:],commonpos)] for f in fh5['data'][dat].keys()]) for fh5 in featureh5]
+    if transcripts is not None:
+        fh5=featureh5[3]
+        for dat in [p_value_field,'position']:
+            rez[dat][3]=np.array([fh5['data'][dat][f][:][np.in1d(fh5['data']['position'][f][:],commonpos)] for f in transcripts])
+            #    return(rez)
+    bestrez0=np.argmin(np.min(rez[p_value_field][0],1))
+    #==============================================================================
+    #  modifty positions for plot
+    #==============================================================================
+    xpos=(commonpos-commonpos.min())/10.0**6;
+    axxpos=np.array([i for i in np.linspace(min(xpos),max(xpos),5)])
+    showxpos=np.array([int(i) for i in np.linspace(min(commonpos),max(commonpos),5)])
+    startstop=np.array([featureh5[0]['metadata']['start'][:][0],featureh5[0]['metadata']['end'][:][0]]);
+    startstop=(startstop-commonpos.min())/10.0**6
+
+    nfeatures=3
+    fig=plt.figure(figsize=(figsize*3,figsize*nfeatures))
+    fig.set_facecolor('white')
+    fplot = gridspec.GridSpec(nfeatures*3,8)
+    ax = [plt.subplot(fplot[(i*2):(i*2+2),:10]) for i in np.arange(nfeatures)]
+    
+    gene_name=str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])  
+    feature_name=str(featureh5[0]['metadata']['feature_id'][:].astype('U')[0])
+    colors2=colors[1:]
+    firsttrait=rez[p_value_field][0][np.argsort([tt.min() for tt in rez[p_value_field][0]])[0]]
+    
+    for indf, a in enumerate(ax):
+        if ylim is not None: a.set_ylim(ylim)
+        a.spines['top'].set_visible(False);    a.spines['right'].set_visible(False);a.yaxis.set_ticks_position('left'); a.xaxis.set_ticks_position('bottom');a.set_axis_bgcolor('white');
+        a.add_patch(Rectangle((startstop[0], 0), startstop[1]-startstop[0], 1, facecolor="grey",    alpha=0.35))
+        a.set_xticks( axxpos)
+        a.set_xticklabels([str(np.around(i,1))+' Mb' for i in showxpos/10.0**6])
+    
+    t=rez[p_value_field][0][bestrez0];
+    ax[0].plot(xpos,-np.log10(t),'o',color='steelblue',markersize=4, mfc='none')
+    ax[0].set_ylabel(gene_name+'\nProtein \n -log10PV',labelpad=30,fontsize=10,rotation=0,horizontalalignment= 'center' ,verticalalignment= 'center')
+    
+ 
+
+    ax[1].set_ylabel('mRNA\n(gene)\n -log10PV',labelpad=30,fontsize=10,rotation=0,horizontalalignment= 'center' ,verticalalignment= 'center')
+    ax[2].set_ylabel('mRNA isoform\n -log10PV',labelpad=30,fontsize=10,rotation=0,horizontalalignment= 'center' ,verticalalignment= 'center')
+    
+    t=rez[p_value_field][2][0];
+    ax[1].plot(xpos,-np.log10(t),'o',color='grey',markersize=4, mfc='none')
+    ax[1].set_ylim(0,np.nanmax(-np.log10(rez[p_value_field][3])))   
+    markers=['P','*']*100
+    for indt,t in  enumerate(rez[p_value_field][3]):
+         ax[2].plot(xpos,-np.log10(t),markers[indt],color=colors[indt],markersize=4, mfc='none')
+        
+    if ann_snp is not None:
+       if (ann_snp[indf].loc['gwas_snp']==ann_snp[indf].loc['gwas_snp']):
+                x=(np.array([s.split('_')[1] for s in ann_snp[indf].loc['gwas_snp'].split(';')]).astype(int)[0]-commonpos.min())/10.0**6
+                a.plot(x,-np.log10(np.nanmin(rez[p_value_field][indf])),'ro')
+                a.annotate(ann_snp[indf].loc['gwas_trait'].split(';')[0], xy=(x, -np.log10(np.nanmin(rez[p_value_field][indf]))),fontsize=11)
+
+    plt.tight_layout()
+    if savefig:
+#        if pdf:
+#            plt.savefig(path_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'_manhattan.pdf',bbox_inches='tight')
+        plt.savefig(path_destination+plot_name+str(featureh5[0]['metadata']['gene_name'][:].astype('U')[0])+'_manhattan.png',dpi=600,bbox_inches='tight')
+
+           

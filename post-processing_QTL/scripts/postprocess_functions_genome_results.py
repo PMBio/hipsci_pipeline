@@ -417,21 +417,22 @@ def replication_two_features(path_data =None,  path_data2=None,  traits=None,
             rez['position'][indf]=featureh5[0][feature]['summary_data/min_p_value_position'][:][0]
             
             try:
-                rez['p_value_raw'][indf]=np.nanmin([featureh5[0][feature]['data']['p_value_raw'][f1][:][featureh5[0][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]] \
-                    for f1 in featureh5[0][feature]['data/features']])     
+                temppvraw=[featureh5[0][feature]['data']['p_value_raw'][f1][:][featureh5[0][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]] \
+                    for f1 in featureh5[0][feature]['data/features']]
+                rez['p_value_raw'][indf]=np.nanmin( np.hstack(temppvraw))     
             except: 1
             try:
-                rez['replicated_p_value_raw'][indf]=np.nanmin( [featureh5[1][feature]['data']['p_value_raw'][f1][:][featureh5[1][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]] for f1 in featureh5[1][feature]['data/features']])     
+                rez['replicated_p_value_raw'][indf]=np.nanmin( np.hstack([featureh5[1][feature]['data']['p_value_raw'][f1][:][featureh5[1][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]] for f1 in featureh5[1][feature]['data/features']])     )
             except: 1
 
             try:
-                rez['replicated_p_value'][indf]=np.nanmin([featureh5[1][feature]['data'][p_value_field][f1][:]\
-                    [featureh5[1][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]] for f1 in featureh5[1][feature]['data/features']])     
+                rez['replicated_p_value'][indf]=np.nanmin(np.hstack([featureh5[1][feature]['data'][p_value_field][f1][:]\
+                    [featureh5[1][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]] for f1 in featureh5[1][feature]['data/features']])     )
                 rez['replicated_number_features'][indf]=len(featureh5[1][feature]['data/beta'])
             except: 1
             
             try:
-                temp=[featureh5[1][feature]['data/beta'][f1][:][featureh5[1][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]]     for f1 in featureh5[1][feature]['data/features']]
+                temp=np.hstack([featureh5[1][feature]['data/beta'][f1][:][featureh5[1][feature]['data/snp_id'][f1][:]==featureh5[0][feature]['summary_data/min_p_value_snp_id'][0]]     for f1 in featureh5[1][feature]['data/features']])
                 rez['replicated_beta'][indf]=np.nanmin(temp) if featureh5[0][feature]['summary_data/min_p_value_beta'][0]<0 else np.nanmax(temp)    
             except: 1
             
@@ -445,7 +446,7 @@ def replication_two_features(path_data =None,  path_data2=None,  traits=None,
                 rez['replicated_self_beta'][indf]=np.nanmin(temp) if featureh5[0][feature]['summary_data/min_p_value_beta'][0]<0 else np.nanmax(temp)    
             except: 1
             
-            if (indf%100)==0:print(feature +'_'+str(indf) +'_'+ str(rez['number_features'][indf])+'_'+ str(rez['replicated_number_features'][indf]))
+            if (indf%500)==0:print(feature +'_'+str(indf) +'_'+ str(rez['number_features'][indf])+'_'+ str(rez['replicated_number_features'][indf]))
             
     for f in featureh5: f.close()
     rez['ensembl_gene_id']=feature_ids.astype('U')
