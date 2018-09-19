@@ -68,5 +68,8 @@ def get_annotation_df(anno_filename):
     annotation_df = pd.read_csv(anno_filename,sep='\t',index_col=0,dtype=annotation_col_dtypes)
     return annotation_df
 
+def get_env_df(env_filename):
+    return pd.read_csv(env_filename,sep='\t',index_col=0)
+
 def get_phenotype_df(pheno_filename):
     return pd.read_csv(pheno_filename,sep='\t',index_col=0)
