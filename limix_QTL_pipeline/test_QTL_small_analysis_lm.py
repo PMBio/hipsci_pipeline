@@ -46,7 +46,7 @@ def test_QTL_analysis():
                      min_maf, min_hwe_P, min_call_rate,
                      blocksize,cis_mode=True, seed=randomSeed, n_perm=100, snps_filename=None,feature_filename = None,
                      genetic_range=chromosome,
-                     covariates_filename=covariates_filename,
+                     covariates_filename=None,
                      write_permutations = True,
                      sample_mapping_filename=individual2sample_filename)
 
