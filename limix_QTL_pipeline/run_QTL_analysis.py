@@ -188,7 +188,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         QS = economic_qs(K)
                 cov_matrix =  covariate_df.loc[sample2individual_feature['sample'],:].values if covariate_df is not None else None
                 if covariate_df is None:
-                    cov_matrix = ones((len(individual_ids), 1))
+                    cov_matrix = np.ones((len(individual_ids), 1))
                 if snp_cov_df is not None:
                     snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
                     snp_cov_df_tmp.index=sample2individual_feature['sample']
