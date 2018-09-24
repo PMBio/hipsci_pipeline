@@ -36,6 +36,11 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
     phenotype_df = qtl_loader_utils.get_phenotype_df(pheno_filename)
     annotation_df = qtl_loader_utils.get_annotation_df(anno_filename)
 
+    phenotype_df.columns = phenotype_df.columns.astype("str")
+    phenotype_df.index = phenotype_df.index.astype("str")
+    annotation_df.columns = annotation_df.columns.astype("str")
+    annotation_df.index = annotation_df.index.astype("str")
+
     if(plinkGenotype):
         bim,fam,bed = qtl_loader_utils.get_genotype_data(geno_prefix)
         bgen=None
@@ -71,6 +76,8 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
     ##Make sure that there is only one entry per feature id!.
 
     sample2individual_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'sample')
+    sample2individual_df.index = sample2individual_df.index.astype('str')
+    sample2individual_df = sample2individual_df.astype('str')
     sample2individual_df['sample']=sample2individual_df.index
     sample2individual_df = sample2individual_df.drop_duplicates();
     ##Filter first the linking files!

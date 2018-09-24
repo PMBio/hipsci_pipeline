@@ -133,7 +133,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             
             if(contains_missing_samples):
                 tmp_unique_individuals = geneticaly_unique_individuals
-                if kinship is not None:
+                if kinship_df is not None:
                     geneticaly_unique_individuals = utils.get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
                 else :
                      geneticaly_unique_individuals = individual_ids
@@ -527,7 +527,6 @@ if __name__=='__main__':
     if (bgen is not None) :
         plinkGenotype=False
         geno_prefix = bgen
-        raise ValueError("Not supported")
     else:
         plinkGenotype=True
         geno_prefix = plink
