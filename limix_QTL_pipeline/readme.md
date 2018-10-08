@@ -12,9 +12,9 @@ To create a limix development enviroment
 
 `source activate limix_qtl_develop`
 
-`conda install -c anaconda pytest`
+`conda install -c anaconda pytest pytables`
 
-`conda install pytables`
+`conda install -c conda-forge bgen-reader`
 
 `bash <(curl -fsSL https://raw.githubusercontent.com/limix/limix/develop/install)`
 
