@@ -191,6 +191,7 @@ def get_grsQtl_args():
     parser.add_argument('--covariates_file','-cf',required=False,default=None)
     parser.add_argument('--kinship_file','-kf',required=False,default=None)
     parser.add_argument('--sample_mapping_file','-smf',required=False,default=None)
+    parser.add_argument('--call_rate','-cr',required=False,default=0.95)
     parser.add_argument('--block_size','-bs',required=False,default=1500)
     parser.add_argument('--number_of_permutations','-np',required=False,default=10)
     parser.add_argument('--variant_filter','-vf',required=False,default=None)
@@ -208,6 +209,9 @@ def get_grsQtl_args():
                         action="store_true",
                         help="Don't filter on autosomes. By default only autosomes are selected, this is where the defaults are designed for."
                         "When running on X/Y/MT please be aware that these defaults might not be appropriate.", default=False)
+    parser.add_argument("--regress_covariates","-rc",
+                        action="store_true",
+                        help="Regress-out covariates, using a LMM, before running the QTL mapping.", default=False)
     args = parser.parse_args()
     return args
 

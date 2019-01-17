@@ -30,18 +30,18 @@ class hdf5_writer:
             qtl_result.append()
         table.flush()
 
-    def apply_pval_correction(self,feature_id,top_pvalues_perm):
+    def apply_pval_correction(self,feature_id,top_pvalues_perm,cis_mode):
         '''Function to correct p values based on nominal p values and the top
         hits from permutation runs for the given feature.'''
         table = self.h5file.get_node('/'+feature_id)
-        if(np.mean(top_pvalues_perm)==1 and np.var(top_pvalues_perm)==0):
+        if(np.mean(top_pvalues_perm)>=0.999999999 and np.var(top_pvalues_perm)==0):
             for row in table:
                 row['empirical_feature_p_value'] = row['p_value']
                 row.update()
             alpha_para=-9
             beta_para=-9
         else:
-            correction_function, alpha_para, beta_para = qtl_fdr_utilities.define_correction_function(top_pvalues_perm)
+            correction_function, alpha_para, beta_para = qtl_fdr_utilities.define_correction_function(top_pvalues_perm,cis_mode)
             for row in table:
                 row['empirical_feature_p_value'] = correction_function(row['p_value'])
                 row.update()

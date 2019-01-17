@@ -7,6 +7,7 @@ import scipy as sp
 import scipy.linalg as la
 from bgen_reader import read_bgen
 import qtl_loader_utils
+import pdb
 
 def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
     (pheno_filename, anno_filename, geno_prefix, plinkGenotype,minimum_test_samples= 10, relatedness_score=0.95,cis_mode=True, skipAutosomeFiltering = False, snps_filename=None,
@@ -35,6 +36,11 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
 
     phenotype_df = qtl_loader_utils.get_phenotype_df(pheno_filename)
     annotation_df = qtl_loader_utils.get_annotation_df(anno_filename)
+
+    phenotype_df.columns = phenotype_df.columns.astype("str")
+    phenotype_df.index = phenotype_df.index.astype("str")
+    annotation_df.columns = annotation_df.columns.astype("str")
+    annotation_df.index = annotation_df.index.astype("str")
 
     if(plinkGenotype):
         bim,fam,bed = qtl_loader_utils.get_genotype_data(geno_prefix)
@@ -71,6 +77,8 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
     ##Make sure that there is only one entry per feature id!.
 
     sample2individual_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'sample')
+    sample2individual_df.index = sample2individual_df.index.astype('str')
+    sample2individual_df = sample2individual_df.astype('str')
     sample2individual_df['sample']=sample2individual_df.index
     sample2individual_df = sample2individual_df.drop_duplicates();
     ##Filter first the linking files!
@@ -144,12 +152,14 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
 
     #Prepare to filter on snps.
     snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
-    if snps_filename is not None:
-        bim=bim[np.in1d(bim['snp'],snp_filter_df.index)]
+    if snp_filter_df is not None:
+        toSelect = set(snp_filter_df.index).intersection(set(bim['snp']))
+        bim = bim.loc[bim['snp'].isin(toSelect)]
         ##Filtering on SNPs to test from the snp filter.
 
     if snp_feature_filter_df is not None:
-        bim=bim[np.in1d(bim['snp'],np.unique(snp_feature_filter_df['snp_id']))]
+        toSelect = set(np.unique(snp_feature_filter_df['snp_id'])).intersection(set(bim['snp']))
+        bim = bim.loc[bim['snp'].isin(toSelect)]
         ##Filtering on features  to test from the combined feature snp filter.
     
     #Filtering for sites on non allosomes.
@@ -308,6 +318,8 @@ def run_structLMM_QTL_analysis_load_intersect_phenotype_environments_covariates_
         genetically_unique_individuals = get_unique_genetic_samples(kinship_df, relatedness_score);
 
     #Filter covariate data based on the linking files.
+    if covariate_df is not None:
+        covariate_df = covariate_df.loc[np.intersect1d(covariate_df.index,sample2individual_df.index.values),:]
     
     snp_feature_filter_df= qtl_loader_utils.get_snp_feature_df(snp_feature_filename)
     try:
@@ -332,12 +344,14 @@ def run_structLMM_QTL_analysis_load_intersect_phenotype_environments_covariates_
 
     #Prepare to filter on snps.
     snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
-    if snps_filename is not None:
-        bim=bim[np.in1d(bim['snp'],snp_filter_df.index)]
+    if snp_filter_df is not None:
+        toSelect = set(snp_filter_df.index).intersection(set(bim['snp']))
+        bim = bim.loc[bim['snp'].isin(toSelect)]
         ##Filtering on SNPs to test from the snp filter.
 
     if snp_feature_filter_df is not None:
-        bim=bim[np.in1d(bim['snp'],np.unique(snp_feature_filter_df['snp_id']))]
+        toSelect = set(np.unique(snp_feature_filter_df['snp_id'])).intersection(set(bim['snp']))
+        bim = bim.loc[bim['snp'].isin(toSelect)]
         ##Filtering on features  to test from the combined feature snp filter.
     
     #Filtering for sites on non allosomes.
@@ -401,20 +415,79 @@ def run_PrsQtl_analysis_load_intersect_phenotype_covariates_kinship_sample_mappi
     ''' function to take input and intersect sample and genotype.'''
     #Load input data files & filter for relevant data
     #Load input data filesf
-
+    #import pdb; pdb.set_trace();
     phenotype_df = qtl_loader_utils.get_phenotype_df(pheno_filename)
     annotation_df = qtl_loader_utils.get_annotation_df(anno_filename)
 
-    risk_df = qtl_loader_utils.get_phenotype_df(prsFile)
-    print("Intersecting data.")
-
+    phenotype_df.columns = phenotype_df.columns.astype("str")
+    phenotype_df.index = phenotype_df.index.astype("str")
+    annotation_df.columns = annotation_df.columns.astype("str")
+    annotation_df.index = annotation_df.index.astype("str")
+    
     if(annotation_df.shape[0] != annotation_df.groupby(annotation_df.index).first().shape[0]): 
         print("Only one location per feature supported. If multiple locations are needed please look at: --extended_anno_file")
         sys.exit()
-
+    
+    #Determine features to be tested
+    if chromosome!='all':
+        if not selectionStart is None :
+            lowest = min([selectionStart,selectionEnd])
+            highest = max([selectionStart,selectionEnd])
+            annotation_df['mean'] = ((annotation_df["start"] + annotation_df["end"])/2)
+            feature_list = list(set(annotation_df.iloc[(annotation_df['chromosome'].values==chromosome) & (annotation_df['mean'].values>=lowest) & (annotation_df["mean"].values<highest)].index.values))
+            annotation_df = annotation_df.loc[feature_list,]
+            del annotation_df['mean']
+        else :
+            feature_list = list(annotation_df[annotation_df['chromosome']==chromosome].index)
+            annotation_df = annotation_df.loc[feature_list,]
+    
+    #To be able to read variants from a large file we change the loading here.
+    #First we subset the genes to the chunk and get the relevant SNPs based on that.
+    
+    snp_feature_filter_df= qtl_loader_utils.get_snp_feature_df(snp_feature_filename)
+    feature_filter_df = qtl_loader_utils.get_snp_df(feature_filename)
+    snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
+    
+    #import pdb; pdb.set_trace()
+    #Do filtering on variants and features first stage.
+    if snp_feature_filter_df is not None:
+        if feature_filter_df is not None:
+            toSelect = set(feature_filter_df.index.values).intersection(set(annotation_df.index.values))
+            annotation_df = annotation_df.loc[toSelect,]
+        toSelect = list(set(snp_feature_filter_df['feature'].values).intersection(set(annotation_df.index.values)))
+        snp_feature_filter_df = snp_feature_filter_df.loc[snp_feature_filter_df['feature'].isin(toSelect)]
+        relSnps = np.unique(snp_feature_filter_df['snp_id'].values)
+        
+        if snp_filter_df is not None:
+            relSnps = set(snp_filter_df.index).intersection(set(relSnps))
+        risk_df = qtl_loader_utils.get_grs_subset_df(prsFile, relSnps)
+        if risk_df is None:
+            print("No variants selected during SNP reading.")
+            sys.exit()
+        risk_df = risk_df.assign(SnpId=risk_df.index.values)
+        risk_df = risk_df.drop_duplicates(keep='first')
+        risk_df = risk_df.drop(['SnpId'], axis='columns')
+        risk_df = risk_df.loc[risk_df.isnull().sum(axis=1)!=risk_df.shape[1],]
+    elif snp_filter_df is not None:
+        relSnps = unique(snp_filter_df.index)
+        risk_df = qtl_loader_utils.get_grs_subset_df(prsFile, relSnps)
+        if risk_df is None:
+            print("No variants selected during SNP reading.")
+            sys.exit()
+        risk_df = risk_df.assign(SnpId=risk_df.index.values)
+        risk_df = risk_df.drop_duplicates(keep='first')
+        risk_df = risk_df.drop(['SnpId'], axis='columns')
+        risk_df = risk_df.loc[risk_df.isnull().sum(axis=1)!=risk_df.shape[1],]
+    else :
+        risk_df = qtl_loader_utils.get_phenotype_df(prsFile)
+    print("Intersecting data.")
+    risk_df =  risk_df.astype(float)
+    #pdb.set_trace();
     ##Make sure that there is only one entry per feature id!.
 
     sample2individual_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'sample')
+    sample2individual_df.index = sample2individual_df.index.astype('str')
+    sample2individual_df = sample2individual_df.astype('str')
     sample2individual_df['sample']=sample2individual_df.index
     sample2individual_df = sample2individual_df.drop_duplicates();
     ##Filter first the linking files!
@@ -452,7 +525,7 @@ def run_PrsQtl_analysis_load_intersect_phenotype_covariates_kinship_sample_mappi
     if(sample2individual_df.shape[0]<minimum_test_samples):
         print("Not enough samples with both genotype & phenotype data.")
         sys.exit()
-
+    #import pdb; pdb.set_trace()
     ##Filter now the actual data!
     #Filter phenotype data based on the linking files.
     phenotype_df = phenotype_df.loc[list(set(phenotype_df.index)&set(annotation_df.index)),sample2individual_df.index.values]
@@ -465,47 +538,34 @@ def run_PrsQtl_analysis_load_intersect_phenotype_covariates_kinship_sample_mappi
 
     #Filter covariate data based on the linking files.
     
-    snp_feature_filter_df= qtl_loader_utils.get_snp_feature_df(snp_feature_filename)
-    try:
-        feature_filter_df = qtl_loader_utils.get_snp_df(feature_filename)
-    except:
-        if feature_filename  is not None:
-            feature_filter_df=pd.DataFrame(index=feature_filename)
     #Do filtering on features.
     if feature_filter_df is not None:
-        phenotype_df = phenotype_df.loc[feature_filter_df.index,:]
+        toSelect = set(feature_filter_df.index.values).intersection(set(phenotype_df.index.values))
+        phenotype_df = phenotype_df.loc[toSelect,:]
         ##Filtering on features to test.
     if snp_feature_filter_df is not None:
-        phenotype_df = phenotype_df.loc[np.unique(snp_feature_filter_df['feature']),:]
+        toSelect = set(snp_feature_filter_df['feature'].values).intersection(set(phenotype_df.index.values))
+        phenotype_df = phenotype_df.loc[toSelect,:]
+        if feature_filter_df is not None:
+            snp_feature_filter_df = snp_feature_filter_df.loc[snp_feature_filter_df['feature'].isin(toSelect)]
         ##Filtering on features  to test from the combined feature snp filter.
 
-    #Prepare to filter on snps.
-    snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
-    if snps_filename is not None:
-        risk_df=risk_df[np.in1d(risk_df.index.values,snp_filter_df.index)]
+    #Prepare to filter on SNPs.
+    if snp_filter_df is not None:
+        toSelect = set(snp_filter_df.index).intersection(set(risk_df.index.values))
+        risk_df=risk_df.loc[toSelect,:]
         ##Filtering on SNPs to test from the snp filter.
-
+    
     if snp_feature_filter_df is not None:
-        risk_df=risk_df[np.in1d(risk_df.index.values,snp_filter_df.index)]
-        ##Filtering on features  to test from the combined feature snp filter.
+        toSelect = set(np.unique(snp_feature_filter_df['snp_id'])).intersection(set(risk_df.index.values))
+        risk_df=risk_df.loc[toSelect,:]
+        ##Filtering on features to test from the combined feature snp filter.
     
     #Filtering for sites on non allosomes.
     if not skipAutosomeFiltering :
         annotation_df = annotation_df[annotation_df['chromosome'].map(lambda x: x in list(map(str, range(1, 23))))]
     
-    #Determine features to be tested
-    if chromosome=='all':
-        feature_list = list(set(annotation_df.index)&set(phenotype_df.index))
-    else:
-        if not selectionStart is None :
-            lowest = min([selectionStart,selectionEnd])
-            highest = max([selectionStart,selectionEnd])
-            annotation_df['mean'] = ((annotation_df["start"] + annotation_df["end"])/2)
-            feature_list = list(set(annotation_df.iloc[(annotation_df['chromosome'].values==chromosome) & (annotation_df['mean'].values>=lowest) & (annotation_df["mean"].values<highest)].index.values)&set(phenotype_df.index))
-            del annotation_df['mean']
-        else :
-            feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
-
+    feature_list = list(set(annotation_df.index)&set(phenotype_df.index))
     print("Number of features to be tested: " + str(len(feature_list)))
     print("Total number of variants to be considered, before variante QC and feature intersection: " + str(risk_df.shape[0]))
     
@@ -545,6 +605,11 @@ def run_PrsQtl_CisCorrected_analysis_load_intersect_phenotype_covariates_kinship
     phenotype_df = qtl_loader_utils.get_phenotype_df(pheno_filename)
     annotation_df = qtl_loader_utils.get_annotation_df(anno_filename)
 
+    phenotype_df.columns = phenotype_df.columns.astype("str")
+    phenotype_df.index = phenotype_df.index.astype("str")
+    annotation_df.columns = annotation_df.columns.astype("str")
+    annotation_df.index = annotation_df.index.astype("str")
+
     if(plinkGenotype):
         bim,fam,bed = qtl_loader_utils.get_genotype_data(geno_prefix)
         annotation_df.replace(['X', 'Y', 'XY', 'MT'], ['23', '24', '25', '26'],inplace=True)
@@ -576,6 +641,8 @@ def run_PrsQtl_CisCorrected_analysis_load_intersect_phenotype_covariates_kinship
     ##Make sure that there is only one entry per feature id!.
 
     sample2individual_df = qtl_loader_utils.get_samplemapping_df(sample_mapping_filename,list(phenotype_df.columns),'sample')
+    sample2individual_df.index = sample2individual_df.index.astype('str')
+    sample2individual_df = sample2individual_df.astype('str')
     sample2individual_df['sample']=sample2individual_df.index
     sample2individual_df = sample2individual_df.drop_duplicates();
     ##Filter first the linking files!
@@ -645,12 +712,14 @@ def run_PrsQtl_CisCorrected_analysis_load_intersect_phenotype_covariates_kinship
 
     #Prepare to filter on snps.
     snp_filter_df = qtl_loader_utils.get_snp_df(snps_filename)
-    if snps_filename is not None:
-        risk_df=risk_df[np.in1d(risk_df.index.values,snp_filter_df.index)]
+    if snp_filter_df is not None:
+        toSelect = set(snp_filter_df.index).intersection(set(risk_df.index.values))
+        risk_df=risk_df.loc[toSelect,:]
         ##Filtering on SNPs to test from the snp filter.
-
+    
     if snp_feature_filter_df is not None:
-        risk_df=risk_df[np.in1d(risk_df.index.values,snp_filter_df.index)]
+        toSelect = set(np.unique(snp_feature_filter_df['snp_id'])).intersection(set(risk_df.index.values))
+        risk_df=risk_df.loc[toSelect,:]
         ##Filtering on features  to test from the combined feature snp filter.
     
     #Filtering for sites on non allosomes.

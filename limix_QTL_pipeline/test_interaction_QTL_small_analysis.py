@@ -49,7 +49,7 @@ def test_QTL_analysis():
                      genetic_range=chromosome,
                      covariates_filename=covariates_filename,
                      kinship_filename=kinship_filename, write_permutations = True,
-                     sample_mapping_filename=individual2sample_filename)
+                     sample_mapping_filename=individual2sample_filename, regres_snp_from_env = True)
 
 if __name__=='__main__':
     test_QTL_analysis()
