@@ -383,7 +383,7 @@ def run_structLMM_QTL_analysis(pheno_filename, anno_filename, env_filename, geno
             #This we need to change in the written file.
         if(n_perm > 1 and data_written):
             #updated_permuted_p_in_hdf5(bestPermutationPval, feature_id);
-            alpha_para, beta_para = output_writer.apply_pval_correction(feature_id, bestPermutationPval)
+            alpha_para, beta_para = output_writer.apply_pval_correction(feature_id, bestPermutationPval, cis_mode)
             alpha_params.append(alpha_para)
             beta_params.append(beta_para)
         if(data_written) :

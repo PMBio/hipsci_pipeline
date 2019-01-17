@@ -72,4 +72,12 @@ def get_env_df(env_filename):
     return pd.read_csv(env_filename,sep='\t',index_col=0)
 
 def get_phenotype_df(pheno_filename):
-    return pd.read_csv(pheno_filename,sep='\t',index_col=0)
+    return pd.read_csv(pheno_filename,sep='\t',index_col=0, na_values=['.'])
+
+def get_grs_subset_df(grs_filename, relSnps):
+    iter_csv = pd.read_csv(grs_filename, chunksize=1000, sep='\t',index_col=0, na_values=['.'])
+    risk_df = None
+    for chunk in iter_csv:
+        if any(chunk.index.isin(relSnps)):
+            risk_df = pd.concat([risk_df,chunk.reindex(labels=relSnps,axis ='index')])
+    return risk_df
