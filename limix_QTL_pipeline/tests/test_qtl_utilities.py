@@ -11,7 +11,7 @@ np.random.seed(0)
 relatedness_score = 0.95
 n_perm = 1
 
-n_snps = 9
+n_snps = 15
 n_individuals = 5
 snps = ['snp{}'.format(x) for x in range(n_snps)]
 individuals = ['donor{}'.format(x) for x in range(n_individuals)]
@@ -44,24 +44,28 @@ kinship_diagonal = pd.DataFrame(index=snp_matrix_DF.index, columns=snp_matrix_DF
 
 
 ### run the tests
-
-# test the normal kinship, with samples from the same donor having the same permuted genotypes:
-
-genetically_unique_individuals = qtl_utilities.get_unique_genetic_samples(kinship_df1, relatedness_score)
-snp_matrix_copy = qtl_utilities.get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df1,n_perm)    
-# put snp_matrix_copy in a dataframe:
-perm_df = pd.DataFrame(data=snp_matrix_copy, index=snp_matrix_DF.index, columns=snp_matrix_DF.columns)
+for seed in [0,1,2,3,4]:
+    np.random.seed(seed)
     
-print('Equality of permuted genotypes for repeated samples from donor0 and donor1:')
-print((perm_df.loc['donor0',:]==perm_df.loc['donor0_2']).all())
-print((perm_df.loc['donor1',:]==perm_df.loc['donor1_2']).all())
+    # test the normal kinship, with samples from the same donor having the same permuted genotypes:
+    
+    genetically_unique_individuals = qtl_utilities.get_unique_genetic_samples(kinship_df1, relatedness_score)
+    snp_matrix_copy = qtl_utilities.get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df1,n_perm)    
+    # put snp_matrix_copy in a dataframe:
+    perm_df = pd.DataFrame(data=snp_matrix_copy, index=snp_matrix_DF.index, columns=snp_matrix_DF.columns)
+    
+    # Equality of permuted genotypes for repeated samples from donor0 and donor1:
+    assert((perm_df.loc['donor0',:]==perm_df.loc['donor0_2']).all())
+    assert((perm_df.loc['donor1',:]==perm_df.loc['donor1_2']).all())
 
-# test the unusal kinship, ensuring that things are actually shuffled
 
-genetically_unique_individuals = qtl_utilities.get_unique_genetic_samples(kinship_diagonal, relatedness_score)
-snp_matrix_copy = qtl_utilities.get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df1,n_perm)    
-# put snp_matrix_copy in a dataframe:
-perm_df = pd.DataFrame(data=snp_matrix_copy, index=snp_matrix_DF.index, columns=snp_matrix_DF.columns)
-
-print('Sum of alleles is maintained after shuffling (should be the case because no related samples with\n a diagonal kinship):')
-print((perm_df.sum()==snp_matrix_DF.sum()).all())
+    # test the unusal kinship, ensuring that things are actually shuffled
+    
+    genetically_unique_individuals = qtl_utilities.get_unique_genetic_samples(kinship_diagonal, relatedness_score)
+    snp_matrix_copy = qtl_utilities.get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, relatedness_score, snp_matrix_DF,kinship_diagonal,n_perm)    
+    # put snp_matrix_copy in a dataframe:
+    perm_df = pd.DataFrame(data=snp_matrix_copy, index=snp_matrix_DF.index, columns=snp_matrix_DF.columns)
+    
+    # Sum of alleles is maintained after shuffling
+    #  (should be the case because no related samples with a diagonal kinship)
+    assert((perm_df.sum()==snp_matrix_DF.sum()).all())

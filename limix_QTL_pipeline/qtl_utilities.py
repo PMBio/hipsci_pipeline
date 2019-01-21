@@ -842,7 +842,9 @@ def get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, re
     #Prepare location search for permuted snp_matrix_df.
     index_samples = np.arange(u_snp_matrix.shape[0])
     for index,current_name in enumerate(genetically_unique_individuals):
-        selection = kinship_df1.loc[current_name].values>=relatedness_score
+        # find all samples that are related to current_name, or are current_name itself.
+        kinship_row = kinship_df1.loc[current_name]
+        selection = np.logical_or(kinship_row>=relatedness_score, kinship_row.index==current_name)
         locationBuffer[np.where(selection)] = index
     snp_matrix_copy = np.zeros((snp_matrix_DF.shape[0],snp_matrix_DF.shape[1]*n_perm))
     counter = 0
