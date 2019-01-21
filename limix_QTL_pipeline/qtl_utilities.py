@@ -840,12 +840,10 @@ def get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, re
     #Shuffle and reinflate
     locationBuffer = np.zeros(snp_matrix_DF.shape[0], dtype=np.int)
     #Prepare location search for permuted snp_matrix_df.
-    index = 0
     index_samples = np.arange(u_snp_matrix.shape[0])
-    for current_name in genetically_unique_individuals :
+    for index,current_name in enumerate(genetically_unique_individuals):
         selection = kinship_df1.loc[current_name].values>=relatedness_score
         locationBuffer[np.where(selection)] = index
-        index +=1
     snp_matrix_copy = np.zeros((snp_matrix_DF.shape[0],snp_matrix_DF.shape[1]*n_perm))
     counter = 0
     end = (snp_matrix_DF.shape[1])
