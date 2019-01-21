@@ -37,25 +37,31 @@ dummy_df = pd.get_dummies(sm_df['individual'])
 kinship_matrix = np.dot(dummy_df.values, dummy_df.values.T)
 kinship_df1 = pd.DataFrame(index=dummy_df.index, columns=dummy_df.index, data=kinship_matrix)
 
-# # use an unsual kinship
-# kinship_matrix = np.diag([0.001 for _ in snp_matrix_DF.index])
-# kinship_df1 = pd.DataFrame(index=snp_matrix_DF.index, columns=snp_matrix_DF.index, data=kinship_matrix)
 
+# define an unsual kinship
+kinship_matrix = np.diag([0.001 for _ in snp_matrix_DF.index])
+kinship_diagonal = pd.DataFrame(index=snp_matrix_DF.index, columns=snp_matrix_DF.index, data=kinship_matrix)
+
+
+### run the tests
+
+# test the normal kinship, with samples from the same donor having the same permuted genotypes:
 
 genetically_unique_individuals = qtl_utilities.get_unique_genetic_samples(kinship_df1, relatedness_score)
-
-snp_matrix_copy = qtl_utilities.get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df1,n_perm)
-
+snp_matrix_copy = qtl_utilities.get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df1,n_perm)    
 # put snp_matrix_copy in a dataframe:
 perm_df = pd.DataFrame(data=snp_matrix_copy, index=snp_matrix_DF.index, columns=snp_matrix_DF.columns)
-
-print('Original dataframe:')
-print(snp_matrix_DF)
-
-print('')
-print('Permuted results:')
-print(perm_df)
-print('')
+    
 print('Equality of permuted genotypes for repeated samples from donor0 and donor1:')
 print((perm_df.loc['donor0',:]==perm_df.loc['donor0_2']).all())
 print((perm_df.loc['donor1',:]==perm_df.loc['donor1_2']).all())
+
+# test the unusal kinship, ensuring that things are actually shuffled
+
+genetically_unique_individuals = qtl_utilities.get_unique_genetic_samples(kinship_diagonal, relatedness_score)
+snp_matrix_copy = qtl_utilities.get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df1,n_perm)    
+# put snp_matrix_copy in a dataframe:
+perm_df = pd.DataFrame(data=snp_matrix_copy, index=snp_matrix_DF.index, columns=snp_matrix_DF.columns)
+
+print('Sum of alleles is maintained after shuffling (should be the case because no related samples with\n a diagonal kinship):')
+print((perm_df.sum()==snp_matrix_DF.sum()).all())
