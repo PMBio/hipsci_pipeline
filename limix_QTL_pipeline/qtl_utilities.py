@@ -830,12 +830,15 @@ def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
 def get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df1,n_perm):
 
     # take only one line for replicates (those with the same name)
-    selected_samples = snp_matrix_DF.index.drop_duplicates()
-    temp = snp_matrix_DF.loc[selected_samples,:]
-    kinship_df1 = kinship_df1.loc[selected_samples, selected_samples]
+    boolean_selection = ~snp_matrix_DF.index.duplicated()
+    temp = snp_matrix_DF.loc[boolean_selection,:]
+
+    boolean_selection = ~kinship_df1.index.duplicated()
+    kinship_df1 = kinship_df1.loc[boolean_selection, boolean_selection]
+
     # subset snp matrix to genetically_unique_individuals
     u_snp_matrix = temp.loc[genetically_unique_individuals,:]
-    
+
     '''has replicates but not same lines form donor (np.setdiff1d(individual_ids,genetically_unique_individuals))'''
     #Shuffle and reinflate
     locationBuffer = np.zeros(snp_matrix_DF.shape[0], dtype=np.int)
