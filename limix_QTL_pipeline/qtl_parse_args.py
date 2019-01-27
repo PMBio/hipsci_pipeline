@@ -35,7 +35,7 @@ def get_args():
                         help=
                         'Secondary annotation file, to add a multiple locations to one feature.'
                         'This can be used to either link multiple test regions to one feature or exclude multiple regions while testing a feature.', required=False)
-    parser.add_argument('--relatedness_score','-rs',required=False,default=0.95)
+    parser.add_argument('--relatedness_score','-rs',required=False,default=None)
     parser.add_argument('--write_permutations','-wp',action="store_true",required=False,default=False)
     parser.add_argument('--minimum_test_samples','-mts',
                     help="The minimal number of samples with non-NA values to consider a feature for a QTL test, if covariates are used the number of covariates is added to this value.",required=False,default=10)
