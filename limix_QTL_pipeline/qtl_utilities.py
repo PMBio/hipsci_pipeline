@@ -10,7 +10,7 @@ import qtl_loader_utils
 import pdb
 
 def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
-    (pheno_filename, anno_filename, geno_prefix, plinkGenotype,minimum_test_samples= 10, relatedness_score=0.95,cis_mode=True, skipAutosomeFiltering = False, snps_filename=None,
+    (pheno_filename, anno_filename, geno_prefix, plinkGenotype,minimum_test_samples= 10, relatedness_score=None,cis_mode=True, skipAutosomeFiltering = False, snps_filename=None,
          feature_filename=None, snp_feature_filename=None, selection='all', covariates_filename=None, kinship_filename=None, sample_mapping_filename=None,
          extended_anno_filename=None, feature_variant_covariate_filename=None):
     selectionStart = None
@@ -125,6 +125,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
     genetically_unique_individuals = None
     if kinship_df is not None:
         kinship_df = kinship_df.loc[np.intersect1d(kinship_df.index,sample2individual_df['iid']),np.intersect1d(kinship_df.index,sample2individual_df['iid'])]
+    if (kinship_df is not None) and (relatedness_score is not None):
         genetically_unique_individuals = get_unique_genetic_samples(kinship_df, relatedness_score);
 
     #Filter covariate data based on the linking files.

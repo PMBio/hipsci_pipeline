@@ -23,7 +23,7 @@ from qtl_snp_qc import do_snp_qc
 #V0.1.4
 
 def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, output_dir, window_size=250000, min_maf=0.05, min_hwe_P=0.001, min_call_rate=0.95, blocksize=1000,
-                     cis_mode=True, skipAutosomeFiltering = False, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, feature_variant_covariate_filename = None, snps_filename=None, feature_filename=None, snp_feature_filename=None, genetic_range='all',
+                     cis_mode=True, skipAutosomeFiltering = False, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=None, feature_variant_covariate_filename = None, snps_filename=None, feature_filename=None, snp_feature_filename=None, genetic_range='all',
                      covariates_filename=None, kinship_filename=None, sample_mapping_filename=None, extended_anno_filename=None, regressCovariatesUpfront = False):
     fill_NaN = Imputer(missing_values=np.nan, strategy='mean', axis=0, copy=False)
     print('Running QTL analysis.')
@@ -37,7 +37,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                      covariates_filename=covariates_filename, kinship_filename=kinship_filename, sample_mapping_filename=sample_mapping_filename, extended_anno_filename=extended_anno_filename, feature_variant_covariate_filename=feature_variant_covariate_filename)
     
     mixed = kinship_df is not None
-    if kinship_df is None : 
+    if (kinship_df is None) or (relatedness_score is None) : 
         geneticaly_unique_individuals = sample2individual_df['iid'].values
     QS = None
     if(feature_list==None or len(feature_list)==0):
@@ -136,10 +136,10 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             
             if(contains_missing_samples):
                 tmp_unique_individuals = geneticaly_unique_individuals
-                if kinship_df is not None:
+                if (kinship_df is not None) and (relatedness_score is not None):
                     geneticaly_unique_individuals = utils.get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
-                else :
-                     geneticaly_unique_individuals = individual_ids
+                else:
+                    geneticaly_unique_individuals = individual_ids
             else:
                 #If no missing samples we can use the previous SNP Qc information before actually loading data.
                 #This allows for more efficient blocking and retrieving of data
@@ -371,12 +371,12 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         perm_df = pd.DataFrame(index = range(len(G_index)),columns=['snp_id'] + ['permutation_'+str(x) for x in range(n_perm)])
                         perm_df['snp_id'] = G_index
                     for currentNperm in utils.chunker(list(range(1, n_perm+1)), permutationStepSize):
-                        if kinship_df is not None:
+                        if (kinship_df is not None) and (relatedness_score is not None):
                             if (plinkGenotype):
                                 temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_df,kinship_df.loc[individual_ids,individual_ids], len(currentNperm))
                             else:
                                 temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_df_dosage,kinship_df.loc[individual_ids,individual_ids], len(currentNperm))
-                        else :
+                        else:
                             if (plinkGenotype):
                                 temp = utils.get_shuffeld_genotypes(snp_df, len(currentNperm))
                             else:
@@ -552,6 +552,6 @@ if __name__=='__main__':
     run_QTL_analysis(pheno_file, anno_file,geno_prefix, plinkGenotype, output_dir, int(window_size),
                      min_maf=float(min_maf), min_hwe_P=float(min_hwe_P), min_call_rate=float(min_call_rate), blocksize=int(block_size),
                      cis_mode=cis, skipAutosomeFiltering= includeAllChromsomes, gaussianize_method = gaussianize, minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), 
-                     n_perm=int(n_perm), write_permutations = write_permutations, relatedness_score=float(relatedness_score), feature_variant_covariate_filename = feature_variant_covariate_filename,
+                     n_perm=int(n_perm), write_permutations = write_permutations, relatedness_score=relatedness_score, feature_variant_covariate_filename = feature_variant_covariate_filename,
                      snps_filename=snps_filename, feature_filename=feature_filename, snp_feature_filename=snp_feature_filename, genetic_range=genetic_range, covariates_filename=covariates_file,
                      kinship_filename=kinship_file, sample_mapping_filename=samplemap_file, extended_anno_filename=extended_anno_file, regressCovariatesUpfront = regressBefore)
