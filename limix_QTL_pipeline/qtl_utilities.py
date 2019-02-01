@@ -829,21 +829,26 @@ def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
 #get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
 def get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df1,n_perm):
 
-#    snp_matrix_DF.iloc[np.unique(snp_matrix_DF.index,return_index=1)[1]].shape
-    '''take only one line for replicates (those with the same name)'''
-    temp=snp_matrix_DF.iloc[np.unique(snp_matrix_DF.index,return_index=1)[1]].copy(deep=True)
+    # take only one line for replicates (those with the same name)
+    boolean_selection = ~snp_matrix_DF.index.duplicated()
+    temp = snp_matrix_DF.loc[boolean_selection,:]
+
+    boolean_selection = ~kinship_df1.index.duplicated()
+    kinship_df1 = kinship_df1.loc[boolean_selection, boolean_selection]
+
+    # subset snp matrix to genetically_unique_individuals
     u_snp_matrix = temp.loc[genetically_unique_individuals,:]
-    kinship_df1=kinship_df1.iloc[np.unique(kinship_df1.index,return_index=1)[1],np.unique(kinship_df1.index,return_index=1)[1]]
+
     '''has replicates but not same lines form donor (np.setdiff1d(individual_ids,genetically_unique_individuals))'''
     #Shuffle and reinflate
     locationBuffer = np.zeros(snp_matrix_DF.shape[0], dtype=np.int)
     #Prepare location search for permuted snp_matrix_df.
-    index = 0
     index_samples = np.arange(u_snp_matrix.shape[0])
-    for current_name in genetically_unique_individuals :
-        selection = kinship_df1.loc[current_name].values>=relatedness_score
+    for index,current_name in enumerate(genetically_unique_individuals):
+        # find all samples that are related to current_name, or are current_name itself.
+        kinship_row = kinship_df1.loc[current_name]
+        selection = np.logical_or(kinship_row>=relatedness_score, kinship_row.index==current_name)
         locationBuffer[np.where(selection)] = index
-        index +=1
     snp_matrix_copy = np.zeros((snp_matrix_DF.shape[0],snp_matrix_DF.shape[1]*n_perm))
     counter = 0
     end = (snp_matrix_DF.shape[1])
