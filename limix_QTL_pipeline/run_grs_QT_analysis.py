@@ -20,23 +20,24 @@ import qtl_parse_args
 import qtl_utilities as utils
 from qtl_snp_qc import do_snp_qc
 
-#V0.1.2
+#V0.1.4
 
 def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_call_rate=0.95, blocksize=1000,
-                     skipAutosomeFiltering = False, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=0.95, feature_variant_covariate_filename = None, snps_filename=None, feature_filename=None, snp_feature_filename=None, genetic_range='all',
+                     skipAutosomeFiltering = False, gaussianize_method=None, minimum_test_samples= 10, seed=np.random.randint(40000), n_perm=0, write_permutations = False, relatedness_score=None, feature_variant_covariate_filename = None, snps_filename=None, feature_filename=None, snp_feature_filename=None, genetic_range='all',
                      covariates_filename=None, kinship_filename=None, sample_mapping_filename=None, regressCovariatesUpfront = False):
     fill_NaN = Imputer(missing_values=np.nan, strategy='mean', axis=0)
     print('Running GRS QT analysis.')
     lik = 'normal'
     '''Core function to take input and run QTL tests on a given chromosome.'''
-
+    if relatedness_score is not None:
+        relatedness_score = float(relatedness_score)
     [phenotype_df, kinship_df, covariate_df, sample2individual_df, annotation_df, snp_filter_df, snp_feature_filter_df, geneticaly_unique_individuals, minimum_test_samples, feature_list, risk_df, chromosome, selectionStart, selectionEnd, feature_variant_covariate_df]=\
     utils.run_PrsQtl_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(pheno_filename=pheno_filename, anno_filename=anno_filename, prsFile=prsFile, skipAutosomeFiltering = skipAutosomeFiltering,
                       minimum_test_samples= minimum_test_samples,  relatedness_score=relatedness_score, snps_filename=snps_filename, feature_filename=feature_filename, snp_feature_filename=snp_feature_filename, selection=genetic_range,
                      covariates_filename=covariates_filename, kinship_filename=kinship_filename, sample_mapping_filename=sample_mapping_filename, feature_variant_covariate_filename=feature_variant_covariate_filename)
-    
+
     mixed = kinship_df is not None
-    if kinship_df is None : 
+    if (kinship_df is None) or (relatedness_score is None) : 
         geneticaly_unique_individuals = sample2individual_df['iid'].values
     QS = None
     if(feature_list==None or len(feature_list)==0):
@@ -62,6 +63,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
     beta_params = []
     n_samples = []
     n_e_samples = []
+    na_containing_features=0
     currentFeatureNumber = 0
     snpQcInfoMain = None
     for feature_id in feature_list:
@@ -69,34 +71,38 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
         currentFeatureNumber+= 1
         if (len(phenotype_df.loc[feature_id,:]))<minimum_test_samples:
             print("Feature: "+feature_id+" not tested not enough samples do QTL test.")
+            fail_qc_features.append(feature_id)
+            geneticaly_unique_individuals = tmp_unique_individuals
             continue
         data_written = False
-
+        contains_missing_samples = False
         snpQuery = risk_df.index.values
         snp_cov_df = None
-        #Here we need to do more changes as we want to correct for cis SNPs
-        #if(feature_variant_covariate_df is not None):
-        #    if(feature_id in feature_variant_covariate_df['feature'].values):
-        #        covariateSnp = feature_variant_covariate_df['snp_id'].values[feature_variant_covariate_df['feature']==feature_id]
-        #        if(any(i in  risk_df.index.values for i in covariateSnp)):
-        #            snpQuery_cov = risk_df.index.loc[risk_df.index.map(lambda x: x in list(covariateSnp)),:]
-        #            snp_cov_df = risk_df.index.loc[risk_df.index.map(lambda x: x in list(covariateSnp)),:].transpose()
-        #import pdb; pdb.set_trace()
+        
+        if(feature_variant_covariate_df is not None):
+            if(feature_id in feature_variant_covariate_df['feature'].values):
+                covariateSnp = feature_variant_covariate_df['snp_id'].values[feature_variant_covariate_df['feature']==feature_id]
+                if(any(i in  risk_df.index.values for i in covariateSnp)):
+                    snp_cov_df = risk_df.loc[risk_df.index.map(lambda x: x in list(covariateSnp)),:].transpose()
+        
         if (len(snpQuery) != 0) and (snp_filter_df is not None):
             snpQuery = list(set(snp_filter_df.index).intersection(set(snpQuery)))
         
         if (len(snpQuery) != 0) and (snp_feature_filter_df is not None):
             snpQuery = list(set(np.unique(snp_feature_filter_df['snp_id'].loc[snp_feature_filter_df['feature']==feature_id])).intersection(set(snpQuery)))
         
-        if len(snpQuery) != 0:
-        
+        if len(snpQuery) == 0:
+            print("Feature: "+feature_id+" not tested. No SNPS passed QC for phenotype.")
+            fail_qc_features.append(feature_id)
+            continue
+        else:
             phenotype_ds = phenotype_df.loc[feature_id]
             contains_missing_samples = any(~np.isfinite(phenotype_ds))
             if(contains_missing_samples):
                 #import pdb; pdb.set_trace()
                 print ('Feature: ' + feature_id + ' contains missing data.')
                 phenotype_ds.dropna(inplace=True)
-            
+                na_containing_features = na_containing_features+1
             '''select indices for relevant individuals in genotype matrix
             These are not unique. NOT to be used to access phenotype/covariates data
             '''
@@ -105,7 +111,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
             
             if contains_missing_samples:
                 tmp_unique_individuals = geneticaly_unique_individuals
-                if kinship_df is not None : 
+                if (kinship_df is not None) and (relatedness_score is not None):
                     geneticaly_unique_individuals = utils.get_unique_genetic_samples(kinship_df.loc[individual_ids,individual_ids], relatedness_score);
                 else :
                     geneticaly_unique_individuals = individual_ids
@@ -146,7 +152,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
                         QS_tmp = QS
                         QS = economic_qs(kinship_mat)
                 if kinship_df is None:
-                    K =  np.eye(len(phenotype_ds.index))
+                    K = np.eye(len(phenotype_ds.index))
                     if(QS is None and not contains_missing_samples):
                         QS = economic_qs(K)
                     elif (contains_missing_samples):
@@ -155,10 +161,15 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
                 cov_matrix =  covariate_df.loc[sample2individual_feature['sample'],:].values if covariate_df is not None else None
                 if covariate_df is None:
                     cov_matrix = np.ones((len(individual_ids), 1))
+                #pdb.set_trace()
                 if snp_cov_df is not None:
                     snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
-                    snp_cov_df_tmp.index=sample2individual_feature['sample']
-                    cov_matrix = np.concatenate((cov_matrix,snp_cov_df_tmp.values),1)
+                    snp_cov_df = pd.DataFrame(fill_NaN.fit_transform(snp_cov_df_tmp))
+                    snp_cov_df.index=sample2individual_feature['sample']
+                    snp_cov_df.columns=snp_cov_df_tmp.columns
+                    cov_matrix = np.concatenate((cov_matrix,snp_cov_df.values),1)
+                    snp_cov_df_tmp = None
+                    snp_cov_df = None
                 cov_matrix = cov_matrix.astype(float)
             else:
                 print ('There is an issue in mapping phenotypes vs covariates and/or kinship')
@@ -385,6 +396,6 @@ if __name__=='__main__':
     if(n_perm<50):
         print("Warning: With less than 50 permutations P-values correction is not very accurate.")
     run_PrsQtl_analysis(pheno_file, anno_file, grsFile, output_dir, min_call_rate=float(min_call_rate), blocksize=int(block_size), skipAutosomeFiltering= includeAllChromsomes, gaussianize_method = gaussianize,
-                     minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), n_perm=int(n_perm), write_permutations = write_permutations, relatedness_score=float(relatedness_score), 
+                     minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), n_perm=int(n_perm), write_permutations = write_permutations, relatedness_score=relatedness_score, 
                      feature_variant_covariate_filename = feature_variant_covariate_filename, snps_filename=snps_filename, feature_filename=feature_filename, snp_feature_filename=snp_feature_filename, 
                      genetic_range=genetic_range, covariates_filename=covariates_file, kinship_filename=kinship_file, sample_mapping_filename=samplemap_file, regressCovariatesUpfront = regressBefore)
