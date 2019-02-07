@@ -341,8 +341,9 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
         snp_df = snp_df.rename(index=str, columns={0: "call_rate"})
         snp_df = snp_df[["snp_id","call_rate"]]
     
-    feature_list = [x for x in feature_list if x not in fail_qc_features]
-    annotation_df = annotation_df.loc[feature_list,:]
+    feature_list = set(feature_list)
+    feature_list = feature_list.difference(set(fail_qc_features))
+    annotation_df = annotation_df.reindex(feature_list)
     annotation_df['n_samples'] = n_samples
     annotation_df['n_e_samples'] = n_e_samples
     if(n_perm>1):
