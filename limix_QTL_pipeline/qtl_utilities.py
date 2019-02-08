@@ -47,12 +47,14 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         bgen=None
     else :
         bgen = read_bgen(geno_prefix+'.bgen', verbose=False)
-        bim = bgen['variants']
+        bim  = bgen['variants'].compute()
         bim = bim.assign(i = range(bim.shape[0]))
         bim = bim.rename(index=str, columns={"id": "snp"})
         bim['a1'] = bim['allele_ids'].str.split(",", expand=True)[0]
-        fam = bgen['samples']
-        fam = fam.rename(index=str, columns={"id": "iid"})
+        bim.index = bim["snp"].astype(str).values
+        bim.index.name = "candidate"
+        fam =bgen['samples']
+        fam = fam.to_frame("iid")
         fam.index=fam["iid"]
         bed=None
         print("Warning, the current software only supports biallelic SNPs and plody 2")
