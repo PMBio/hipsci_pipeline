@@ -93,18 +93,21 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         ##Here we make some assumptions on the SNPs. They are expected to be ploidy 2!
                         ##Also we don't use a minimal quality to assure a value is present for all samples.
                         print('Warning, during the regression of SNPs we assume ploidy 2.')
-                        snp_cov_df = pd.DataFrame(index=fam.index,columns=snpQuery_cov['i'])
-                        phasedFlag = bgen["X"][snpQuery_cov['i'].values].compute().sel(data="phased").to_pandas()
-                        phasedFlag = phasedFlag.min(1)
+                        snp_cov_df_t = pd.DataFrame(columns=fam.index)
+                        rowNumber = 0
                         for snpId in snpQuery_cov['i'] :
-                            probabilities = bgen["genotype"][snpId].compute()
-                            if(phasedFlag[snpId]==1):
-                                snp_cov_df[snpId] = probabilities[:,[0,2]].sum(1)
-                            else:
-                                snp_cov_df[snpId] = (probabilities[:,0]* 2)+probabilities[:,1]
-                            if (any(snp_cov_df[snpId] > 2)) :
-                                snp_cov_df[snpId][snp_df_dosage[snpId]>2] = 2
-                        snp_cov_df.columns = snpQuery_cov['snp']
+                            geno = bgen["genotype"][snpId].compute()
+                            if(geno["phased"]):
+                                snp_df_dosage_t = geno["probs"][:,[0,2]].sum(1).astype(float)
+                                snp_df_dosage_t[(np.amax(geno["probs"][:,:2],1)+np.amax(geno["probs"][:,2:4],1))<(1+minimumProbabilityStep)] = float('NaN')
+                            else :
+                                snp_df_dosage_t = (geno["probs"][:,0]* 2)+geno["probs"][:,1]
+                                snp_df_dosage_t[np.amax(geno["probs"][:,:3],1)<((1/3)+minimumProbabilityStep)] = float('NaN')
+                            snp_df_dosage_t = pd.Series(snp_df_dosage_t, index= fam.index)
+                            snp_df_dosage_t.name = snpId
+                            snp_cov_df_t = snp_cov_df_t.append(snp_df_dosage_t)
+                            rowNumber = rowNumber +1
+                        snp_cov_df_t = snp_cov_df_t.transpose()
         
         if (len(snpQuery) != 0) and (snp_filter_df is not None):
             toSelect = set(snp_filter_df.index).intersection(set(snpQuery['snp']))
@@ -246,38 +249,31 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 if(plinkGenotype):
                     snp_df = pd.DataFrame(data=bed[snp_idxs,:].compute().transpose(),index=fam.index,columns=snp_names)
                 else :
-                    ploidy = bgen["X"][snp_idxs].compute().sel(data="ploidy")
-                    ploidy = ploidy.to_pandas()
-                    ploidy.columns = fam.index
-                    ploidy = ploidy.loc[:,individual_ids]
-                    ploidy = ploidy.loc[np.logical_and(ploidy.min(1)>1,ploidy.max(1)<3),:]
-                    snpGroup = snpGroup.loc[snpGroup['i'].isin(ploidy.index.values)]
-                    snp_idxs = snpGroup['i'].values
-                    snp_names = snpGroup['snp'].values
-                    phasedFlag = bgen["X"][snp_idxs].compute().sel(data="phased")
-                    phasedFlag = phasedFlag.to_pandas()
-                    if all(phasedFlag.min(1) == phasedFlag.max(1)) :
-                        phasedFlag = phasedFlag.min(1)
-                    else :
-                        print("Warning, illegal file mixed phases in one file.")
-                    snp_df_dosage = pd.DataFrame(index=fam.index,columns=snp_idxs)
-                    snp_df = pd.DataFrame(index=fam.index,columns=snp_idxs)
+                    snp_df_dosage = pd.DataFrame(columns=fam.index)
+                    snp_df = pd.DataFrame(columns=fam.index)
+                    rowNumber = 0
                     for snpId in snp_idxs :
-                        probabilities = bgen["genotype"][snpId].compute()
-                        if(phasedFlag[snpId]==1):
-                            snp_df_dosage[snpId] = probabilities[:,[0,2]].sum(1)
-                            snp_df[snpId] = (np.abs(np.argmax(probabilities[:,:2], axis=1)-1)+np.abs(np.argmax(probabilities[:,2:4], axis=1)-1))
-                            snp_df_dosage.loc[(np.amax(probabilities[:,:2],1)+np.amax(probabilities[:,2:4],1))<(1+minimumProbabilityStep),snpId] = float('NaN')
-                            snp_df.loc[(np.amax(probabilities[:,:2],1)+np.amax(probabilities[:,2:4],1))<(1+minimumProbabilityStep),snpId] = float('NaN')
-                        else:
-                            snp_df_dosage[snpId] = (probabilities[:,0]* 2)+probabilities[:,1]
-                            snp_df[snpId] = (np.abs(np.argmax(probabilities[:,:3], axis=1)-2))
-                            snp_df_dosage.loc[np.amax(probabilities[:,:3],1)<((1/3)+minimumProbabilityStep),snpId] = float('NaN')
-                            snp_df.loc[np.amax(probabilities[:,:3],1)<((1/3)+minimumProbabilityStep),snpId] = float('NaN')
-                        if (any(snp_df[snpId] > 2)) :
-                            snp_df_dosage.loc[snp_df_dosage[snpId]>2,snpId] = 2
-                    snp_df_dosage.columns=snp_names
-                    snp_df.columns=snp_names
+                        geno = bgen["genotype"][snpId].compute()
+                        if (geno["ploidy"].min()>1 & geno["ploidy"].max()<3) :
+                            if(geno["phased"]):
+                                snp_df_dosage_t = geno["probs"][:,[0,2]].sum(1).astype(float)
+                                snp_df_t = (np.abs(np.argmax(geno["probs"][:,:2], axis=1)-1)+np.abs(np.argmax(geno["probs"][:,2:4], axis=1)-1)).astype(float)
+                                snp_df_dosage_t[(np.amax(geno["probs"][:,:2],1)+np.amax(geno["probs"][:,2:4],1))<(1+minimumProbabilityStep)] = float('NaN')
+                                snp_df_t[(np.amax(geno["probs"][:,:2],1)+np.amax(geno["probs"][:,2:4],1))<(1+minimumProbabilityStep)] = float('NaN')
+                            else :
+                                snp_df_dosage_t = (geno["probs"][:,0]* 2)+geno["probs"][:,1]
+                                snp_df_t = (np.abs(np.argmax(geno["probs"][:,:3], axis=1)-2))
+                                snp_df_dosage_t[np.amax(geno["probs"][:,:3],1)<((1/3)+minimumProbabilityStep)] = float('NaN')
+                                snp_df_t[np.amax(geno["probs"][:,:3],1)<((1/3)+minimumProbabilityStep)] = float('NaN')
+                            snp_df_dosage_t = pd.Series(snp_df_dosage_t, index= fam.index)
+                            snp_df_t = pd.Series(snp_df_t, index= fam.index)
+                            snp_df_dosage_t.name = snp_names[rowNumber]
+                            snp_df_t.name = snp_names[rowNumber]
+                            snp_df_dosage = snp_df_dosage.append(snp_df_dosage_t)
+                            snp_df = snp_df.append(snp_df_t)
+                        rowNumber = rowNumber +1
+                    snp_df_dosage = snp_df_dosage.transpose()
+                    snp_df = snp_df.transpose()
                     snp_df_dosage = snp_df_dosage.loc[individual_ids,:]
                     
                 snp_df = snp_df.loc[individual_ids,:]
@@ -463,7 +459,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     snp_df.index = snp_df['snp_id']
     
     if snpQcInfoMain is not None :
-        snpQcInfoMain =  snpQcInfoMain.drop_duplicates()
+        snpQcInfoMain['index']=snpQcInfoMain.index
+        snpQcInfoMain = snpQcInfoMain.drop_duplicates()
+        del snpQcInfoMain['index']
         snp_df = pd.concat([snp_df, snpQcInfoMain.reindex(snp_df.index)], axis=1)
         
         if(snp_df.shape[1]==5):
