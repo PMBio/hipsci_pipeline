@@ -219,7 +219,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
                     print ('There is an issue in mapping phenotypes and genotypes')
                     sys.exit()
                 #Impute missingness
-                #pdb.set_trace()
+                pdb.set_trace()
                 call_rate = 1-snp_matrix_DF.isnull().sum()/len(snp_matrix_DF.index)
                 if snpQcInfo is None and call_rate is not None:
                     snpQcInfo = call_rate
@@ -333,13 +333,16 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
         sys.exit()
     #gather unique indexes of tested snps
     #write annotation and snp data to file
-    
+    snp_df = pd.DataFrame()
+    snp_df['snp_id'] = np.unique(tested_snp_names)
+    snp_df.index = np.unique(tested_snp_names)
+    snp_df['chromosome'] = "NA"
+    snp_df['position'] = "NA"
     if (snpQcInfoMain is not None):
-        snp_df = snpQcInfoMain.to_frame()
-        snp_df['snp_id'] = snp_df.index
-        snp_df = snp_df.drop_duplicates()
-        snp_df = snp_df.rename(index=str, columns={0: "call_rate"})
-        snp_df = snp_df[["snp_id","call_rate"]]
+        snpQcInfoMain['index']=snpQcInfoMain.index
+        snpQcInfoMain = snpQcInfoMain.drop_duplicates()
+        del snpQcInfoMain['index']
+        snp_df = pd.concat([snp_df, snpQcInfoMain.reindex(snp_df.index)], axis=1)
     
     feature_list = set(feature_list)
     feature_list = feature_list.difference(set(fail_qc_features))
