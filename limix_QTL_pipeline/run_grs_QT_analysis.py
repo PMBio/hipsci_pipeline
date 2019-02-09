@@ -219,7 +219,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
                     print ('There is an issue in mapping phenotypes and genotypes')
                     sys.exit()
                 #Impute missingness
-                pdb.set_trace()
+                #pdb.set_trace()
                 call_rate = 1-snp_matrix_DF.isnull().sum()/len(snp_matrix_DF.index)
                 if snpQcInfo is None and call_rate is not None:
                     snpQcInfo = call_rate
@@ -306,7 +306,8 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
             if contains_missing_samples:
                 QS = QS_tmp
                 geneticaly_unique_individuals = tmp_unique_individuals
-                snpQcInfo = snpQcInfo.transpose()
+                snpQcInfo = snpQcInfo.to_frame(name="call_rate")
+                snpQcInfo.index.name = "snp_id"
                 snpQcInfo.to_csv(output_dir+'/snp_qc_metrics_naContaining_feature_{}.txt'.format(feature_id),sep='\t')
                 del QS_tmp
                 del tmp_unique_individuals
@@ -339,6 +340,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
     snp_df['chromosome'] = "NA"
     snp_df['position'] = "NA"
     if (snpQcInfoMain is not None):
+        snpQcInfoMain = snpQcInfoMain.to_frame(name="call_rate")
         snpQcInfoMain['index']=snpQcInfoMain.index
         snpQcInfoMain = snpQcInfoMain.drop_duplicates()
         del snpQcInfoMain['index']
@@ -353,12 +355,10 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
         annotation_df['alpha_param'] = alpha_params
         annotation_df['beta_param'] = beta_params
     if not selectionStart is None :
-        if (snpQcInfoMain is not None):
-            snp_df.to_csv(output_dir+'/snp_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t',index=False)
+        snp_df.to_csv(output_dir+'/snp_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t',index=False)
         annotation_df.to_csv(output_dir+'/feature_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t')
     else :
-        if (snpQcInfoMain is not None):
-            snp_df.to_csv(output_dir+'/snp_metadata_{}.txt'.format(chromosome),sep='\t',index=False)
+        snp_df.to_csv(output_dir+'/snp_metadata_{}.txt'.format(chromosome),sep='\t',index=False)
         annotation_df.to_csv(output_dir+'/feature_metadata_{}.txt'.format(chromosome),sep='\t')
 
 if __name__=='__main__':
