@@ -4,6 +4,7 @@ import os.path
 import numpy as np
 import pandas as pd
 import argparse
+import pdb
 
 def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed = False, overWrite=True, minimalPValue = 1, minimalFeaturePValue = 1, topMode = False, debugMode = False):
     qtl_results_file='qtl_results_'
@@ -52,7 +53,7 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
 
         ffea = ffea.rename(index=str, columns={"chromosome": "feature_chromosome", "start": "feature_start", "end": "feature_end"})
         fsnp = fsnp.rename(index=str, columns={"chromosome": "snp_chromosome", "position": "snp_position"})
-
+        #pdb.set_trace()
         frez=h5py.File(file,'r')
         frezkeys= np.array([k.replace('_i_','') for k in list(frez.keys())])
 
@@ -79,7 +80,7 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
             if os.path.isfile(QTL_Dir+"/snp_qc_metrics_naContaining_feature_"+key+".txt"):
                 fsnp_rel = pd.read_table(QTL_Dir+"/snp_qc_metrics_naContaining_feature_"+key+".txt", sep='\t')
                 temp_t = temp.loc[temp["feature_id"]==key]
-                fsnp_t = fsnp.loc[:,["snp_id","snp_chromosome","snp_position"]]
+                fsnp_t = fsnp.loc[:,["snp_id","snp_chromosome","snp_position","assessed_allele"]]
                 fsnp_t = pd.merge(fsnp_t, fsnp_rel, on='snp_id', how='right')
                 temp_t = pd.merge(temp_t, fsnp_t, on='snp_id', how='left')
                 temp2 = temp2.append(temp_t,sort=False)
