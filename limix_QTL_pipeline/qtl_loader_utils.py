@@ -53,7 +53,7 @@ def get_covariate_df(covariates_filename):
     return covariate_df
 
 def get_genotype_data(geno_prefix):
-    bim,fam,bed = limix.io.read_plink(geno_prefix,verbose=False)
+    bim,fam,bed = limix.io.plink.read(geno_prefix,verbose=False)
     fam.set_index('iid',inplace=True)
     return bim,fam,bed
 
