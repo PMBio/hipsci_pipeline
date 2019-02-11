@@ -3,6 +3,7 @@ from __future__ import division
 import time
 import glob
 import os
+import gc
 import pdb
 import sys
 ##External packages.
@@ -131,6 +132,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             '''select indices for relevant individuals in genotype matrix
             These are not unique. NOT to be used to access phenotype/covariates data
             '''
+            
             individual_ids = sample2individual_df.loc[phenotype_ds.index,'iid'].values
             sample2individual_feature= sample2individual_df.loc[phenotype_ds.index]
             
@@ -249,8 +251,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 if(plinkGenotype):
                     snp_df = pd.DataFrame(data=bed[snp_idxs,:].compute().transpose(),index=fam.index,columns=snp_names)
                 else :
-                    snp_df_dosage = pd.DataFrame(columns=fam.index)
-                    snp_df = pd.DataFrame(columns=fam.index)
+                    snp_df_dosage = pd.DataFrame(np.nan,index=fam.index, columns = snp_names)
+                    snp_df = pd.DataFrame(np.nan,index=fam.index, columns = snp_names)
                     rowNumber = 0
                     for snpId in snp_idxs :
                         geno = bgen["genotype"][snpId].compute()
@@ -258,22 +260,18 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                             if(geno["phased"]):
                                 snp_df_dosage_t = geno["probs"][:,[0,2]].sum(1).astype(float)
                                 snp_df_t = (np.abs(np.argmax(geno["probs"][:,:2], axis=1)-1)+np.abs(np.argmax(geno["probs"][:,2:4], axis=1)-1)).astype(float)
-                                snp_df_dosage_t[(np.amax(geno["probs"][:,:2],1)+np.amax(geno["probs"][:,2:4],1))<(1+minimumProbabilityStep)] = float('NaN')
-                                snp_df_t[(np.amax(geno["probs"][:,:2],1)+np.amax(geno["probs"][:,2:4],1))<(1+minimumProbabilityStep)] = float('NaN')
+                                naId = (np.amax(geno["probs"][:,:2],1)+np.amax(geno["probs"][:,2:4],1))<(1+minimumProbabilityStep)
+                                snp_df_dosage_t[naId] = float('NaN')
+                                snp_df_t[naId] = float('NaN')
                             else :
                                 snp_df_dosage_t = (geno["probs"][:,0]* 2)+geno["probs"][:,1]
                                 snp_df_t = (np.abs(np.argmax(geno["probs"][:,:3], axis=1)-2))
-                                snp_df_dosage_t[np.amax(geno["probs"][:,:3],1)<((1/3)+minimumProbabilityStep)] = float('NaN')
-                                snp_df_t[np.amax(geno["probs"][:,:3],1)<((1/3)+minimumProbabilityStep)] = float('NaN')
-                            snp_df_dosage_t = pd.Series(snp_df_dosage_t, index= fam.index)
-                            snp_df_t = pd.Series(snp_df_t, index= fam.index)
-                            snp_df_dosage_t.name = snp_names[rowNumber]
-                            snp_df_t.name = snp_names[rowNumber]
-                            snp_df_dosage = snp_df_dosage.append(snp_df_dosage_t)
-                            snp_df = snp_df.append(snp_df_t)
+                                naId = np.amax(geno["probs"][:,:3],1)<((1/3)+minimumProbabilityStep)
+                                snp_df_dosage_t[naId] = float('NaN')
+                                snp_df_t[naId] = float('NaN')
+                            snp_df_dosage.loc[:,snp_names[rowNumber]] = snp_df_dosage_t
+                            snp_df.loc[:,snp_names[rowNumber]] = snp_df_t
                         rowNumber = rowNumber +1
-                    snp_df_dosage = snp_df_dosage.transpose()
-                    snp_df = snp_df.transpose()
                     snp_df_dosage = snp_df_dosage.loc[individual_ids,:]
                     
                 snp_df = snp_df.loc[individual_ids,:]
@@ -322,7 +320,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 if snpQcInfo is None and snpQcInfo_t is not None:
                     snpQcInfo = snpQcInfo_t
                 elif snpQcInfo_t is not None:
-                    snpQcInfo = pd.concat([snpQcInfo, snpQcInfo_t], axis=0)
+                    snpQcInfo = pd.concat([snpQcInfo, snpQcInfo_t], axis=0, sort = False)
                 
                 #We could make use of relatedness when imputing.  And impute only based on genetically unique individuals.
                 snp_df = pd.DataFrame(fill_NaN.fit_transform(snp_df),index=snp_df.index,columns=snp_df.columns)
@@ -420,6 +418,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             del QS_tmp
             del tmp_unique_individuals
             if snpQcInfo is not None:
+                snpQcInfo.index.name = "snp_id"
                 snpQcInfo.to_csv(output_dir+'/snp_qc_metrics_naContaining_feature_{}.txt'.format(feature_id),sep='\t')
         else:
             if (snpQcInfo is not None and snpQcInfoMain is not None):
@@ -469,10 +468,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         elif(snp_df.shape[1]==6):
             snp_df.columns = ['snp_id','chromosome','position','assessed_allele','call_rate','maf']
         else :
-            snp_df.columns = ['snp_id','chromosome','position','assessed_allele','call_rate','maf','hwe_pvalue']
+            snp_df.columns = ['snp_id','chromosome','position','assessed_allele','call_rate','maf','hwe_p']
     
-    feature_list = set(feature_list)
-    feature_list = feature_list.difference(set(fail_qc_features))
+    feature_list = temp3 = [x for x in feature_list if x not in fail_qc_features]
     annotation_df = annotation_df.reindex(feature_list)
     annotation_df['n_samples'] = n_samples
     annotation_df['n_e_samples'] = n_e_samples
@@ -482,12 +480,10 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         annotation_df['beta_param'] = beta_params
     
     if not selectionStart is None :
-        if (snpQcInfoMain is not None):
-            snp_df.to_csv(output_dir+'/snp_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t',index=False)
+        snp_df.to_csv(output_dir+'/snp_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t',index=False)
         annotation_df.to_csv(output_dir+'/feature_metadata_{}_{}_{}.txt'.format(chromosome,selectionStart,selectionEnd),sep='\t')
     else :
-        if (snpQcInfoMain is not None):
-            snp_df.to_csv(output_dir+'/snp_metadata_{}.txt'.format(chromosome),sep='\t',index=False)
+        snp_df.to_csv(output_dir+'/snp_metadata_{}.txt'.format(chromosome),sep='\t',index=False)
         annotation_df.to_csv(output_dir+'/feature_metadata_{}.txt'.format(chromosome),sep='\t')
 
         
