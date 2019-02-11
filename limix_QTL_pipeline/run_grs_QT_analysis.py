@@ -47,14 +47,14 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
     #Open output files
     qtl_loader_utils.ensure_dir(output_dir)
     if not selectionStart is None :
-        output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
+        output_writer = qtl_output.hdf5_writer(output_dir+'/qtl_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
     else :
-        output_writer = qtl_output.hdf5_writer(output_dir+'qtl_results_{}.h5'.format(chromosome))
+        output_writer = qtl_output.hdf5_writer(output_dir+'/qtl_results_{}.h5'.format(chromosome))
     if(write_permutations):
         if not selectionStart is None :
-            permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'perm_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd),n_perm)
+            permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'/perm_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd),n_perm)
         else :
-            permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'perm_results_{}.h5'.format(chromosome),n_perm)
+            permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'/perm_results_{}.h5'.format(chromosome),n_perm)
 
     #Arrays to store indices of snps tested and pass and fail QC SNPs for features without missingness.
     tested_snp_names = []
@@ -262,7 +262,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
                         perm_df = pd.DataFrame(index = range(len(G_index)),columns=['snp_id'] + ['permutation_'+str(x) for x in range(n_perm)])
                         perm_df['snp_id'] = G_index
                     for currentNperm in utils.chunker(list(range(1, n_perm+1)), permutationStepSize):
-                        if kinship_df is not None:
+                        if (kinship_df is not None) and (relatedness_score is not None):
                             temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], len(currentNperm))
                         else :
                             temp = utils.get_shuffeld_genotypes(snp_matrix_DF, len(currentNperm))
@@ -294,7 +294,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
             #This we need to change in the written file.
             if(n_perm>1 and data_written):
                 #updated_permuted_p_in_hdf5(bestPermutationPval, feature_id);
-                alpha_para, beta_para = output_writer.apply_pval_correction(feature_id,bestPermutationPval,True)
+                alpha_para, beta_para = output_writer.apply_pval_correction(feature_id,bestPermutationPval,False)
                 alpha_params.append(alpha_para)
                 beta_params.append(beta_para)
                 #pdb.set_trace();
@@ -346,8 +346,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
         del snpQcInfoMain['index']
         snp_df = pd.concat([snp_df, snpQcInfoMain.reindex(snp_df.index)], axis=1)
     
-    feature_list = set(feature_list)
-    feature_list = feature_list.difference(set(fail_qc_features))
+    feature_list = temp3 = [x for x in feature_list if x not in fail_qc_features]
     annotation_df = annotation_df.reindex(feature_list)
     annotation_df['n_samples'] = n_samples
     annotation_df['n_e_samples'] = n_e_samples
