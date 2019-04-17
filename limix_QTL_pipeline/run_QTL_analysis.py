@@ -237,7 +237,6 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             flmm = lmm.get_fast_scanner()
             countChunker = 0
             for snpGroup in utils.chunker(snpQuery, blocksize):
-                #print(countChunker)#
                 countChunker=countChunker+1
                 #print(countChunker)
                 #Fix seed at the start of the first chunker so all permutations are based on the same random first split.
@@ -303,10 +302,6 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     else:
                         passed_snp_names,failed_snp_names,call_rate,maf,hweP = do_snp_qc(snp_df, min_call_rate, min_maf, min_hwe_P)
                     snp_df = snp_df.loc[:,snp_df.columns[snp_df.columns.isin(passed_snp_names)]]
-                if len(snp_df.columns) == 0:
-                    continue
-                elif (not plinkGenotype):
-                    snp_df_dosage= snp_df_dosage.loc[:,np.unique(snp_df.columns)]
                 snpQcInfo_t = None
                 if call_rate is not None:
                     snpQcInfo_t = call_rate
@@ -321,7 +316,11 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     snpQcInfo = snpQcInfo_t
                 elif snpQcInfo_t is not None:
                     snpQcInfo = pd.concat([snpQcInfo, snpQcInfo_t], axis=0, sort = False)
-                
+                ##First process SNPQc than check if we can continue.
+                if len(snp_df.columns) == 0:
+                    continue
+                elif (not plinkGenotype):
+                    snp_df_dosage= snp_df_dosage.loc[:,np.unique(snp_df.columns)]
                 #We could make use of relatedness when imputing.  And impute only based on genetically unique individuals.
                 snp_df = pd.DataFrame(fill_NaN.fit_transform(snp_df),index=snp_df.index,columns=snp_df.columns)
                 if (not plinkGenotype):
@@ -422,7 +421,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 snpQcInfo.to_csv(output_dir+'/snp_qc_metrics_naContaining_feature_{}.txt'.format(feature_id),sep='\t')
         else:
             if (snpQcInfo is not None and snpQcInfoMain is not None):
-                snpQcInfoMain = pd.concat([snpQcInfoMain, snpQcInfo], axis=0)
+                snpQcInfoMain = pd.concat([snpQcInfoMain, snpQcInfo], axis=0, sort=False)
             elif snpQcInfo is not None :
                 snpQcInfoMain = snpQcInfo.copy(deep=True)
         #if snpQcInfo is not None:
@@ -470,7 +469,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         else :
             snp_df.columns = ['snp_id','chromosome','position','assessed_allele','call_rate','maf','hwe_p']
     
-    feature_list = temp3 = [x for x in feature_list if x not in fail_qc_features]
+    feature_list = [x for x in feature_list if x not in fail_qc_features]
     annotation_df = annotation_df.reindex(feature_list)
     annotation_df['n_samples'] = n_samples
     annotation_df['n_e_samples'] = n_e_samples
