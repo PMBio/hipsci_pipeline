@@ -4,6 +4,7 @@ import os.path
 import numpy as np
 import pandas as pd
 import argparse
+import glob
 import pdb
 
 def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed = False, overWrite=True, minimalPValue = 1, minimalFeaturePValue = 1, topMode = False, debugMode = False):
@@ -14,8 +15,8 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
         output_file='top_qtl_results_'
     else:
         output_file='qtl_results_'
-
-
+    
+    
     h5FilesToProcess = (glob.glob(QTL_Dir+"/qtl_*.h5"))
     
     #print(h5FilesToProcess)
@@ -50,47 +51,55 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
         except:
             print("Issue in features or snp annotation.\n Skipping: "+partTmp)
             continue
-
+        
         ffea = ffea.rename(index=str, columns={"chromosome": "feature_chromosome", "start": "feature_start", "end": "feature_end"})
         fsnp = fsnp.rename(index=str, columns={"chromosome": "snp_chromosome", "position": "snp_position"})
         #pdb.set_trace()
         frez=h5py.File(file,'r')
         frezkeys= np.array([k.replace('_i_','') for k in list(frez.keys())])
-
+        
         data={}
         for key in ['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value']:
             data[key]=np.zeros(len(np.unique(list(frezkeys))),dtype='object')+np.nan
-
+        
         for ifea,report_feature in enumerate(np.unique(list(frezkeys))):
             for key in ['snp_id','p_value','beta','beta_se','empirical_feature_p_value']:
                 temp = np.array(frez[report_feature][key])
                 data[key][ifea]=np.hstack(temp).astype('U')
             data['feature_id'][ifea]=np.hstack(np.repeat(report_feature,len(frez[report_feature][key])))
-
+        #pdb.set_trace()
         for key in data.keys():
             data[key]=np.hstack(data[key])
-
+        
         temp=pd.DataFrame(data)
         #print(temp.head())
-
+        
         temp = pd.merge(temp, ffea, on='feature_id', how='left')
         #print(temp.head())
-        temp2 = pd.DataFrame(columns=temp.columns)
-        for key in frezkeys:
-            if os.path.isfile(QTL_Dir+"/snp_qc_metrics_naContaining_feature_"+key+".txt"):
-                fsnp_rel = pd.read_table(QTL_Dir+"/snp_qc_metrics_naContaining_feature_"+key+".txt", sep='\t')
-                temp_t = temp.loc[temp["feature_id"]==key]
-                fsnp_t = fsnp.loc[:,["snp_id","snp_chromosome","snp_position","assessed_allele"]]
-                fsnp_t = pd.merge(fsnp_t, fsnp_rel, on='snp_id', how='right')
-                temp_t = pd.merge(temp_t, fsnp_t, on='snp_id', how='left')
-                temp2 = temp2.append(temp_t,sort=False)
-            else:
-                temp_t = temp.loc[temp["feature_id"]==key]
-                temp_t = pd.merge(temp_t, fsnp, on='snp_id', how='left')
-                temp2 = temp2.append(temp_t,sort=False)
-            data[key]=np.zeros(len(np.unique(list(frezkeys))),dtype='object')+np.nan
-        temp = temp2
-        temp2 = None
+        
+        #pdb.set_trace()
+        if(len(glob.glob(QTL_Dir+'snp_qc_metrics_naContaining_feature_*.txt'))>0):
+            ##Here we need to check, we can based on the output of glob do this quicker.
+            temp2 = pd.DataFrame(columns=temp.columns)
+            for key in frezkeys:
+                if os.path.isfile(QTL_Dir+"/snp_qc_metrics_naContaining_feature_"+key+".txt"):
+                    fsnp_rel = pd.read_table(QTL_Dir+"/snp_qc_metrics_naContaining_feature_"+key+".txt", sep='\t')
+                    temp_t = temp.loc[temp["feature_id"]==key]
+                    fsnp_t = fsnp.loc[:,["snp_id","snp_chromosome","snp_position","assessed_allele"]]
+                    fsnp_t = pd.merge(fsnp_t, fsnp_rel, on='snp_id', how='right')
+                    temp_t = pd.merge(temp_t, fsnp_t, on='snp_id', how='left')
+                    temp2 = temp2.append(temp_t,sort=False)
+                else:
+                    temp_t = temp.loc[temp["feature_id"]==key]
+                    temp_t = pd.merge(temp_t, fsnp, on='snp_id', how='left')
+                    temp2 = temp2.append(temp_t,sort=False)
+                data[key]=np.zeros(len(np.unique(list(frezkeys))),dtype='object')+np.nan
+            temp = temp2
+            temp2 = None
+        else : 
+            temp = pd.merge(temp, fsnp, on='snp_id', how='left')
+        
+        #pdb.set_trace()
         #print(temp.head())
         temp['empirical_feature_p_value'] = temp['empirical_feature_p_value'].astype(float)
         temp['p_value'] = temp['p_value'].astype(float)
@@ -104,6 +113,7 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
         
         if topMode:
             temp = temp.groupby(temp['feature_id']).first()
+            temp['feature_id'] = temp.index
         #print(outputFile)#
         #temp.to_csv(path_or_buf=outputFile, mode='w', sep='\t', columns=None,index=None)
         #print('w'if not os.path.isfile(outputFile) else 'a')

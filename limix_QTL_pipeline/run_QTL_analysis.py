@@ -264,7 +264,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                                 snp_df_t[naId] = float('NaN')
                             else :
                                 snp_df_dosage_t = (geno["probs"][:,0]* 2)+geno["probs"][:,1]
-                                snp_df_t = (np.abs(np.argmax(geno["probs"][:,:3], axis=1)-2))
+                                snp_df_t = (np.abs(np.argmax(geno["probs"][:,:3], axis=1)-2)).astype(float)
                                 naId = np.amax(geno["probs"][:,:3],1)<((1/3)+minimumProbabilityStep)
                                 snp_df_dosage_t[naId] = float('NaN')
                                 snp_df_t[naId] = float('NaN')
