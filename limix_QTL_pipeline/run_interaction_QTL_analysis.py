@@ -215,7 +215,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
             
             phenotype = phenotype.astype(float)
             
-																
+
             countChunker = 0
             for snpGroup in utils.chunker(snpQuery, blocksize):
                 countChunker=countChunker+1
