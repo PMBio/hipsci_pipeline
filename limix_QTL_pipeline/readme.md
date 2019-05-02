@@ -16,7 +16,7 @@ To create a limix development enviroment
 
 `conda install -c conda-forge bgen-reader`
 
-`pip install limix`
+`pip install limix==2`
 
 
 NB. be sure to be in a folder where you can download files to and there is no folder called limix.
