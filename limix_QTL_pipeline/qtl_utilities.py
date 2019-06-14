@@ -465,7 +465,8 @@ def run_PrsQtl_analysis_load_intersect_phenotype_covariates_kinship_sample_mappi
         if snp_filter_df is not None:
             relSnps = set(snp_filter_df.index).intersection(set(relSnps))
         if feature_variant_covariate_df is not None:
-            relSnps = relSnps.update(feature_variant_covariate_df["snp_id"])
+            feature_variant_covariate_df = feature_variant_covariate_df.loc[feature_variant_covariate_df['feature'].isin(toSelect)]
+            relSnps = np.union1d(relSnps, feature_variant_covariate_df["snp_id"].values)
         
         relSnps = np.unique(relSnps)
         risk_df = qtl_loader_utils.get_grs_subset_df(prsFile, relSnps)
@@ -481,7 +482,8 @@ def run_PrsQtl_analysis_load_intersect_phenotype_covariates_kinship_sample_mappi
         relSnps = snp_filter_df.index
         
         if feature_variant_covariate_df is not None:
-            relSnps = relSnps.update(feature_variant_covariate_df["snp_id"])
+            feature_variant_covariate_df = feature_variant_covariate_df.loc[feature_variant_covariate_df['feature'].isin(toSelect)]
+            relSnps = np.union1d(relSnps, feature_variant_covariate_df["snp_id"].values)
         
         relSnps = np.unique(relSnps)
         risk_df = qtl_loader_utils.get_grs_subset_df(prsFile, relSnps)
