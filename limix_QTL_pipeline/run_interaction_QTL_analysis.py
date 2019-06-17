@@ -474,7 +474,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
         else :
             snp_df.columns = ['snp_id','chromosome','position','assessed_allele','call_rate','maf','hwe_p']
     
-    feature_list = [x for x in feature_list if x not in fail_qc_features]
+    feature_list = list(set(feature_list) - set(fail_qc_features))
     annotation_df = annotation_df.reindex(feature_list)
     annotation_df['n_samples'] = n_samples
     annotation_df['n_e_samples'] = n_e_samples
