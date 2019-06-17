@@ -457,9 +457,10 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
     snp_df['chromosome'] = bim['chrom']
     snp_df['position'] = bim['pos']
     snp_df['assessed_allele'] = bim['a1']
+    snp_df.index = snp_df['snp_id']
+    snp_df = snp_df.drop_duplicates()
     snp_df = snp_df.reindex(tested_snp_ids)
     snp_df = snp_df.drop_duplicates()
-    snp_df.index = snp_df['snp_id']
     
     if snpQcInfoMain is not None :
         snpQcInfoMain['index']=snpQcInfoMain.index
