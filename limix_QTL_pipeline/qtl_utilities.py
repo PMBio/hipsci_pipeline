@@ -48,9 +48,6 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
     else :
         bgen = read_bgen(geno_prefix+'.bgen', verbose=False)
         bim = bgen['variants'].compute()
-        if len(bim["id"].values) > len(set(bim["id"].values)):
-            print("Error with SNP ids, there are none unique IDs observed.")
-            sys.exit()
         bim = bim.assign(i = range(bim.shape[0]))
         bim = bim.rename(index=str, columns={"id": "snp"})
         bim['a1'] = bim['allele_ids'].str.split(",", expand=True)[0]
@@ -204,7 +201,11 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         complete_annotation_df = annotation_df
 
     feature_variant_covariate_df = qtl_loader_utils.get_snp_feature_df(feature_variant_covariate_filename) 
-
+    
+    if len(bim["snp"].values) > len(set(bim["snp"].values)):
+        print("Error with SNP ids, there are duplicated SNP IDs observed. (After filtering if applied).")
+        sys.exit()
+    
     return [phenotype_df, kinship_df, covariate_df, sample2individual_df, complete_annotation_df, annotation_df, snp_filter_df, 
         snp_feature_filter_df, genetically_unique_individuals, minimum_test_samples, feature_list, bim, fam, bed, bgen, chromosome, 
         selectionStart, selectionEnd, feature_variant_covariate_df]
