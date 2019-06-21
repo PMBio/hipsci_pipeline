@@ -48,6 +48,9 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
     else :
         bgen = read_bgen(geno_prefix+'.bgen', verbose=False)
         bim = bgen['variants'].compute()
+        if len(bim["id"].values) > len(set(bim["id"].values)):
+            print("Error with SNP ids, there are none unique IDs observed.")
+            sys.exit()
         bim = bim.assign(i = range(bim.shape[0]))
         bim = bim.rename(index=str, columns={"id": "snp"})
         bim['a1'] = bim['allele_ids'].str.split(",", expand=True)[0]
@@ -57,7 +60,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
         fam = fam.to_frame("iid")
         fam.index=fam["iid"]
         bed=None
-        print("Warning, the current software only supports biallelic SNPs and plody 2")
+        print("Warning, the current software only supports biallelic SNPs and ploidy 2")
         bim['chrom'].replace(['X', 'Y', 'XY', 'MT'], ['23', '24', '25', '26'],inplace=True)
         bim.loc[np.logical_and(bim['nalleles']<3,bim['nalleles']>0),:]
 
