@@ -203,8 +203,9 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping\
     feature_variant_covariate_df = qtl_loader_utils.get_snp_feature_df(feature_variant_covariate_filename) 
     
     if len(bim["snp"].values) > len(set(bim["snp"].values)):
-        print("Error with SNP ids, there are duplicated SNP IDs observed. (After filtering if applied).")
-        sys.exit()
+        print("Warning duplicated SNP ids (After filtering if applied).")
+        print("Removing variants observed twice.")
+        bim = bim[bim["snp"].value_counts()==1]
     
     return [phenotype_df, kinship_df, covariate_df, sample2individual_df, complete_annotation_df, annotation_df, snp_filter_df, 
         snp_feature_filter_df, genetically_unique_individuals, minimum_test_samples, feature_list, bim, fam, bed, bgen, chromosome, 
