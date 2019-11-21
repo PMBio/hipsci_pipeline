@@ -263,7 +263,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                                 snp_df_dosage_t[naId] = float('NaN')
                                 snp_df_t[naId] = float('NaN')
                             else :
-                                snp_df_dosage_t = (geno["probs"][:,0]* 2)+geno["probs"][:,1]
+                                snp_df_dosage_t = ((geno["probs"][:,0]* 2)+geno["probs"][:,1]).astype(float)
                                 snp_df_t = (np.abs(np.argmax(geno["probs"][:,:3], axis=1)-2)).astype(float)
                                 naId = np.amax(geno["probs"][:,:3],1)<((1/3)+minimumProbabilityStep)
                                 snp_df_dosage_t[naId] = float('NaN')
@@ -452,9 +452,10 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     snp_df['chromosome'] = bim['chrom']
     snp_df['position'] = bim['pos']
     snp_df['assessed_allele'] = bim['a1']
+    snp_df.index = snp_df['snp_id']
+    snp_df = snp_df.drop_duplicates()
     snp_df = snp_df.reindex(tested_snp_ids)
     snp_df = snp_df.drop_duplicates()
-    snp_df.index = snp_df['snp_id']
     
     if snpQcInfoMain is not None :
         snpQcInfoMain['index']=snpQcInfoMain.index
@@ -469,7 +470,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         else :
             snp_df.columns = ['snp_id','chromosome','position','assessed_allele','call_rate','maf','hwe_p']
     
-    feature_list = [x for x in feature_list if x not in fail_qc_features]
+    feature_list = list(set(feature_list) - set(fail_qc_features))
     annotation_df = annotation_df.reindex(feature_list)
     annotation_df['n_samples'] = n_samples
     annotation_df['n_e_samples'] = n_e_samples
