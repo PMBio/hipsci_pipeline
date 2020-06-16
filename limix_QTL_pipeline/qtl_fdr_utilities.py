@@ -45,8 +45,8 @@ def define_correction_function(top_pvalues_perm, cis_mode):
     #Would be good to replace 0 with minimal double value of python.
     return [correction_function, alpha_para, beta_para]
 
-def calculate_corrected_pvalues(top_pvalues_perm,nominal_pvalues):
-    correction_function = define_correction_function(top_pvalues_perm)
+def calculate_corrected_pvalues(top_pvalues_perm,nominal_pvalues, cis_mode):
+    correction_function, alpha_para, beta_para  = define_correction_function(top_pvalues_perm, cis_mode)
     #apply correction to nominal p_values - potentially slow
     corrected_pvalues = np.array([correction_function(x) for x in nominal_pvalues])
     #corrected_pvalues = Parallel(n_jobs=-2)(np.array([correction_function(x) for x in nominal_pvalues]))
